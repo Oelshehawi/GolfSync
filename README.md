@@ -7,6 +7,7 @@ A simple application to help golf clubs manage members, track scores, and organi
 ### Phase 1: Foundation
 
 - [ ] Set up Clerk for authentication
+- [ ] Build out initial UI
 - [ ] Create database schema for members
 - [ ] Build SERVER COMPONENTS for member data
 - [ ] Create member management interface
