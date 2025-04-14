@@ -20,11 +20,11 @@ A simple application to help golf clubs manage members, track scores, and organi
 - [ ] TEST
 - [ ] TEST
 
-### Phase 3: Advanced Features
+### Phase 3: Stuff ill need to do in future
 
 - [ ] TEST
 - [ ] TEST
 - [ ] TEST
-- [ ] TEST
+- [ ] Migrate users using Clerk migrate docs
 
-_More items will be added as the project progresses._
+
