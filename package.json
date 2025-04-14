@@ -17,12 +17,16 @@
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "format:write": "prettier --write \"**/*.{ts,tsx,js,jsx,mdx}\" --cache",
-    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,mdx}\" --cache"
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,mdx}\" --cache",
+    "import-users": "tsx src/scripts/import-users.ts",
+    "analyze-duplicates": "tsx src/scripts/analyze-duplicates.ts",
+    "fix-member-numbers": "tsx src/scripts/fix-member-numbers.ts"
   },
   "dependencies": {
     "@clerk/nextjs": "^6.14.3",
     "@neondatabase/serverless": "^0.10.4",
     "@t3-oss/env-nextjs": "^0.10.1",
+    "csv-parse": "^5.6.0",
     "dotenv": "^16.4.7",
     "drizzle-orm": "^0.40.1",
     "geist": "^1.3.0",
@@ -49,6 +53,7 @@
     "prettier": "^3.3.2",
     "prettier-plugin-tailwindcss": "^0.6.5",
     "tailwindcss": "^4.1.3",
+    "tsx": "^4.19.3",
     "typescript": "^5.5.3"
   },
   "ct3aMetadata": {

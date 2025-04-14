@@ -44,3 +44,10 @@ yarn-error.log*
 
 # idea files
 .idea
+
+# csv files
+/csvdata
+
+
+# scripts
+/scripts
