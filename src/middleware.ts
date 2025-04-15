@@ -20,7 +20,6 @@ export default clerkMiddleware(async (auth, req) => {
 
   // If trying to access member route with admin permission
   if (isMemberRoute(req) && isAdmin) {
-    console.log("Redirecting to member route");
 
     return NextResponse.redirect(new URL("/admin", req.url));
   }

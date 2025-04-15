@@ -6,8 +6,7 @@ import { ClerkProvider } from "@clerk/nextjs";
 
 export const metadata: Metadata = {
   title: "GolfSync",
-  description:
-    "Golf club management system for tracking members, scores, and events",
+  description: "Golf club management system",
   icons: [{ rel: "icon", url: "/favicon.ico" }],
 };
 
@@ -16,7 +15,7 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <ClerkProvider>
-      <html lang="en" className={`${GeistSans.variable}`}>
+      <html lang="en" className={GeistSans.variable}>
         <body>{children}</body>
       </html>
     </ClerkProvider>

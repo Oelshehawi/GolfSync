@@ -4,9 +4,8 @@ import { GeistSans } from "geist/font/sans";
 import { type Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "GolfSync",
-  description:
-    "Golf club management system for tracking members, scores, and events",
+  title: "GolfSync - Authentication",
+  description: "Sign in to your GolfSync account",
   icons: [{ rel: "icon", url: "/favicon.ico" }],
 };
 
@@ -14,8 +13,8 @@ export default function AuthLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={`${GeistSans.variable}`}>
-      <body>{children}</body>
-    </html>
+    <div className={GeistSans.variable}>
+      <div className="min-h-screen bg-gray-50">{children}</div>
+    </div>
   );
 }
