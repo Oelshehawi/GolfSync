@@ -2,14 +2,84 @@
 
 A simple application to help golf clubs manage members, track scores, and organize golf events.
 
+## Teesheet System Flow
+
+### Configuration Management
+
+1. **Teesheet Configurations**
+
+   - Configurations define the rules for time block creation
+   - Each config has:
+     - Name (e.g., "Weekday", "Weekend")
+     - Start time (e.g., "07:00")
+     - End time (e.g., "19:00")
+     - Interval (minutes between time blocks)
+     - Max members per block (default: 4)
+     - Active status
+
+2. **Configuration Rules**
+   - Rules determine which config to use based on:
+     - Day of week (0-6, null for all)
+     - Weekend status (true/false/null)
+     - Start/end dates (optional)
+     - Priority (higher = more important)
+     - Active status
+
+### Teesheet Creation Flow
+
+1. **Daily Teesheet Creation**
+
+   - When accessing a date:
+     - System checks for existing teesheet
+     - If none exists:
+       1. Determines appropriate config based on rules
+       2. Creates new teesheet with selected config
+       3. Generates time blocks based on config settings
+       4. Each time block can hold 0-4 members
+
+2. **Time Block Management**
+
+   - Time blocks are created in sequence based on:
+     - Start time
+     - End time
+     - Interval
+   - Each block has:
+     - Start time
+     - End time
+     - Associated members (0-4)
+     - Creation/update timestamps
+
+3. **Member Management**
+   - Members can be:
+     - Added to time blocks (up to max per block)
+     - Removed from time blocks
+     - Searched by name or member number
+   - Changes are reflected immediately in the UI
+
+### Data Flow
+
+1. **Database Schema**
+
+   - `teesheets`: Daily teesheets
+   - `teesheetConfigs`: Configuration templates
+   - `teesheetConfigRules`: Rules for config selection
+   - `timeBlocks`: Individual time slots
+   - `timeBlockMembers`: Member assignments to time blocks
+   - `members`: Member information
+
+2. **API Flow**
+   - Server components handle data fetching
+   - Client components handle user interactions
+   - Real-time updates using Next.js router refresh
+
 ## Roadmap
 
 ### Phase 1: Foundation
 
-- [X] Set up Clerk for authentication
+- [x] Set up Clerk for authentication
 - [ ] Build out initial UI
-- [X] Create database schema for members
-- [X] Migrate member data using scripts
+- [x] Create database schema for members
+- [x] Migrate member data using scripts
 - [ ] Build SERVER COMPONENTS for member data
 - [ ] Create member management interface
 - [ ] Display member data in dashboard
@@ -28,10 +98,9 @@ A simple application to help golf clubs manage members, track scores, and organi
 - [ ] TEST
 - [ ] Migrate users using Clerk migrate docs
 
-
 # Things that need fixing
 
-- [X] Inconsistent member numbering system:
+- [x] Inconsistent member numbering system:
   - Duplicate member numbers exist across active and resigned members
   - Staff members don't have a consistent numbering format
   - Many members have empty or zero member numbers

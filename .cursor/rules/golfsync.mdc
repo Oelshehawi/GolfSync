@@ -9,4 +9,4 @@ alwaysApply: true
 - You can @ files here
 - COME UP WITH IMPLEMENATION FOR ANY PROMPT I SEND, AND EXPLAIN HOW YOU WILL IMPLEMENT, WHAT FILES WILL BE EDITED AND GET AGREEMENT FROM ME BEFORE ACTUALY EDITING OR CHANGING FILES
 - I'm using NEXTJS as a framework
-- 
+- use ui components in components folder whenever possible for styling
