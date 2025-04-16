@@ -16,11 +16,17 @@ import { useState } from "react";
 interface TimeBlockMemberManagerProps {
   timeBlock: TimeBlock;
   searchResults: Member[];
+  theme?: {
+    primary?: string;
+    secondary?: string;
+    tertiary?: string;
+  };
 }
 
 export function TimeBlockMemberManager({
   timeBlock,
   searchResults,
+  theme,
 }: TimeBlockMemberManagerProps) {
   const searchParams = useSearchParams();
   const pathname = usePathname();
@@ -64,7 +70,7 @@ export function TimeBlockMemberManager({
 
   return (
     <div className="space-y-6 p-6">
-      <TimeBlockHeader timeBlock={timeBlock} />
+      <TimeBlockHeader timeBlock={timeBlock} theme={theme} />
 
       <MemberSearch
         searchQuery={localSearchQuery}
@@ -72,11 +78,13 @@ export function TimeBlockMemberManager({
         searchResults={searchResults}
         onAddMember={handleAddMember}
         isTimeBlockFull={timeBlock.members.length >= 4}
+        theme={theme}
       />
 
       <MemberList
         members={timeBlock.members}
         onRemoveMember={handleRemoveMember}
+        theme={theme}
       />
     </div>
   );

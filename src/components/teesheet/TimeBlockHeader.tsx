@@ -6,18 +6,26 @@ import type { TimeBlock } from "~/app/types/TeeSheetTypes";
 
 interface TimeBlockHeaderProps {
   timeBlock: TimeBlock;
+  theme?: {
+    primary?: string;
+    secondary?: string;
+    tertiary?: string;
+  };
 }
 
-export function TimeBlockHeader({ timeBlock }: TimeBlockHeaderProps) {
+export function TimeBlockHeader({ timeBlock, theme }: TimeBlockHeaderProps) {
   return (
-    <Card>
+    <Card theme={theme}>
       <CardHeader className="flex flex-row items-center justify-between">
         <div className="flex items-center space-x-4">
-          <div className="rounded-lg bg-blue-100 p-2">
-            <Clock className="h-6 w-6 text-blue-600" />
+          <div
+            className="rounded-lg p-2"
+            style={{ backgroundColor: theme?.secondary }}
+          >
+            <Clock className="h-6 w-6" style={{ color: theme?.primary }} />
           </div>
           <div>
-            <CardTitle className="text-xl">
+            <CardTitle className="text-xl" theme={theme}>
               {format(new Date(timeBlock.startTime), "h:mm a")}
             </CardTitle>
             <p className="text-sm text-gray-500">
@@ -27,10 +35,11 @@ export function TimeBlockHeader({ timeBlock }: TimeBlockHeaderProps) {
         </div>
         <Badge
           variant={timeBlock.members.length >= 4 ? "destructive" : "default"}
-          className={
+          theme={theme}
+          style={
             timeBlock.members.length >= 4
-              ? "bg-red-100 text-red-700"
-              : "bg-green-100 text-green-700"
+              ? { backgroundColor: "#FEE2E2", color: "#B91C1C" }
+              : { backgroundColor: "#D1FAE5", color: "#065F46" }
           }
         >
           {timeBlock.members.length >= 4 ? "Full" : "Available"}

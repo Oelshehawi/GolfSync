@@ -16,6 +16,8 @@ import type {
   TeesheetConfig,
 } from "~/app/types/TeeSheetTypes";
 import { generateTimeBlocks } from "~/lib/utils";
+import { clerkClient } from "@clerk/nextjs/server";
+import { auth } from "@clerk/nextjs/server";
 
 export async function initializeDefaultConfigs() {
   // Check if configs exist
@@ -429,4 +431,24 @@ export async function searchMembers(query: string) {
   });
 
   return results;
+}
+
+export async function getOrganizationTheme() {
+  const session = await auth();
+
+  const organization = await (
+    await clerkClient()
+  ).organizations.getOrganization({
+    organizationId: session.orgId!,
+  });
+
+  const theme = organization.publicMetadata?.theme as
+    | {
+        primary: string;
+        tertiary: string;
+        secondary: string;
+      }
+    | undefined;
+
+  return theme;
 }

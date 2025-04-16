@@ -7,14 +7,23 @@ import type { Member } from "~/app/types/TeeSheetTypes";
 interface MemberListProps {
   members: Member[];
   onRemoveMember: (memberId: number) => void;
+  theme?: {
+    primary?: string;
+    secondary?: string;
+    tertiary?: string;
+  };
 }
 
-export function MemberList({ members, onRemoveMember }: MemberListProps) {
+export function MemberList({
+  members,
+  onRemoveMember,
+  theme,
+}: MemberListProps) {
   return (
-    <Card>
+    <Card theme={theme}>
       <CardHeader>
-        <CardTitle className="flex items-center space-x-2">
-          <UserPlus className="h-5 w-5" />
+        <CardTitle className="flex items-center space-x-2" theme={theme}>
+          <UserPlus className="h-5 w-5" style={{ color: theme?.primary }} />
           <span>Current Members</span>
         </CardTitle>
       </CardHeader>
@@ -47,7 +56,11 @@ export function MemberList({ members, onRemoveMember }: MemberListProps) {
                   variant="ghost"
                   size="sm"
                   onClick={() => onRemoveMember(member.id)}
-                  className="text-red-600 hover:bg-red-50 hover:text-red-700"
+                  theme={theme}
+                  style={{
+                    color: theme?.primary,
+                  }}
+                  className="hover:bg-secondary"
                 >
                   <UserMinus className="mr-2 h-4 w-4" />
                   Remove

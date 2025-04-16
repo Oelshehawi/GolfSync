@@ -11,6 +11,11 @@ interface MemberSearchProps {
   searchResults: Member[];
   onAddMember: (memberId: number) => void;
   isTimeBlockFull: boolean;
+  theme?: {
+    primary?: string;
+    secondary?: string;
+    tertiary?: string;
+  };
 }
 
 export function MemberSearch({
@@ -19,25 +24,30 @@ export function MemberSearch({
   searchResults,
   onAddMember,
   isTimeBlockFull,
+  theme,
 }: MemberSearchProps) {
   return (
-    <Card>
+    <Card theme={theme}>
       <CardHeader>
-        <CardTitle className="flex items-center space-x-2">
-          <UserPlus className="h-5 w-5" />
+        <CardTitle className="flex items-center space-x-2" theme={theme}>
+          <UserPlus className="h-5 w-5" style={{ color: theme?.primary }} />
           <span>Add Member</span>
         </CardTitle>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
           <div className="relative">
-            <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-gray-400" />
+            <Search
+              className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2"
+              style={{ color: theme?.tertiary }}
+            />
             <Input
               type="text"
               placeholder="Search members by name or number..."
               className="pl-9"
               value={searchQuery}
               onChange={(e) => onSearch(e.target.value)}
+              theme={theme}
             />
           </div>
 
@@ -69,7 +79,11 @@ export function MemberSearch({
                     size="sm"
                     onClick={() => onAddMember(member.id)}
                     disabled={isTimeBlockFull}
-                    variant="destructive"
+                    theme={theme}
+                    style={{
+                      backgroundColor: theme?.primary,
+                      color: "#ffffff",
+                    }}
                   >
                     <UserPlus className="mr-2 h-4 w-4" />
                     Add

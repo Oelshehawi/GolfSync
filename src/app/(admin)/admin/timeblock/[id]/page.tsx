@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Button } from "~/components/ui/button";
 import { ChevronLeft, Calendar } from "lucide-react";
 import { format } from "date-fns";
+import { getOrganizationTheme } from "~/app/teesheet/data";
 
 interface TimeBlockPageProps {
   params: {
@@ -22,6 +23,8 @@ export default async function TimeBlockPage({
 }: TimeBlockPageProps) {
   const { id } = await params;
   const query = (await searchParams)?.query || "";
+
+  const theme = await getOrganizationTheme();
 
   const timeBlockId = parseInt(id);
   if (isNaN(timeBlockId)) {
@@ -41,7 +44,7 @@ export default async function TimeBlockPage({
         {/* Header */}
         <div className="flex items-center space-x-4 border-b pb-4">
           <Link href="/admin">
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="sm" theme={theme}>
               <ChevronLeft className="mr-2 h-4 w-4" />
               Back to Teesheet
             </Button>
@@ -60,6 +63,7 @@ export default async function TimeBlockPage({
           <TimeBlockMemberManager
             timeBlock={timeBlock}
             searchResults={searchResults}
+            theme={theme}
           />
         </div>
       </div>
