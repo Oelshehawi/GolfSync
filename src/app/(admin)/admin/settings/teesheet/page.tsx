@@ -1,5 +1,4 @@
 import { db } from "~/server/db";
-import { teesheetConfigs } from "~/server/db/schema";
 import { ConfigManager } from "~/components/teesheet/ConfigManager";
 import {
   Card,

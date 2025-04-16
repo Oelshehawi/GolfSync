@@ -6,7 +6,7 @@ import { useDebouncedCallback } from "use-debounce";
 import {
   addMemberToTimeBlock,
   removeMemberFromTimeBlock,
-} from "~/app/teesheet/actions";
+} from "~/server/members/actions";
 import type { TimeBlock, Member } from "~/app/types/TeeSheetTypes";
 import { TimeBlockHeader } from "./TimeBlockHeader";
 import { MemberList } from "./MemberList";

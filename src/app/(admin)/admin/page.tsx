@@ -1,7 +1,7 @@
 import {
   getOrCreateTeesheet,
   getTimeBlocksForTeesheet,
-} from "~/app/teesheet/data";
+} from "~/server/teesheet/data";
 import { TeesheetView } from "~/components/teesheet/TeesheetView";
 import { TeesheetHeader } from "~/components/teesheet/TeesheetHeader";
 import { format } from "date-fns";
