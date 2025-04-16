@@ -40,17 +40,18 @@ export default async function AdminLayout({
 
   return (
     <div className={GeistSans.variable}>
-      <div
-        className="min-h-screen"
-        style={{ backgroundColor: theme.secondary }}
-      >
-        <Navigation
-          theme={theme}
-          logoUrl={organization.imageUrl}
-          organizationName={organization.name}
-        />
-        {children}
-      </div>
+
+        <div
+          className="min-h-screen"
+          style={{ backgroundColor: theme.secondary }}
+        >
+          <Navigation
+            theme={theme}
+            logoUrl={organization.imageUrl}
+            organizationName={organization.name}
+          />
+          <main className="container mx-auto px-4 py-8">{children}</main>
+        </div>
     </div>
   );
 }

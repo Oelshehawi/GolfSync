@@ -21,7 +21,7 @@ const Navigation = ({ theme, logoUrl, organizationName }: NavigationProps) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const navItems = [
-    { name: "Dashboard", href: "/admin" },
+    { name: "Teesheet", href: "/admin" },
     { name: "Members", href: "/admin/members" },
     { name: "Events", href: "/admin/events" },
     { name: "Settings", href: "/admin/settings" },
