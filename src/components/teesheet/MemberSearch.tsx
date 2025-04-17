@@ -3,6 +3,7 @@ import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
+import { LoadingSpinner } from "~/components/ui/loading-spinner";
 import type { Member } from "~/app/types/TeeSheetTypes";
 
 interface MemberSearchProps {
@@ -11,6 +12,7 @@ interface MemberSearchProps {
   searchResults: Member[];
   onAddMember: (memberId: number) => void;
   isTimeBlockFull: boolean;
+  isLoading?: boolean;
   theme?: {
     primary?: string;
     secondary?: string;
@@ -24,6 +26,7 @@ export function MemberSearch({
   searchResults,
   onAddMember,
   isTimeBlockFull,
+  isLoading = false,
   theme,
 }: MemberSearchProps) {
   return (
@@ -51,7 +54,11 @@ export function MemberSearch({
             />
           </div>
 
-          {searchResults.length > 0 && (
+          {isLoading ? (
+            <div className="flex justify-center py-4">
+              <LoadingSpinner theme={theme} />
+            </div>
+          ) : searchResults.length > 0 ? (
             <div className="space-y-3">
               {searchResults.map((member) => (
                 <div
@@ -91,13 +98,11 @@ export function MemberSearch({
                 </div>
               ))}
             </div>
-          )}
-
-          {searchQuery && searchResults.length === 0 && (
+          ) : searchQuery ? (
             <div className="rounded-lg border border-dashed p-4 text-center text-gray-500">
               No members found matching your search
             </div>
-          )}
+          ) : null}
         </div>
       </CardContent>
     </Card>

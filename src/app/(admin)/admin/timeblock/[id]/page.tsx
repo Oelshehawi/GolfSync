@@ -7,6 +7,7 @@ import { Button } from "~/components/ui/button";
 import { ChevronLeft, Calendar } from "lucide-react";
 import { format } from "date-fns";
 import { getOrganizationTheme } from "~/server/config/data";
+import { Suspense } from "react";
 
 interface TimeBlockPageProps {
   params: {
@@ -60,11 +61,14 @@ export default async function TimeBlockPage({
 
         {/* Content */}
         <div className="rounded-xl bg-white shadow-sm">
-          <TimeBlockMemberManager
-            timeBlock={timeBlock}
-            searchResults={searchResults}
-            theme={theme}
-          />
+          <Suspense fallback={<div>Loading...</div>}>
+            <TimeBlockMemberManager
+              timeBlock={timeBlock}
+              searchResults={searchResults}
+              theme={theme}
+              searchQuery={query}
+            />
+          </Suspense>
         </div>
       </div>
     </div>

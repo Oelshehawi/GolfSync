@@ -11,11 +11,12 @@ import type { TimeBlock, Member } from "~/app/types/TeeSheetTypes";
 import { TimeBlockHeader } from "./TimeBlockHeader";
 import { MemberList } from "./MemberList";
 import { MemberSearch } from "./MemberSearch";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 interface TimeBlockMemberManagerProps {
   timeBlock: TimeBlock;
   searchResults: Member[];
+  searchQuery: string;
   theme?: {
     primary?: string;
     secondary?: string;
@@ -26,16 +27,23 @@ interface TimeBlockMemberManagerProps {
 export function TimeBlockMemberManager({
   timeBlock,
   searchResults,
+  searchQuery,
   theme,
 }: TimeBlockMemberManagerProps) {
   const searchParams = useSearchParams();
   const pathname = usePathname();
   const router = useRouter();
-  const [localSearchQuery, setLocalSearchQuery] = useState(
-    searchParams.get("query")?.toString() ?? "",
-  );
+  const [localSearchQuery, setLocalSearchQuery] = useState(searchQuery);
+  const [isSearching, setIsSearching] = useState(false);
+
+  // Update local search query when server-side query changes
+  useEffect(() => {
+    setLocalSearchQuery(searchQuery);
+    setIsSearching(false);
+  }, [searchQuery]);
 
   const handleSearch = useDebouncedCallback((term: string) => {
+    setIsSearching(true);
     const params = new URLSearchParams(searchParams);
     if (term) {
       params.set("query", term);
@@ -78,6 +86,7 @@ export function TimeBlockMemberManager({
         searchResults={searchResults}
         onAddMember={handleAddMember}
         isTimeBlockFull={timeBlock.members.length >= 4}
+        isLoading={isSearching}
         theme={theme}
       />
 
