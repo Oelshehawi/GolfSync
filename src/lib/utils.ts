@@ -56,3 +56,82 @@ export function getOrganizationColors(theme?: {
     },
   };
 }
+
+/**
+ * Converts a local date to UTC midnight
+ */
+export function localToUTCMidnight(date: Date): Date {
+  return new Date(
+    Date.UTC(
+      date.getUTCFullYear(),
+      date.getUTCMonth(),
+      date.getUTCDate(),
+      0,
+      0,
+      0,
+      0,
+    ),
+  );
+}
+
+/**
+ * Converts a UTC date to local midnight
+ */
+export function utcToLocalMidnight(date: Date): Date {
+  const localDate = new Date(date);
+  return new Date(
+    localDate.getFullYear(),
+    localDate.getMonth(),
+    localDate.getDate(),
+    0,
+    0,
+    0,
+    0,
+  );
+}
+
+/**
+ * Checks if two dates are on the same day (ignoring time)
+ */
+export function isSameDay(date1: Date, date2: Date): boolean {
+  return (
+    date1.getUTCFullYear() === date2.getUTCFullYear() &&
+    date1.getUTCMonth() === date2.getUTCMonth() &&
+    date1.getUTCDate() === date2.getUTCDate()
+  );
+}
+
+/**
+ * Formats a date in the local timezone
+ */
+export function formatLocalDate(date: Date): string {
+  return format(date, "yyyy-MM-dd");
+}
+
+/**
+ * Formats a time in the local timezone
+ */
+export function formatLocalTime(date: Date): string {
+  return format(date, "HH:mm");
+}
+
+/**
+ * Formats a date and time in the local timezone
+ */
+export function formatLocalDateTime(date: Date): string {
+  return format(date, "yyyy-MM-dd HH:mm");
+}
+
+/**
+ * Formats a date for display in the local timezone
+ */
+export function formatLocalDisplayDate(date: Date): string {
+  return format(date, "EEEE, MMMM d, yyyy");
+}
+
+/**
+ * Formats a month for display in the local timezone
+ */
+export function formatLocalDisplayMonth(date: Date): string {
+  return format(date, "MMMM yyyy");
+}

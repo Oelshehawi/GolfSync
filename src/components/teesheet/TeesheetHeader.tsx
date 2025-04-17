@@ -13,6 +13,11 @@ import {
 } from "lucide-react";
 import { ConfigInfo } from "./ConfigInfo";
 import type { TeesheetConfig } from "~/app/types/TeeSheetTypes";
+import {
+  formatLocalDate,
+  formatLocalDisplayDate,
+  formatLocalDisplayMonth,
+} from "~/lib/utils";
 
 interface TeesheetHeaderProps {
   date: Date;
@@ -41,7 +46,7 @@ export function TeesheetHeader({
     const newDate = new Date(date);
     newDate.setDate(date.getDate() + days);
     const params = new URLSearchParams(searchParams.toString());
-    params.set("date", format(newDate, "yyyy-MM-dd"));
+    params.set("date", formatLocalDate(newDate));
     router.push(`?${params.toString()}`);
   };
 
@@ -57,8 +62,6 @@ export function TeesheetHeader({
     ["--org-tertiary" as string]: theme?.tertiary,
   } as React.CSSProperties;
 
-
-
   return (
     <div className="space-y-4" style={themeStyles}>
       <div className="flex items-center justify-between">
@@ -70,9 +73,7 @@ export function TeesheetHeader({
           >
             <ChevronLeft className="h-4 w-4" />
           </Button>
-          <h1 className="text-2xl font-bold">
-            {format(date, "EEEE, MMMM d, yyyy")}
-          </h1>
+          <h1 className="text-2xl font-bold">{formatLocalDisplayDate(date)}</h1>
           <Button
             variant="outline"
             size="icon"
@@ -99,7 +100,7 @@ export function TeesheetHeader({
           ) : (
             <CalendarIcon className="mr-2 h-4 w-4" />
           )}
-          {format(date, "MMMM yyyy")}
+          {formatLocalDisplayMonth(date)}
         </Button>
       </div>
 
@@ -109,18 +110,15 @@ export function TeesheetHeader({
         <Card className="mt-4 p-4">
           <Calendar
             selected={date}
-            month={date}
             modifiers={modifiers}
             theme={theme}
             onSelect={(newDate: Date | undefined) => {
               if (newDate) {
                 const params = new URLSearchParams(searchParams.toString());
-                params.set("date", format(newDate, "yyyy-MM-dd"));
+                params.set("date", formatLocalDate(newDate));
                 router.push(`?${params.toString()}`);
               }
             }}
-            numberOfMonths={3}
-            showOutsideDays
           />
         </Card>
       )}

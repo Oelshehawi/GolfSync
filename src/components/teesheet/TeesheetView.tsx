@@ -1,13 +1,16 @@
-import { format } from "date-fns";
-import type { TeeSheet, TimeBlock } from "~/app/types/TeeSheetTypes";
+import type {
+  TeeSheet,
+  TimeBlock,
+  TimeBlockWithMembers,
+} from "~/app/types/TeeSheetTypes";
 import { TimeBlock as TimeBlockComponent } from "./TimeBlock";
 
 interface TeesheetViewProps {
   teesheet: TeeSheet;
-  timeBlocks: TimeBlock[];
+  timeBlocks: TimeBlockWithMembers[];
 }
 
-export function TeesheetView({ teesheet, timeBlocks }: TeesheetViewProps) {
+export function TeesheetView({ timeBlocks }: TeesheetViewProps) {
   // Sort time blocks by start time
   const sortedTimeBlocks = [...timeBlocks].sort(
     (a, b) => a.startTime.getTime() - b.startTime.getTime(),
@@ -17,7 +20,15 @@ export function TeesheetView({ teesheet, timeBlocks }: TeesheetViewProps) {
     <div className="rounded-lg bg-white p-4 shadow">
       <div className="grid grid-cols-1 gap-4">
         {sortedTimeBlocks.map((block) => (
-          <TimeBlockComponent key={block.id} timeBlock={block} />
+          <TimeBlockComponent
+            key={block.id}
+            timeBlock={{
+              ...block,
+              startTime: new Date(block.startTime),
+              endTime: new Date(block.endTime),
+              members: block.members || [],
+            }}
+          />
         ))}
       </div>
     </div>

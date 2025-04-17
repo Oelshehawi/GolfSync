@@ -4,13 +4,17 @@ import { db } from "~/server/db";
 import { timeBlockMembers } from "~/server/db/schema";
 import { revalidatePath } from "next/cache";
 import { eq, and } from "drizzle-orm";
+import { getOrganizationId } from "~/lib/auth";
 
 export async function addMemberToTimeBlock(
   timeBlockId: number,
   memberId: number,
 ) {
   try {
+    const clerkOrgId = await getOrganizationId();
+
     await db.insert(timeBlockMembers).values({
+      clerkOrgId,
       timeBlockId,
       memberId,
     });
@@ -28,10 +32,13 @@ export async function removeMemberFromTimeBlock(
   memberId: number,
 ) {
   try {
+    const clerkOrgId = await getOrganizationId();
+
     await db
       .delete(timeBlockMembers)
       .where(
         and(
+          eq(timeBlockMembers.clerkOrgId, clerkOrgId),
           eq(timeBlockMembers.timeBlockId, timeBlockId),
           eq(timeBlockMembers.memberId, memberId),
         ),
@@ -50,15 +57,23 @@ export async function updateTimeBlockMembers(
   memberIds: number[],
 ) {
   try {
+    const clerkOrgId = await getOrganizationId();
+
     // First delete all existing members
     await db
       .delete(timeBlockMembers)
-      .where(eq(timeBlockMembers.timeBlockId, timeBlockId));
+      .where(
+        and(
+          eq(timeBlockMembers.clerkOrgId, clerkOrgId),
+          eq(timeBlockMembers.timeBlockId, timeBlockId),
+        ),
+      );
 
     // Then add new members if any
     if (memberIds.length > 0) {
       await db.insert(timeBlockMembers).values(
         memberIds.map((memberId) => ({
+          clerkOrgId,
           timeBlockId,
           memberId,
         })),

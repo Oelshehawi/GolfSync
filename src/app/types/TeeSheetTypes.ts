@@ -1,16 +1,7 @@
-import { members } from "~/server/db/schema";
-
-export interface Member {
-  id: number;
-  firstName: string;
-  lastName: string;
-  memberNumber: string;
-  avatarUrl?: string;
-}
-
 export interface TeeSheet {
   id: number;
-  date: string;
+  clerkOrgId: string;
+  date: Date;
   configId: number;
   createdAt: Date;
   updatedAt: Date | null;
@@ -18,27 +9,26 @@ export interface TeeSheet {
 
 export interface TimeBlock {
   id: number;
+  clerkOrgId: string;
   teesheetId: number;
   startTime: Date;
   endTime: Date;
   createdAt: Date;
   updatedAt: Date | null;
-  members: Member[];
 }
 
-export interface TimeBlockWithMember extends TimeBlock {
-  members: Member[];
-}
-
-export interface TimeBlockMember {
-  id: number;
-  timeBlockId: number;
-  memberId: number;
-  createdAt: Date;
+export interface TimeBlockWithMembers extends TimeBlock {
+  members: {
+    id: number;
+    firstName: string;
+    lastName: string;
+    memberNumber: string;
+  }[];
 }
 
 export interface TeesheetConfig {
   id: number;
+  clerkOrgId: string;
   name: string;
   startTime: string;
   endTime: string;
@@ -47,16 +37,15 @@ export interface TeesheetConfig {
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date | null;
-  rules?: TeesheetConfigRule[];
 }
 
 export interface TeesheetConfigRule {
   id: number;
+  clerkOrgId: string;
   configId: number;
-  dayOfWeek: number | null;
-  isWeekend: boolean | null;
-  startDate: string | null;
-  endDate: string | null;
+  daysOfWeek: number[];
+  startDate: Date | null;
+  endDate: Date | null;
   priority: number;
   isActive: boolean;
   createdAt: Date;

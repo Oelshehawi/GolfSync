@@ -27,6 +27,7 @@ export const members = createTable(
   "members",
   {
     id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+    clerkOrgId: varchar("clerk_org_id", { length: 50 }).notNull(),
     class: varchar("class", { length: 50 }).notNull(),
     memberNumber: varchar("member_number", { length: 20 }).notNull(),
     firstName: varchar("first_name", { length: 50 }).notNull(),
@@ -45,18 +46,18 @@ export const members = createTable(
     ),
   },
   (table) => [
-    // Unique constraints (automatically create necessary indexes)
-    unique("member_number_unq").on(table.memberNumber),
-    // Consider adding unique constraints for username and email if applicable
-    // unique("username_unq").on(table.username),
-    // unique("email_unq").on(table.email),
-
-    // Indexes for performance based on common search patterns
-    index("first_name_idx").on(table.firstName), // Keep if searching only by first name is common
-    index("last_name_idx").on(table.lastName), // Keep if searching only by last name is common
-
-    // Optional: Consider replacing the two above with this if combined search is primary
-    // index("name_idx").on(table.lastName, table.firstName),
+    // Unique constraints
+    unique("members_org_member_number_unq").on(
+      table.clerkOrgId,
+      table.memberNumber,
+    ),
+    unique("members_org_username_unq").on(table.clerkOrgId, table.username),
+    // Removed email unique constraint temporarily
+    // unique("members_org_email_unq").on(table.clerkOrgId, table.email),
+    // Indexes
+    index("members_org_id_idx").on(table.clerkOrgId),
+    index("members_first_name_idx").on(table.firstName),
+    index("members_last_name_idx").on(table.lastName),
   ],
 );
 
@@ -65,6 +66,7 @@ export const teesheetConfigs = createTable(
   "teesheet_configs",
   {
     id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+    clerkOrgId: varchar("clerk_org_id", { length: 50 }).notNull(),
     name: varchar("name", { length: 50 }).notNull(),
     startTime: varchar("start_time", { length: 5 }).notNull(),
     endTime: varchar("end_time", { length: 5 }).notNull(),
@@ -78,7 +80,10 @@ export const teesheetConfigs = createTable(
       () => new Date(),
     ),
   },
-  (table) => [unique("name_unq").on(table.name)],
+  (table) => [
+    unique("configs_org_name_unq").on(table.clerkOrgId, table.name),
+    index("configs_org_id_idx").on(table.clerkOrgId),
+  ],
 );
 
 // Configuration rules for when to apply each config
@@ -86,6 +91,7 @@ export const teesheetConfigRules = createTable(
   "teesheet_config_rules",
   {
     id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+    clerkOrgId: varchar("clerk_org_id", { length: 50 }).notNull(),
     configId: integer("config_id")
       .references(() => teesheetConfigs.id, { onDelete: "cascade" })
       .notNull(),
@@ -102,8 +108,9 @@ export const teesheetConfigRules = createTable(
     ),
   },
   (table) => [
-    index("config_id_idx").on(table.configId),
-    index("days_of_week_idx").on(table.daysOfWeek),
+    index("rules_org_id_idx").on(table.clerkOrgId),
+    index("rules_config_id_idx").on(table.configId),
+    index("rules_days_of_week_idx").on(table.daysOfWeek),
   ],
 );
 
@@ -112,7 +119,8 @@ export const teesheets = createTable(
   "teesheets",
   {
     id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
-    date: date("date").notNull(),
+    clerkOrgId: varchar("clerk_org_id", { length: 50 }).notNull(),
+    date: timestamp("date", { withTimezone: true }).notNull(),
     configId: integer("config_id")
       .references(() => teesheetConfigs.id)
       .notNull(),
@@ -123,7 +131,11 @@ export const teesheets = createTable(
       () => new Date(),
     ),
   },
-  (table) => [unique("date_unq").on(table.date)],
+  (table) => [
+    unique("teesheets_org_date_unq").on(table.clerkOrgId, table.date),
+    index("teesheets_org_id_idx").on(table.clerkOrgId),
+    index("teesheets_date_idx").on(table.date),
+  ],
 );
 
 // Time blocks
@@ -131,6 +143,7 @@ export const timeBlocks = createTable(
   "time_blocks",
   {
     id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+    clerkOrgId: varchar("clerk_org_id", { length: 50 }).notNull(),
     teesheetId: integer("teesheet_id")
       .references(() => teesheets.id, { onDelete: "cascade" })
       .notNull(),
@@ -144,8 +157,9 @@ export const timeBlocks = createTable(
     ),
   },
   (table) => [
-    index("teesheet_id_idx").on(table.teesheetId),
-    index("start_time_idx").on(table.startTime),
+    index("blocks_org_id_idx").on(table.clerkOrgId),
+    index("blocks_teesheet_id_idx").on(table.teesheetId),
+    index("blocks_start_time_idx").on(table.startTime),
   ],
 );
 
@@ -154,6 +168,7 @@ export const timeBlockMembers = createTable(
   "time_block_members",
   {
     id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+    clerkOrgId: varchar("clerk_org_id", { length: 50 }).notNull(),
     timeBlockId: integer("time_block_id")
       .references(() => timeBlocks.id, { onDelete: "cascade" })
       .notNull(),
@@ -165,8 +180,12 @@ export const timeBlockMembers = createTable(
       .notNull(),
   },
   (table) => [
-    index("time_block_id_idx").on(table.timeBlockId),
-    index("member_id_idx").on(table.memberId),
-    unique("time_block_member_unq").on(table.timeBlockId, table.memberId),
+    index("block_members_org_id_idx").on(table.clerkOrgId),
+    index("block_members_time_block_id_idx").on(table.timeBlockId),
+    index("block_members_member_id_idx").on(table.memberId),
+    unique("block_members_time_block_member_unq").on(
+      table.timeBlockId,
+      table.memberId,
+    ),
   ],
 );

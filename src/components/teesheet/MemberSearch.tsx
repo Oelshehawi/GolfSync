@@ -4,7 +4,7 @@ import { Input } from "~/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
 import { LoadingSpinner } from "~/components/ui/loading-spinner";
-import type { Member } from "~/app/types/TeeSheetTypes";
+import type { Member } from "~/app/types/MemberTypes";
 
 interface MemberSearchProps {
   searchQuery: string;
@@ -66,13 +66,13 @@ export function MemberSearch({
                   className="flex items-center justify-between rounded-lg border p-3 transition-colors hover:bg-gray-50"
                 >
                   <div className="flex items-center space-x-3">
-                    <Avatar>
+                    {/* <Avatar>
                       <AvatarImage src={member.avatarUrl} />
                       <AvatarFallback>
                         {member.firstName[0]}
                         {member.lastName[0]}
                       </AvatarFallback>
-                    </Avatar>
+                    </Avatar> */}
                     <div>
                       <p className="font-medium">
                         {member.firstName} {member.lastName}

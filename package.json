@@ -18,9 +18,9 @@
     "typecheck": "tsc --noEmit",
     "format:write": "prettier --write \"**/*.{ts,tsx,js,jsx,mdx}\" --cache",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,mdx}\" --cache",
-    "import-users": "tsx src/scripts/import-users.ts",
-    "analyze-duplicates": "tsx src/scripts/analyze-duplicates.ts",
-    "fix-member-numbers": "tsx src/scripts/fix-member-numbers.ts"
+    "import-users": "tsx scripts/import-users.ts",
+    "analyze-duplicates": "tsx scripts/analyze-duplicates.ts",
+    "fix-member-numbers": "tsx scripts/fix-member-numbers.ts"
   },
   "dependencies": {
     "@clerk/nextjs": "^6.14.3",
@@ -41,6 +41,7 @@
     "react": "^18.3.1",
     "react-day-picker": "^9.6.7",
     "react-dom": "^18.3.1",
+    "react-hot-toast": "^2.5.2",
     "tailwind-merge": "^3.2.0",
     "use-debounce": "^10.0.4",
     "zod": "^3.24.2"

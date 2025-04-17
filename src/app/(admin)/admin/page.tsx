@@ -4,7 +4,6 @@ import {
 } from "~/server/teesheet/data";
 import { TeesheetView } from "~/components/teesheet/TeesheetView";
 import { TeesheetHeader } from "~/components/teesheet/TeesheetHeader";
-import { format } from "date-fns";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { getConfigForDate, getOrganizationTheme } from "~/server/config/data";
 
@@ -52,16 +51,10 @@ export default async function AdminPage({ searchParams }: PageProps) {
 
     const timeBlocks = await getTimeBlocksForTeesheet(teesheet.id);
 
-
     return (
-      <div
-        className={`container mx-auto space-y-2 p-6`}
-      >
+      <div className="container mx-auto space-y-2 p-6">
         <TeesheetHeader date={date} config={config} theme={theme} />
         <Card>
-          <CardHeader>
-            <CardTitle>Teesheet for {format(date, "MMMM d, yyyy")}</CardTitle>
-          </CardHeader>
           <CardContent>
             <TeesheetView teesheet={teesheet} timeBlocks={timeBlocks} />
           </CardContent>

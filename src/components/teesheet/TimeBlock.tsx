@@ -2,10 +2,10 @@
 
 import { format } from "date-fns";
 import Link from "next/link";
-import type { TimeBlock as TimeBlockType } from "~/app/types/TeeSheetTypes";
+import type { TimeBlockWithMembers } from "~/app/types/TeeSheetTypes";
 
 interface TimeBlockProps {
-  timeBlock: TimeBlockType;
+  timeBlock: TimeBlockWithMembers;
 }
 
 export function TimeBlock({ timeBlock }: TimeBlockProps) {
