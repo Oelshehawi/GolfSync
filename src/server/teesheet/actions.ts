@@ -2,7 +2,6 @@
 
 import { db } from "~/server/db";
 import { timeBlocks, timeBlockMembers } from "~/server/db/schema";
-import { revalidatePath } from "next/cache";
 import { eq, and } from "drizzle-orm";
 
 export async function createTimeBlock(
@@ -11,61 +10,77 @@ export async function createTimeBlock(
   endTime: Date,
   memberIds?: number[],
 ) {
-  const [timeBlock] = await db
-    .insert(timeBlocks)
-    .values({
-      teesheetId,
-      startTime,
-      endTime,
-    })
-    .returning();
+  try {
+    const [timeBlock] = await db
+      .insert(timeBlocks)
+      .values({
+        teesheetId,
+        startTime,
+        endTime,
+      })
+      .returning();
 
-  if (memberIds && memberIds.length > 0) {
-    await db.insert(timeBlockMembers).values(
-      memberIds.map((memberId) => ({
-        timeBlockId: timeBlock?.id || 0,
-        memberId,
-      })),
-    );
+    if (!timeBlock) {
+      throw new Error("Failed to create time block");
+    }
+
+    if (memberIds && memberIds.length > 0) {
+      await db.insert(timeBlockMembers).values(
+        memberIds.map((memberId) => ({
+          timeBlockId: timeBlock.id,
+          memberId,
+        })),
+      );
+    }
+
+    return timeBlock;
+  } catch (error) {
+    console.error("Error creating time block:", error);
+    throw error;
   }
-
-  revalidatePath("/admin");
-  return timeBlock;
 }
 
 export async function updateTimeBlock(
   timeBlockId: number,
   memberIds: number[],
 ) {
-  // First, delete existing member associations
-  await db
-    .delete(timeBlockMembers)
-    .where(eq(timeBlockMembers.timeBlockId, timeBlockId));
+  try {
+    // First, delete existing member associations
+    await db
+      .delete(timeBlockMembers)
+      .where(eq(timeBlockMembers.timeBlockId, timeBlockId));
 
-  // Then, add new member associations if any
-  if (memberIds.length > 0) {
-    await db.insert(timeBlockMembers).values(
-      memberIds.map((memberId) => ({
-        timeBlockId,
-        memberId,
-      })),
-    );
+    // Then, add new member associations if any
+    if (memberIds.length > 0) {
+      await db.insert(timeBlockMembers).values(
+        memberIds.map((memberId) => ({
+          timeBlockId,
+          memberId,
+        })),
+      );
+    }
+
+    const [timeBlock] = await db
+      .select()
+      .from(timeBlocks)
+      .where(eq(timeBlocks.id, timeBlockId));
+
+    if (!timeBlock) {
+      throw new Error("Time block not found");
+    }
+
+    return timeBlock;
+  } catch (error) {
+    console.error("Error updating time block:", error);
+    throw error;
   }
-
-  const [timeBlock] = await db
-    .select()
-    .from(timeBlocks)
-    .where(eq(timeBlocks.id, timeBlockId));
-
-  if (!timeBlock) {
-    throw new Error("Time block not found");
-  }
-
-  revalidatePath("/admin");
-  return timeBlock;
 }
 
 export async function deleteTimeBlock(timeBlockId: number) {
-  await db.delete(timeBlocks).where(eq(timeBlocks.id, timeBlockId));
-  revalidatePath("/admin");
+  try {
+    await db.delete(timeBlocks).where(eq(timeBlocks.id, timeBlockId));
+  } catch (error) {
+    console.error("Error deleting time block:", error);
+    throw error;
+  }
 }

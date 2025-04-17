@@ -2,19 +2,21 @@
 
 @theme {
   /* Primary colors */
-  --color-primary: #1B4D3E; 
-  --color-primary-light: #2D6A5B; 
-  --color-primary-dark: #0A2F22; 
+  --color-primary: #1b4d3e;
+  --color-primary-light: #2d6a5b;
+  --color-primary-dark: #0a2f22;
 
   /* Secondary colors */
-  --color-sand: #E6D5B8; 
-  --color-sand-dark: #D4C4A8; 
+  --color-sand: #e6d5b8;
+  --color-sand-dark: #d4c4a8;
 
   /* Accent colors */
-  --color-accent: #C4A77D; 
-  --color-accent-light: #D8C4A3; 
+  --color-accent: #c4a77d;
+  --color-accent-light: #d8c4a3;
 
   /* Neutral colors */
-  --color-neutral: #F5F5F5; 
-  --color-neutral-dark: #333333; 
+  --color-neutral: #f5f5f5;
+  --color-neutral-dark: #333333;
+
 }
+

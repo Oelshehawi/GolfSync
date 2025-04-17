@@ -65,11 +65,10 @@ export const teesheetConfigs = createTable(
   "teesheet_configs",
   {
     id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
-    name: varchar("name", { length: 50 }).notNull(), // e.g., "Weekday", "Weekend", "Holiday"
-    description: varchar("description", { length: 200 }),
-    startTime: varchar("start_time", { length: 5 }).notNull(), // "09:00"
-    endTime: varchar("end_time", { length: 5 }).notNull(), // "18:00"
-    interval: integer("interval").notNull(), // 10 or 15 (minutes)
+    name: varchar("name", { length: 50 }).notNull(),
+    startTime: varchar("start_time", { length: 5 }).notNull(),
+    endTime: varchar("end_time", { length: 5 }).notNull(),
+    interval: integer("interval").notNull(),
     maxMembersPerBlock: integer("max_members_per_block").notNull().default(4),
     isActive: boolean("is_active").notNull().default(true),
     createdAt: timestamp("created_at", { withTimezone: true })
@@ -90,11 +89,10 @@ export const teesheetConfigRules = createTable(
     configId: integer("config_id")
       .references(() => teesheetConfigs.id, { onDelete: "cascade" })
       .notNull(),
-    dayOfWeek: integer("day_of_week"), // 0-6 (Sunday-Saturday), null for all days
-    isWeekend: boolean("is_weekend"), // true for weekends, false for weekdays, null for all
-    startDate: date("start_date"), // null for no start date
-    endDate: date("end_date"), // null for no end date
-    priority: integer("priority").notNull().default(0), // higher number = higher priority
+    daysOfWeek: integer("days_of_week").array(), // [1,2,3,4] for Mon-Thu
+    startDate: date("start_date"), // null for recurring
+    endDate: date("end_date"), // null for recurring
+    priority: integer("priority").notNull().default(0),
     isActive: boolean("is_active").notNull().default(true),
     createdAt: timestamp("created_at", { withTimezone: true })
       .default(sql`CURRENT_TIMESTAMP`)
@@ -105,7 +103,7 @@ export const teesheetConfigRules = createTable(
   },
   (table) => [
     index("config_id_idx").on(table.configId),
-    index("day_of_week_idx").on(table.dayOfWeek),
+    index("days_of_week_idx").on(table.daysOfWeek),
   ],
 );
 

@@ -15,7 +15,7 @@ import type {
 } from "~/app/types/TeeSheetTypes";
 import { generateTimeBlocks } from "~/lib/utils";
 import { createTimeBlock } from "~/server/teesheet/actions";
-import { getDefaultConfigForDate } from "~/server/config/data";
+import { getConfigForDate } from "~/server/config/data";
 
 interface TimeBlockQueryResult {
   id: number;
@@ -84,50 +84,60 @@ async function createTimeBlocksForTeesheet(
   config: TeesheetConfig,
   date: Date,
 ) {
-  const timeBlocks = generateTimeBlocks(date, config);
+  try {
+    const timeBlocks = generateTimeBlocks(date, config);
 
-  // Create time blocks in batch for each consecutive pair of times
-  for (let i = 0; i < timeBlocks.length - 1; i++) {
-    await createTimeBlock(teesheetId, timeBlocks[i]!, timeBlocks[i + 1]!);
+    // Create time blocks in batch for each consecutive pair of times
+    for (let i = 0; i < timeBlocks.length - 1; i++) {
+      await createTimeBlock(teesheetId, timeBlocks[i]!, timeBlocks[i + 1]!);
+    }
+  } catch (error) {
+    console.error("Error creating time blocks:", error);
+    throw new Error("Failed to create time blocks for teesheet");
   }
 }
 
 export async function getOrCreateTeesheet(date: Date): Promise<TeeSheet> {
   const formattedDate = format(date, "yyyy-MM-dd");
 
-  // Try to find existing teesheet
-  let teesheet = await db.query.teesheets.findFirst({
-    where: eq(teesheets.date, formattedDate),
-  });
+  try {
+    // Try to find existing teesheet
+    let teesheet = await db.query.teesheets.findFirst({
+      where: eq(teesheets.date, formattedDate),
+    });
 
-  // If no teesheet exists, create one with default config and time blocks
-  if (!teesheet) {
-    const defaultConfig = await getDefaultConfigForDate(date);
-    const [newTeesheet] = await db
-      .insert(teesheets)
-      .values({
-        date: formattedDate,
-        configId: defaultConfig.id,
-      })
-      .returning();
+    // If no teesheet exists, create one with the appropriate config and time blocks
+    if (!teesheet) {
+      const config = await getConfigForDate(date);
+      const [newTeesheet] = await db
+        .insert(teesheets)
+        .values({
+          date: formattedDate,
+          configId: config.id,
+        })
+        .returning();
 
-    if (!newTeesheet) {
-      throw new Error("Failed to create teesheet");
+      if (!newTeesheet) {
+        throw new Error("Failed to create teesheet");
+      }
+
+      // Create time blocks for the new teesheet
+      await createTimeBlocksForTeesheet(newTeesheet.id, config, date);
+
+      teesheet = newTeesheet;
     }
 
-    // Create time blocks for the new teesheet
-    await createTimeBlocksForTeesheet(newTeesheet.id, defaultConfig, date);
-
-    teesheet = newTeesheet;
+    return {
+      id: teesheet.id,
+      date: teesheet.date,
+      configId: teesheet.configId,
+      createdAt: teesheet.createdAt,
+      updatedAt: teesheet.updatedAt,
+    };
+  } catch (error) {
+    console.error("Error in getOrCreateTeesheet:", error);
+    throw new Error("Failed to get or create teesheet");
   }
-
-  return {
-    id: teesheet.id,
-    date: teesheet.date,
-    configId: teesheet.configId,
-    createdAt: teesheet.createdAt,
-    updatedAt: teesheet.updatedAt,
-  };
 }
 
 interface BlockQueryResult {

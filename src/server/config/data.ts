@@ -1,107 +1,156 @@
 import { db } from "~/server/db";
 import { teesheetConfigs, teesheetConfigRules } from "~/server/db/schema";
-import { eq, and, or, desc } from "drizzle-orm";
-import { isWeekend } from "date-fns";
+import { eq, and, or, desc, isNull, lte, gte, sql } from "drizzle-orm";
+import { format } from "date-fns";
 import type { TeesheetConfig } from "~/app/types/TeeSheetTypes";
 import { auth } from "@clerk/nextjs/server";
 import { clerkClient } from "@clerk/nextjs/server";
 
 export async function initializeDefaultConfigs() {
-  // Check if configs exist
-  const existingConfigs = await db.query.teesheetConfigs.findMany();
+  try {
+    // First check if we already have configs
+    const existingConfigs = await db.query.teesheetConfigs.findMany();
 
-  if (existingConfigs.length === 0) {
-    // Create default configurations
-    const [weekdayConfig] = await db
+    if (existingConfigs.length > 0) {
+      return; // Configs already exist, no need to create defaults
+    }
+
+    // Create default weekday config (Mon-Fri)
+    const weekdayConfig = await db
       .insert(teesheetConfigs)
       .values({
-        name: "Weekday",
+        name: "Weekday (Mon-Fri)",
         startTime: "07:00",
         endTime: "19:00",
         interval: 15,
         maxMembersPerBlock: 4,
         isActive: true,
       })
-      .returning();
+      .returning()
+      .then((result) => result[0]);
 
     if (!weekdayConfig) {
       throw new Error("Failed to create weekday config");
     }
 
-    const [weekendConfig] = await db
+    // Create default weekend config (Sat-Sun)
+    const weekendConfig = await db
       .insert(teesheetConfigs)
       .values({
-        name: "Weekend",
+        name: "Weekend (Sat-Sun)",
         startTime: "07:00",
         endTime: "19:00",
         interval: 20,
         maxMembersPerBlock: 4,
         isActive: true,
       })
-      .returning();
+      .returning()
+      .then((result) => result[0]);
 
     if (!weekendConfig) {
       throw new Error("Failed to create weekend config");
     }
 
-    // Create default rules
+    // Create rules
     await db.insert(teesheetConfigRules).values([
       {
         configId: weekdayConfig.id,
-        isWeekend: false,
+        daysOfWeek: [1, 2, 3, 4, 5], // Mon-Fri
         priority: 1,
         isActive: true,
       },
       {
         configId: weekendConfig.id,
-        isWeekend: true,
+        daysOfWeek: [0, 6], // Sat-Sun
         priority: 1,
         isActive: true,
       },
     ]);
+  } catch (error) {
+    console.error("Error initializing default configs:", error);
+    // If we get a unique constraint error, it means another process already created the configs
+    // We can safely ignore this error
+    if (error instanceof Error && error.message.includes("unique constraint")) {
+      return;
+    }
+    throw error;
   }
 }
 
-export async function getDefaultConfigForDate(
-  date: Date,
-): Promise<TeesheetConfig> {
-  // First ensure default configs exist
+export async function getConfigForDate(date: Date): Promise<TeesheetConfig> {
+  // First ensure we have default configs
   await initializeDefaultConfigs();
 
-  const isWeekendDay = isWeekend(date);
   const dayOfWeek = date.getDay();
+  const formattedDate = format(date, "yyyy-MM-dd");
 
-  // Find the highest priority matching rule
-  const rules = await db.query.teesheetConfigRules.findMany({
+  // First check for specific date rules
+  const specificDateRules = await db.query.teesheetConfigRules.findMany({
     where: and(
       eq(teesheetConfigRules.isActive, true),
+      eq(teesheetConfigRules.startDate, formattedDate),
+      eq(teesheetConfigRules.endDate, formattedDate),
+    ),
+    orderBy: desc(teesheetConfigRules.priority),
+    limit: 1,
+  });
+
+  if (specificDateRules.length > 0 && specificDateRules[0]) {
+    const config = await db.query.teesheetConfigs.findFirst({
+      where: eq(teesheetConfigs.id, specificDateRules[0].configId),
+    });
+
+    if (!config) {
+      throw new Error("Configuration not found");
+    }
+
+    return config;
+  }
+
+  // Then check for recurring day rules
+  const recurringRules = await db.query.teesheetConfigRules.findMany({
+    where: and(
+      eq(teesheetConfigRules.isActive, true),
+      sql`${dayOfWeek} = ANY(${teesheetConfigRules.daysOfWeek})`,
       or(
-        eq(teesheetConfigRules.isWeekend, isWeekendDay),
-        eq(teesheetConfigRules.dayOfWeek, dayOfWeek),
+        isNull(teesheetConfigRules.startDate),
+        lte(teesheetConfigRules.startDate, formattedDate),
+      ),
+      or(
+        isNull(teesheetConfigRules.endDate),
+        gte(teesheetConfigRules.endDate, formattedDate),
       ),
     ),
     orderBy: desc(teesheetConfigRules.priority),
     limit: 1,
   });
 
-  if (rules.length === 0) {
-    throw new Error("No matching configuration rule found");
+  if (recurringRules.length > 0 && recurringRules[0]) {
+    const config = await db.query.teesheetConfigs.findFirst({
+      where: eq(teesheetConfigs.id, recurringRules[0].configId),
+    });
+
+    if (!config) {
+      throw new Error("Configuration not found");
+    }
+
+    return config;
   }
 
-  const rule = rules[0];
-  if (!rule) {
-    throw new Error("Configuration rule not found");
-  }
-
-  const config = await db.query.teesheetConfigs.findFirst({
-    where: eq(teesheetConfigs.id, rule.configId),
+  // If no rules match, get the default config for the day of week
+  const defaultConfig = await db.query.teesheetConfigs.findFirst({
+    where: and(
+      eq(teesheetConfigs.isActive, true),
+      sql`${dayOfWeek} = ANY(${teesheetConfigRules.daysOfWeek})`,
+    ),
+    orderBy: desc(teesheetConfigRules.priority),
   });
 
-  if (!config) {
-    throw new Error("Configuration not found");
+  if (!defaultConfig) {
+    throw new Error("No matching configuration found");
   }
 
-  return config;
+  return defaultConfig;
 }
 
 export async function getOrganizationTheme() {

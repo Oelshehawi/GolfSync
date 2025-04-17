@@ -8,9 +8,19 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function generateTimeBlocks(date: Date, config: TeesheetConfig): Date[] {
+  if (!config.startTime || !config.endTime || !config.interval) {
+    throw new Error("Invalid configuration: missing required time parameters");
+  }
+
   const blocks: Date[] = [];
   const startTime = parse(config.startTime, "HH:mm", date);
   const endTime = parse(config.endTime, "HH:mm", date);
+
+  if (startTime >= endTime) {
+    throw new Error(
+      "Invalid configuration: start time must be before end time",
+    );
+  }
 
   for (
     let time = startTime;
