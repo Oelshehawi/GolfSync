@@ -61,8 +61,6 @@ export async function getOrCreateTeesheet(date: Date): Promise<TeeSheet> {
     ),
   });
 
-
-
   if (existingTeesheet) {
     return existingTeesheet;
   }

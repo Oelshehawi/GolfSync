@@ -1,29 +1,33 @@
 import { db } from "~/server/db";
-import { members } from "~/server/db/schema";
-import { sql } from "drizzle-orm";
-import type { Member } from "~/app/types/TeeSheetTypes";
+import type { Member } from "~/app/types/MemberTypes";
 
 // Helper function to map members to their full names
 export function mapMembersToNames(members: Member[]): string[] {
   return members.map((member) => `${member.firstName} ${member.lastName}`);
 }
 
-export async function searchMembers(query: string) {
-  if (query.length < 2) return [];
-
-  const searchTerm = query.toLowerCase();
+export async function searchMembers(
+  query: string = "",
+  page: number = 1,
+  pageSize: number = 20,
+) {
+  const offset = (page - 1) * pageSize;
 
   const results = await db.query.members.findMany({
-    where: (members, { or, like, sql }) =>
+    where: (members, { or, sql }) =>
       or(
-        sql`LOWER(${members.firstName}) LIKE ${`%${searchTerm}%`}`,
-        sql`LOWER(${members.lastName}) LIKE ${`%${searchTerm}%`}`,
-        sql`LOWER(${members.memberNumber}) LIKE ${`%${searchTerm}%`}`,
-        // Also search for full name concatenation
-        sql`LOWER(CONCAT(${members.firstName}, ' ', ${members.lastName})) LIKE ${`%${searchTerm}%`}`,
+        sql`LOWER(${members.firstName}) LIKE ${`%${query.toLowerCase()}%`}`,
+        sql`LOWER(${members.lastName}) LIKE ${`%${query.toLowerCase()}%`}`,
+        sql`LOWER(${members.memberNumber}) LIKE ${`%${query.toLowerCase()}%`}`,
+        sql`LOWER(CONCAT(${members.firstName}, ' ', ${members.lastName})) LIKE ${`%${query.toLowerCase()}%`}`,
       ),
-    limit: 10,
+    limit: pageSize + 1,
+    offset: offset,
+    orderBy: (members, { asc }) => [asc(members.lastName)],
   });
 
-  return results;
+  const hasMore = results.length > pageSize;
+  const items = results.slice(0, pageSize);
+
+  return { results: items, hasMore };
 }

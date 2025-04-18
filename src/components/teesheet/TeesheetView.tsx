@@ -1,8 +1,6 @@
-import type {
-  TeeSheet,
-  TimeBlock,
-  TimeBlockWithMembers,
-} from "~/app/types/TeeSheetTypes";
+"use client";
+
+import type { TeeSheet, TimeBlockWithMembers } from "~/app/types/TeeSheetTypes";
 import { TimeBlock as TimeBlockComponent } from "./TimeBlock";
 
 interface TeesheetViewProps {
@@ -10,7 +8,7 @@ interface TeesheetViewProps {
   timeBlocks: TimeBlockWithMembers[];
 }
 
-export function TeesheetView({ timeBlocks }: TeesheetViewProps) {
+export function TeesheetView({ teesheet, timeBlocks }: TeesheetViewProps) {
   // Sort time blocks by start time
   const sortedTimeBlocks = [...timeBlocks].sort(
     (a, b) => a.startTime.getTime() - b.startTime.getTime(),

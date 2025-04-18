@@ -3,6 +3,7 @@ import { GeistSans } from "geist/font/sans";
 import { type Metadata } from "next";
 import { auth, clerkClient } from "@clerk/nextjs/server";
 import Navigation from "~/components/Navigation";
+import { Toaster } from "react-hot-toast";
 
 export const metadata: Metadata = {
   title: "GolfSync",
@@ -50,6 +51,7 @@ export default async function AdminLayout({
           organizationName={organization.name}
         />
         <main className="container mx-auto px-4 py-8">{children}</main>
+        <Toaster position="top-right" />
       </div>
     </div>
   );

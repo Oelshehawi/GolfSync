@@ -1,22 +1,22 @@
 "use client";
 
-import { usePathname, useSearchParams } from "next/navigation";
-import { useRouter } from "next/navigation";
+import { useState, useCallback } from "react";
 import { useDebouncedCallback } from "use-debounce";
-import {
-  addMemberToTimeBlock,
-  removeMemberFromTimeBlock,
-} from "~/server/members/actions";
-import type { TimeBlock, Member } from "~/app/types/TeeSheetTypes";
-import { TimeBlockHeader } from "./TimeBlockHeader";
-import { MemberList } from "./MemberList";
 import { MemberSearch } from "./MemberSearch";
-import { useState, useEffect } from "react";
+import { TimeBlockPageHeader } from "./TimeBlockPageHeader";
+import { TimeBlockHeader } from "./TimeBlockHeader";
+import {
+  searchMembersAction,
+  addMemberToTimeBlock,
+} from "~/server/members/actions";
+import type { Member } from "~/app/types/MemberTypes";
+import type { TimeBlockWithMembers } from "~/app/types/TeeSheetTypes";
+import { removeMemberFromTimeBlock } from "~/server/members/actions";
+import { MemberList } from "./MemberList";
+import toast from "react-hot-toast";
 
 interface TimeBlockMemberManagerProps {
-  timeBlock: TimeBlock;
-  searchResults: Member[];
-  searchQuery: string;
+  timeBlock: TimeBlockWithMembers;
   theme?: {
     primary?: string;
     secondary?: string;
@@ -26,70 +26,82 @@ interface TimeBlockMemberManagerProps {
 
 export function TimeBlockMemberManager({
   timeBlock,
-  searchResults,
-  searchQuery,
   theme,
 }: TimeBlockMemberManagerProps) {
-  const searchParams = useSearchParams();
-  const pathname = usePathname();
-  const router = useRouter();
-  const [localSearchQuery, setLocalSearchQuery] = useState(searchQuery);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<Member[]>([]);
   const [isSearching, setIsSearching] = useState(false);
 
-  // Update local search query when server-side query changes
-  useEffect(() => {
-    setLocalSearchQuery(searchQuery);
-    setIsSearching(false);
-  }, [searchQuery]);
-
-  const handleSearch = useDebouncedCallback((term: string) => {
-    setIsSearching(true);
-    const params = new URLSearchParams(searchParams);
-    if (term) {
-      params.set("query", term);
-    } else {
-      params.delete("query");
+  const handleSearch = useCallback(async (query: string) => {
+    if (!query.trim()) {
+      setSearchResults([]);
+      return;
     }
-    router.push(`${pathname}?${params.toString()}`);
-  }, 300);
 
-  const handleSearchChange = (term: string) => {
-    setLocalSearchQuery(term);
-    handleSearch(term);
-  };
+    setIsSearching(true);
+    try {
+      const results = await searchMembersAction(query);
+
+      // Transform date strings to Date objects
+      const transformedResults = results.map((member) => ({
+        ...member,
+        dateOfBirth: member.dateOfBirth ? new Date(member.dateOfBirth) : null,
+        createdAt: new Date(member.createdAt),
+        updatedAt: member.updatedAt ? new Date(member.updatedAt) : null,
+      }));
+
+      setSearchResults(transformedResults);
+    } finally {
+      setIsSearching(false);
+    }
+  }, []);
+
+  const debouncedSearch = useDebouncedCallback(handleSearch, 300);
 
   const handleAddMember = async (memberId: number) => {
-    const result = await addMemberToTimeBlock(timeBlock.id, memberId);
-    if (result.success) {
-      router.refresh();
-    } else {
-      console.error(result.error);
+    try {
+      const result = await addMemberToTimeBlock(timeBlock.id, memberId);
+      if (result.success) {
+        toast.success("Member added successfully");
+      } else {
+        toast.error(result.error || "Failed to add member");
+      }
+    } catch (error) {
+      toast.error("An error occurred while adding the member");
+      console.error(error);
     }
   };
 
   const handleRemoveMember = async (memberId: number) => {
-    const result = await removeMemberFromTimeBlock(timeBlock.id, memberId);
-    if (result.success) {
-      router.refresh();
-    } else {
-      console.error(result.error);
+    try {
+      const result = await removeMemberFromTimeBlock(timeBlock.id, memberId);
+      if (result.success) {
+        toast.success("Member removed successfully");
+      } else {
+        toast.error(result.error || "Failed to remove member");
+      }
+    } catch (error) {
+      toast.error("An error occurred while removing the member");
+      console.error(error);
     }
   };
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-6">
+      <TimeBlockPageHeader timeBlock={timeBlock} theme={theme} />
       <TimeBlockHeader timeBlock={timeBlock} theme={theme} />
-
       <MemberSearch
-        searchQuery={localSearchQuery}
-        onSearch={handleSearchChange}
+        searchQuery={searchQuery}
+        onSearch={(query) => {
+          setSearchQuery(query);
+          debouncedSearch(query);
+        }}
         searchResults={searchResults}
+        isLoading={isSearching}
         onAddMember={handleAddMember}
         isTimeBlockFull={timeBlock.members.length >= 4}
-        isLoading={isSearching}
         theme={theme}
       />
-
       <MemberList
         members={timeBlock.members}
         onRemoveMember={handleRemoveMember}

@@ -1,18 +1,20 @@
+"use client";
+
+import { useState } from "react";
 import { Search, UserPlus } from "lucide-react";
-import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
+import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
-import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
 import { LoadingSpinner } from "~/components/ui/loading-spinner";
 import type { Member } from "~/app/types/MemberTypes";
 
 interface MemberSearchProps {
   searchQuery: string;
-  onSearch: (term: string) => void;
+  onSearch: (query: string) => void;
   searchResults: Member[];
+  isLoading: boolean;
   onAddMember: (memberId: number) => void;
   isTimeBlockFull: boolean;
-  isLoading?: boolean;
   theme?: {
     primary?: string;
     secondary?: string;
@@ -24,11 +26,13 @@ export function MemberSearch({
   searchQuery,
   onSearch,
   searchResults,
+  isLoading,
   onAddMember,
   isTimeBlockFull,
-  isLoading = false,
   theme,
 }: MemberSearchProps) {
+  const [localQuery, setLocalQuery] = useState(searchQuery);
+
   return (
     <Card theme={theme}>
       <CardHeader>
@@ -48,8 +52,11 @@ export function MemberSearch({
               type="text"
               placeholder="Search members by name or number..."
               className="pl-9"
-              value={searchQuery}
-              onChange={(e) => onSearch(e.target.value)}
+              value={localQuery}
+              onChange={(e) => {
+                setLocalQuery(e.target.value);
+                onSearch(e.target.value);
+              }}
               theme={theme}
             />
           </div>
@@ -66,13 +73,6 @@ export function MemberSearch({
                   className="flex items-center justify-between rounded-lg border p-3 transition-colors hover:bg-gray-50"
                 >
                   <div className="flex items-center space-x-3">
-                    {/* <Avatar>
-                      <AvatarImage src={member.avatarUrl} />
-                      <AvatarFallback>
-                        {member.firstName[0]}
-                        {member.lastName[0]}
-                      </AvatarFallback>
-                    </Avatar> */}
                     <div>
                       <p className="font-medium">
                         {member.firstName} {member.lastName}
@@ -98,7 +98,7 @@ export function MemberSearch({
                 </div>
               ))}
             </div>
-          ) : searchQuery ? (
+          ) : localQuery ? (
             <div className="rounded-lg border border-dashed p-4 text-center text-gray-500">
               No members found matching your search
             </div>

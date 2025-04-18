@@ -17,13 +17,15 @@ export interface TimeBlock {
   updatedAt: Date | null;
 }
 
+export interface TimeBlockMemberView {
+  id: number;
+  firstName: string;
+  lastName: string;
+  memberNumber: string;
+}
+
 export interface TimeBlockWithMembers extends TimeBlock {
-  members: {
-    id: number;
-    firstName: string;
-    lastName: string;
-    memberNumber: string;
-  }[];
+  members: TimeBlockMemberView[];
 }
 
 export interface TeesheetConfig {

@@ -2,10 +2,10 @@ import { format } from "date-fns";
 import { Clock } from "lucide-react";
 import { Badge } from "~/components/ui/badge";
 import { Card, CardHeader, CardTitle } from "~/components/ui/card";
-import type { TimeBlock } from "~/app/types/TeeSheetTypes";
+import type { TimeBlockWithMembers } from "~/app/types/TeeSheetTypes";
 
 interface TimeBlockHeaderProps {
-  timeBlock: TimeBlock;
+  timeBlock: TimeBlockWithMembers;
   theme?: {
     primary?: string;
     secondary?: string;
