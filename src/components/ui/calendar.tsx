@@ -29,7 +29,7 @@ function Calendar({
   } as React.CSSProperties;
 
   return (
-    <div className="relative">
+    <div className="relative w-full max-w-full overflow-hidden">
       <DayPicker
         selected={selected}
         mode="single"
@@ -40,8 +40,8 @@ function Calendar({
         style={themeStyles}
         classNames={{
           months:
-            "flex flex-col justify-evenly sm:flex-row space-y-4  sm:space-x-4 sm:space-y-0",
-          month: "space-y-4 space-x-0 border rounded-md p-6",
+            "flex flex-col sm:flex-row justify-between space-y-4 sm:space-y-0 sm:space-x-2 md:space-x-4",
+          month: "w-full place-items-center space-y-2 space-x-0 border rounded-md p-2 sm:p-3",
           caption: "flex justify-center pt-1 relative items-center",
           caption_label: "text-sm font-medium",
           nav: "absolute w-full top-[50%] -translate-y-[50%] flex justify-between left-0 right-0 px-2",
@@ -50,11 +50,11 @@ function Calendar({
           button_previous:
             "h-7 w-7 p-0 hover:bg-[var(--org-primary)] hover:cursor-pointer rounded-md",
           day: cn(
-            "h-12 w-12 rounded-xl text-center font-normal",
+            "h-7 w-7 sm:h-8 sm:w-8 p-0 font-normal text-xs sm:text-sm rounded-md",
             "[&:not([data-outside='true'])]:hover:bg-[var(--org-primary)] [&:not([data-outside='true'])]:hover:cursor-pointer [&:not([data-outside='true'])]:hover:text-white",
           ),
           day_button: cn(
-            "h-12 w-12 rounded-xl text-center font-normal",
+            "h-7 w-7 sm:h-8 sm:w-8 p-0 font-normal text-xs sm:text-sm rounded-md",
             "[&:not([data-outside='true'])]:hover:bg-[var(--org-primary)] [&:not([data-outside='true'])]:hover:cursor-pointer [&:not([data-outside='true'])]:hover:text-white",
           ),
           today:
