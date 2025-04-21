@@ -3,6 +3,7 @@
 import * as React from "react";
 import { DayPicker, type DayPickerProps } from "react-day-picker";
 import { cn } from "~/lib/utils";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 export interface CalendarProps
   extends Omit<DayPickerProps, "mode" | "selected" | "onSelect"> {
@@ -28,41 +29,77 @@ function Calendar({
     ["--org-tertiary" as string]: theme?.tertiary,
   } as React.CSSProperties;
 
+  const [month, setMonth] = React.useState<Date>(selected || new Date());
+  const [numberOfMonths, setNumberOfMonths] = React.useState(3);
+
+  React.useEffect(() => {
+    const handleResize = () => {
+      setNumberOfMonths(window.innerWidth <= 1024 ? 2 : 3);
+    };
+
+    // Set initial value
+    handleResize();
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
   return (
     <div className="relative w-full max-w-full overflow-hidden">
-      <DayPicker
-        selected={selected}
-        mode="single"
-        onSelect={onSelect}
-        numberOfMonths={3}
-        modifiers={modifiers}
-        modifiersClassNames={modifiersClassNames}
-        style={themeStyles}
-        classNames={{
-          months:
-            "flex flex-col sm:flex-row justify-between space-y-4 sm:space-y-0 sm:space-x-2 md:space-x-4",
-          month: "w-full place-items-center space-y-2 space-x-0 border rounded-md p-2 sm:p-3",
-          caption: "flex justify-center pt-1 relative items-center",
-          caption_label: "text-sm font-medium",
-          nav: "absolute w-full top-[50%] -translate-y-[50%] flex justify-between left-0 right-0 px-2",
-          button_next:
-            "h-7 w-7 hover:cursor-pointer p-0 hover:bg-[var(--org-primary)] rounded-md",
-          button_previous:
-            "h-7 w-7 p-0 hover:bg-[var(--org-primary)] hover:cursor-pointer rounded-md",
-          day: cn(
-            "h-7 w-7 sm:h-8 sm:w-8 p-0 font-normal text-xs sm:text-sm rounded-md",
-            "[&:not([data-outside='true'])]:hover:bg-[var(--org-primary)] [&:not([data-outside='true'])]:hover:cursor-pointer [&:not([data-outside='true'])]:hover:text-white",
-          ),
-          day_button: cn(
-            "h-7 w-7 sm:h-8 sm:w-8 p-0 font-normal text-xs sm:text-sm rounded-md",
-            "[&:not([data-outside='true'])]:hover:bg-[var(--org-primary)] [&:not([data-outside='true'])]:hover:cursor-pointer [&:not([data-outside='true'])]:hover:text-white",
-          ),
-          today:
-            "[&:not([data-outside='true'])]:bg-[var(--org-secondary)] [&:not([data-outside='true'])]:text-accent-foreground",
-          selected:
-            "[&:not([data-outside='true'])]:!bg-[var(--org-primary)] [&:not([data-outside='true'])]:text-white [&:not([data-outside='true'])]:text-primary-foreground",
-        }}
-      />
+      <div className="flex items-center justify-evenly">
+        <button
+          onClick={() => {
+            const newMonth = new Date(month);
+            newMonth.setMonth(month.getMonth() - 1);
+            setMonth(newMonth);
+          }}
+          className="inline-flex h-10 w-10 items-center justify-center rounded-md transition-colors hover:cursor-pointer hover:bg-[var(--org-primary)] hover:text-white"
+        >
+          <ChevronLeft className="h-6 w-6" />
+        </button>
+        <DayPicker
+          selected={selected}
+          mode="single"
+          onSelect={onSelect}
+          month={month}
+          onMonthChange={setMonth}
+          numberOfMonths={numberOfMonths}
+          modifiers={modifiers}
+          modifiersClassNames={modifiersClassNames}
+          style={themeStyles}
+          hideNavigation
+          classNames={{
+            months:
+              "flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-2",
+            month:
+              "w-full max-w-[350px] place-items-center space-y-2 space-x-0 border rounded-md p-2 sm:p-3",
+            caption: "flex justify-center pt-1 relative items-center",
+            caption_label: "text-sm font-medium",
+            day: cn(
+              "h-7 w-8 sm:h-8 sm:w-10 lg:w-12 p-0 font-normal text-xs sm:text-sm rounded-md",
+              "[&:not([data-outside='true'])]:hover:bg-[var(--org-primary)] [&:not([data-outside='true'])]:hover:cursor-pointer [&:not([data-outside='true'])]:hover:text-white",
+            ),
+            day_button: cn(
+              "h-7 w-8 sm:h-8 sm:w-10 lg:w-12 p-0 font-normal text-xs sm:text-sm rounded-md",
+              "[&:not([data-outside='true'])]:hover:bg-[var(--org-primary)] [&:not([data-outside='true'])]:hover:cursor-pointer [&:not([data-outside='true'])]:hover:text-white",
+            ),
+            today:
+              "[&:not([data-outside='true'])]:bg-[var(--org-secondary)] [&:not([data-outside='true'])]:text-accent-foreground",
+            selected:
+              "[&:not([data-outside='true'])]:!bg-[var(--org-primary)] [&:not([data-outside='true'])]:text-white [&:not([data-outside='true'])]:text-primary-foreground",
+          }}
+        />
+        <button
+          onClick={() => {
+            const newMonth = new Date(month);
+            newMonth.setMonth(month.getMonth() + 1);
+            setMonth(newMonth);
+          }}
+          className="inline-flex h-10 w-10 items-center justify-center rounded-md transition-colors hover:cursor-pointer hover:bg-[var(--org-primary)] hover:text-white"
+        >
+          <ChevronRight className="h-6 w-6" />
+        </button>
+      </div>
     </div>
   );
 }
