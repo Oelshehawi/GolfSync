@@ -1,19 +1,21 @@
 "use server";
 
-import { auth } from "@clerk/nextjs/server";
 import { db } from "~/server/db";
-import { timeBlockMembers } from "~/server/db/schema";
+import { members, timeBlockMembers } from "~/server/db/schema";
 import { eq, and } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { getOrganizationId } from "~/lib/auth";
 import { searchMembers } from "./data";
 
+// Time block related functions
 export async function addMemberToTimeBlock(
   timeBlockId: number,
   memberId: number,
 ) {
   try {
-    const session = await auth();
-    if (!session.orgId) {
+    const orgId = await getOrganizationId();
+
+    if (!orgId) {
       return { success: false, error: "No organization selected" };
     }
 
@@ -31,7 +33,7 @@ export async function addMemberToTimeBlock(
 
     // Add member to time block
     await db.insert(timeBlockMembers).values({
-      clerkOrgId: session.orgId,
+      clerkOrgId: orgId,
       timeBlockId,
       memberId,
     });
@@ -49,8 +51,9 @@ export async function removeMemberFromTimeBlock(
   memberId: number,
 ) {
   try {
-    const session = await auth();
-    if (!session.orgId) {
+    const orgId = await getOrganizationId();
+
+    if (!orgId) {
       return { success: false, error: "No organization selected" };
     }
 
@@ -60,7 +63,7 @@ export async function removeMemberFromTimeBlock(
         and(
           eq(timeBlockMembers.timeBlockId, timeBlockId),
           eq(timeBlockMembers.memberId, memberId),
-          eq(timeBlockMembers.clerkOrgId, session.orgId),
+          eq(timeBlockMembers.clerkOrgId, orgId),
         ),
       );
 
@@ -72,8 +75,67 @@ export async function removeMemberFromTimeBlock(
   }
 }
 
+// Member management functions
+export async function createMember(data: {
+  memberNumber: string;
+  firstName: string;
+  lastName: string;
+  username: string;
+  email: string;
+  class: string;
+  gender?: string;
+  dateOfBirth?: string;
+  handicap?: string;
+  bagNumber?: string;
+}) {
+  const orgId = await getOrganizationId();
+  await db.insert(members).values({
+    ...data,
+    clerkOrgId: orgId,
+  });
+
+  revalidatePath("/admin/members");
+}
+
+export async function updateMember(
+  id: number,
+  data: {
+    memberNumber: string;
+    firstName: string;
+    lastName: string;
+    username: string;
+    email: string;
+    class: string;
+    gender?: string;
+    dateOfBirth?: string;
+    handicap?: string;
+    bagNumber?: string;
+  },
+) {
+  const orgId = await getOrganizationId();
+  await db
+    .update(members)
+    .set(data)
+    .where(and(eq(members.id, id), eq(members.clerkOrgId, orgId)));
+
+  revalidatePath("/admin/members");
+}
+
+export async function deleteMember(id: number) {
+  const orgId = await getOrganizationId();
+  await db
+    .delete(members)
+    .where(and(eq(members.id, id), eq(members.clerkOrgId, orgId)));
+
+  revalidatePath("/admin/members");
+}
+
 export async function searchMembersAction(query: string = "") {
-  // Limit to 10 results for better performance
   const { results } = await searchMembers(query, 1, 10);
-  return results;
+  return results.map((member) => ({
+    ...member,
+    dateOfBirth: member.dateOfBirth ? new Date(member.dateOfBirth) : null,
+    createdAt: new Date(member.createdAt),
+    updatedAt: member.updatedAt ? new Date(member.updatedAt) : null,
+  }));
 }

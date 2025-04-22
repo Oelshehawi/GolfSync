@@ -1,9 +1,48 @@
 import { db } from "~/server/db";
+import { members } from "~/server/db/schema";
+import { eq, sql, and } from "drizzle-orm";
+import { getOrganizationId } from "~/lib/auth";
 import type { Member } from "~/app/types/MemberTypes";
 
 // Helper function to map members to their full names
 export function mapMembersToNames(members: Member[]): string[] {
   return members.map((member) => `${member.firstName} ${member.lastName}`);
+}
+
+function convertToMember(row: any): Member {
+  return {
+    ...row,
+    dateOfBirth: row.dateOfBirth ? new Date(row.dateOfBirth) : null,
+    createdAt: new Date(row.createdAt),
+    updatedAt: row.updatedAt ? new Date(row.updatedAt) : null,
+  };
+}
+
+export async function getMembers(): Promise<Member[]> {
+  const orgId = await getOrganizationId();
+  const rows = await db
+    .select()
+    .from(members)
+    .where(eq(members.clerkOrgId, orgId))
+    .orderBy(members.lastName, members.firstName);
+
+  return rows.map(convertToMember);
+}
+
+export async function searchMembersList(query: string): Promise<Member[]> {
+  const orgId = await getOrganizationId();
+  const rows = await db
+    .select()
+    .from(members)
+    .where(
+      and(
+        eq(members.clerkOrgId, orgId),
+        sql`CONCAT(${members.firstName}, ' ', ${members.lastName}) ILIKE ${`%${query}%`} OR ${members.memberNumber} ILIKE ${`%${query}%`}`,
+      ),
+    )
+    .orderBy(members.lastName, members.firstName);
+
+  return rows.map(convertToMember);
 }
 
 export async function searchMembers(

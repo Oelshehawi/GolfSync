@@ -39,11 +39,18 @@ export default async function AdminLayout({
     return <div>No theme found in organization metadata</div>;
   }
 
+  const themeStyles = {
+    ["--org-primary" as string]: theme?.primary,
+    ["--org-secondary" as string]: theme?.secondary,
+    ["--org-tertiary" as string]: theme?.tertiary,
+  } as React.CSSProperties;
+
+
   return (
     <div className={GeistSans.variable}>
       <div
-        className="min-h-screen"
-        style={{ backgroundColor: theme.secondary }}
+        className="min-h-screen bg-[var(--org-secondary)]"
+        style={themeStyles}
       >
         <Navigation
           theme={theme}
