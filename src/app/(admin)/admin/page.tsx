@@ -6,7 +6,7 @@ import { TeesheetView } from "~/components/teesheet/TeesheetView";
 import { TeesheetHeader } from "~/components/teesheet/TeesheetHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { getOrganizationTheme } from "~/server/config/data";
-import { getConfigForDate } from "~/server/settings/data";
+import { getTeesheetConfigs } from "~/server/settings/data";
 
 interface PageProps {
   searchParams?: {
@@ -48,13 +48,22 @@ export default async function AdminPage({ searchParams }: PageProps) {
 
     const timeBlocks = await getTimeBlocksForTeesheet(teesheet.id);
     const theme = await getOrganizationTheme();
+    const configsResult = await getTeesheetConfigs();
+
+    if (!Array.isArray(configsResult)) {
+      throw new Error(configsResult.error || "Failed to load configurations");
+    }
 
     return (
       <div className="container mx-auto space-y-2 p-6">
         <TeesheetHeader date={date} config={config} theme={theme} />
         <Card>
           <CardContent>
-            <TeesheetView teesheet={teesheet} timeBlocks={timeBlocks} />
+            <TeesheetView
+              teesheet={teesheet}
+              timeBlocks={timeBlocks}
+              availableConfigs={configsResult}
+            />
           </CardContent>
         </Card>
       </div>

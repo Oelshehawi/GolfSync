@@ -8,7 +8,7 @@ import {
   CardTitle,
   CardContent,
 } from "~/components/ui/card";
-import { Calendar, Plus } from "lucide-react";
+import { Calendar, Plus, Shield } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { TeesheetConfigDialog } from "./TeesheetConfigDialog";
 import type {
@@ -31,6 +31,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "~/components/ui/alert-dialog";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "~/components/ui/tooltip";
+import { Badge } from "~/components/ui/badge";
 
 interface TeesheetSettingsProps {
   initialConfigs: TeesheetConfig[];
@@ -98,6 +105,10 @@ export function TeesheetSettings({ initialConfigs }: TeesheetSettingsProps) {
   };
 
   const handleDeleteClick = (config: TeesheetConfig) => {
+    if (config.isSystemConfig) {
+      toast.error("System configurations cannot be deleted");
+      return;
+    }
     setDeleteConfig(config);
   };
 
@@ -152,22 +163,59 @@ export function TeesheetSettings({ initialConfigs }: TeesheetSettingsProps) {
                 className="flex flex-col space-y-2 rounded-lg border p-4 hover:bg-gray-50"
               >
                 <div className="flex items-center justify-between">
-                  <h3 className="font-medium">{config.name}</h3>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-medium">{config.name}</h3>
+                    {config.isSystemConfig && (
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger>
+                            <Badge
+                              variant="secondary"
+                              className="flex items-center gap-1"
+                            >
+                              <Shield className="h-3 w-3" />
+                              System
+                            </Badge>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>
+                              This is a system configuration that cannot be
+                              deleted or deactivated
+                            </p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    )}
+                  </div>
                   <div className="flex gap-2">
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => handleOpenDialog(config)}
                     >
-                      Edit
+                      {config.isSystemConfig ? "View" : "Edit"}
                     </Button>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => handleDeleteClick(config)}
-                    >
-                      Delete
-                    </Button>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span>
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => handleDeleteClick(config)}
+                              disabled={config.isSystemConfig}
+                            >
+                              Delete
+                            </Button>
+                          </span>
+                        </TooltipTrigger>
+                        {config.isSystemConfig && (
+                          <TooltipContent>
+                            <p>System configurations cannot be deleted</p>
+                          </TooltipContent>
+                        )}
+                      </Tooltip>
+                    </TooltipProvider>
                   </div>
                 </div>
                 <div className="text-sm text-gray-500">

@@ -5,11 +5,10 @@ import {
   timeBlockMembers,
   members,
 } from "~/server/db/schema";
-import { eq, and, sql } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { getOrganizationId } from "~/lib/auth";
 import type {
   TeeSheet,
-  TimeBlock,
   TimeBlockWithMembers,
   TeesheetConfig,
 } from "~/app/types/TeeSheetTypes";
@@ -17,7 +16,7 @@ import { getConfigForDate } from "~/server/settings/data";
 import { generateTimeBlocks } from "~/lib/utils";
 import { localToUTCMidnight } from "~/lib/utils";
 
-async function createTimeBlocksForTeesheet(
+export async function createTimeBlocksForTeesheet(
   teesheetId: number,
   config: TeesheetConfig,
   date: Date,

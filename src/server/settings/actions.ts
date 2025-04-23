@@ -1,10 +1,17 @@
 "use server";
 
 import { db } from "~/server/db";
-import { teesheetConfigs, teesheetConfigRules } from "~/server/db/schema";
+import {
+  teesheetConfigs,
+  teesheetConfigRules,
+  teesheets,
+  timeBlocks,
+} from "~/server/db/schema";
 import { eq, and } from "drizzle-orm";
 import { getOrganizationId } from "~/lib/auth";
 import { revalidatePath } from "next/cache";
+import { createTimeBlocksForTeesheet } from "~/server/teesheet/data";
+import { convertToTeesheetConfig } from "./data";
 
 export async function createTeesheetConfig(data: {
   name: string;
@@ -12,6 +19,15 @@ export async function createTeesheetConfig(data: {
   endTime: string;
   interval: number;
   maxMembersPerBlock: number;
+  isActive?: boolean;
+  isSystemConfig?: boolean;
+  rules: {
+    daysOfWeek: number[] | null;
+    startDate: string | null;
+    endDate: string | null;
+    priority: number;
+    isActive: boolean;
+  }[];
 }) {
   const orgId = await getOrganizationId();
 
@@ -20,17 +36,53 @@ export async function createTeesheetConfig(data: {
   }
 
   try {
+    // Create the config
     const [newConfig] = await db
       .insert(teesheetConfigs)
       .values({
-        ...data,
+        name: data.name,
+        startTime: data.startTime,
+        endTime: data.endTime,
+        interval: data.interval,
+        maxMembersPerBlock: data.maxMembersPerBlock,
+        isActive: data.isActive ?? true,
+        isSystemConfig: data.isSystemConfig ?? false,
         clerkOrgId: orgId,
       })
       .returning();
 
+    if (!newConfig) {
+      throw new Error("Failed to create configuration");
+    }
+
+    // Create the rules
+    if (data.rules && data.rules.length > 0) {
+      const rules = await Promise.all(
+        data.rules.map((rule) =>
+          db
+            .insert(teesheetConfigRules)
+            .values({
+              clerkOrgId: orgId,
+              configId: newConfig.id,
+              daysOfWeek: rule.daysOfWeek,
+              startDate: rule.startDate,
+              endDate: rule.endDate,
+              priority: rule.priority,
+              isActive: rule.isActive,
+            })
+            .returning(),
+        ),
+      );
+
+      if (!rules.every((r) => r[0])) {
+        throw new Error("Failed to create rules");
+      }
+    }
+
     revalidatePath("/settings");
     return { success: true, data: newConfig };
   } catch (error) {
+    console.error("Error creating teesheet config:", error);
     return { success: false, error: "Failed to create configuration" };
   }
 }
@@ -43,6 +95,15 @@ export async function updateTeesheetConfig(
     endTime?: string;
     interval?: number;
     maxMembersPerBlock?: number;
+    isActive?: boolean;
+    isSystemConfig?: boolean;
+    rules?: {
+      daysOfWeek: number[] | null;
+      startDate: string | null;
+      endDate: string | null;
+      priority: number;
+      isActive: boolean;
+    }[];
   },
 ) {
   const orgId = await getOrganizationId();
@@ -52,17 +113,79 @@ export async function updateTeesheetConfig(
   }
 
   try {
+    // Update the config
     const [updatedConfig] = await db
       .update(teesheetConfigs)
-      .set(data)
+      .set({
+        name: data.name,
+        startTime: data.startTime,
+        endTime: data.endTime,
+        interval: data.interval,
+        maxMembersPerBlock: data.maxMembersPerBlock,
+        isActive: data.isActive,
+        isSystemConfig: data.isSystemConfig,
+      })
       .where(
         and(eq(teesheetConfigs.id, id), eq(teesheetConfigs.clerkOrgId, orgId)),
       )
       .returning();
 
+    if (!updatedConfig) {
+      throw new Error("Failed to update configuration");
+    }
+
+    // If isActive status changed, update all associated rules
+    if (data.isActive !== undefined) {
+      await db
+        .update(teesheetConfigRules)
+        .set({ isActive: data.isActive })
+        .where(
+          and(
+            eq(teesheetConfigRules.configId, id),
+            eq(teesheetConfigRules.clerkOrgId, orgId),
+          ),
+        );
+    }
+
+    // Update the rules if provided
+    if (data.rules && data.rules.length > 0) {
+      // First delete existing rules
+      await db
+        .delete(teesheetConfigRules)
+        .where(
+          and(
+            eq(teesheetConfigRules.configId, id),
+            eq(teesheetConfigRules.clerkOrgId, orgId),
+          ),
+        );
+
+      // Then create new rules
+      const rules = await Promise.all(
+        data.rules.map((rule) =>
+          db
+            .insert(teesheetConfigRules)
+            .values({
+              clerkOrgId: orgId,
+              configId: id,
+              daysOfWeek: rule.daysOfWeek,
+              startDate: rule.startDate,
+              endDate: rule.endDate,
+              priority: rule.priority,
+              isActive: data.isActive ?? rule.isActive, // Use config's isActive if provided
+            })
+            .returning(),
+        ),
+      );
+
+      if (!rules.every((r) => r[0])) {
+        throw new Error("Failed to update rules");
+      }
+    }
+
     revalidatePath("/settings");
     return { success: true, data: updatedConfig };
   } catch (error) {
+    console.error("Error updating teesheet config:", error);
     return { success: false, error: "Failed to update configuration" };
   }
 }
@@ -85,6 +208,7 @@ export async function deleteTeesheetConfig(id: number) {
     revalidatePath("/settings");
     return { success: true, data: deletedConfig };
   } catch (error) {
+    console.error("Error deleting teesheet config:", error);
     return { success: false, error: "Failed to delete configuration" };
   }
 }
@@ -181,4 +305,70 @@ export async function deleteTeesheetConfigRule(ruleId: number) {
   }
 
   return { success: true, data: deletedRule };
+}
+
+export async function updateTeesheetConfigForDate(
+  teesheetId: number,
+  configId: number,
+) {
+  const orgId = await getOrganizationId();
+
+  if (!orgId) {
+    return { success: false, error: "No organization selected" };
+  }
+
+  try {
+    // Get the new config
+    const config = await db.query.teesheetConfigs.findFirst({
+      where: and(
+        eq(teesheetConfigs.id, configId),
+        eq(teesheetConfigs.clerkOrgId, orgId),
+      ),
+      with: {
+        rules: {
+          where: eq(teesheetConfigRules.clerkOrgId, orgId),
+        },
+      },
+    });
+
+    if (!config) {
+      return { success: false, error: "Configuration not found" };
+    }
+
+    const newConfig = convertToTeesheetConfig(config);
+
+    // Update the teesheet's config
+    const [updatedTeesheet] = await db
+      .update(teesheets)
+      .set({ configId })
+      .where(and(eq(teesheets.id, teesheetId), eq(teesheets.clerkOrgId, orgId)))
+      .returning();
+
+    if (!updatedTeesheet) {
+      return { success: false, error: "Failed to update teesheet" };
+    }
+
+    // Delete existing time blocks
+    await db
+      .delete(timeBlocks)
+      .where(
+        and(
+          eq(timeBlocks.teesheetId, teesheetId),
+          eq(timeBlocks.clerkOrgId, orgId),
+        ),
+      );
+
+    // Recreate time blocks for the teesheet with the new config
+    await createTimeBlocksForTeesheet(
+      teesheetId,
+      newConfig,
+      updatedTeesheet.date,
+    );
+
+    revalidatePath("/teesheet");
+    return { success: true, data: updatedTeesheet };
+  } catch (error) {
+    console.error("Error updating teesheet config:", error);
+    return { success: false, error: "Failed to update teesheet configuration" };
+  }
 }

@@ -74,6 +74,7 @@ export const teesheetConfigs = createTable(
     interval: integer("interval").notNull(),
     maxMembersPerBlock: integer("max_members_per_block").notNull().default(4),
     isActive: boolean("is_active").notNull().default(true),
+    isSystemConfig: boolean("is_system_config").notNull().default(false),
     createdAt: timestamp("created_at", { withTimezone: true })
       .default(sql`CURRENT_TIMESTAMP`)
       .notNull(),
@@ -140,9 +141,7 @@ export const teesheets = createTable(
     id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
     clerkOrgId: varchar("clerk_org_id", { length: 50 }).notNull(),
     date: timestamp("date", { withTimezone: true }).notNull(),
-    configId: integer("config_id")
-      .references(() => teesheetConfigs.id)
-      .notNull(),
+    configId: integer("config_id").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .default(sql`CURRENT_TIMESTAMP`)
       .notNull(),

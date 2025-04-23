@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import { Plus } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { MembersTable } from "~/components/members/MembersTable";
-import { MemberForm } from "~/components/members/MemberForm";
 import { MemberSearchBar } from "~/components/members/MemberSearchBar";
 import {
   Dialog,
@@ -31,6 +30,8 @@ import {
 } from "~/server/members/actions";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
+import { AddMemberForm } from "./AddMemberForm";
+import { EditMemberForm } from "./EditMemberForm";
 
 interface MembersClientProps {
   initialMembers: Member[];
@@ -159,11 +160,15 @@ export function MembersClient({ initialMembers }: MembersClientProps) {
               {selectedMember ? "Edit Member" : "Add Member"}
             </DialogTitle>
           </DialogHeader>
-          <MemberForm
-            member={selectedMember || undefined}
-            onSubmit={selectedMember ? handleUpdateMember : handleCreateMember}
-            onCancel={resetForm}
-          />
+          {selectedMember ? (
+            <EditMemberForm
+              member={selectedMember}
+              onSubmit={handleUpdateMember}
+              onCancel={resetForm}
+            />
+          ) : (
+            <AddMemberForm onSubmit={handleCreateMember} onCancel={resetForm} />
+          )}
         </DialogContent>
       </Dialog>
 

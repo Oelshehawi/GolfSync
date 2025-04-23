@@ -81,6 +81,7 @@ export function TeesheetConfigDialog({
   );
 
   const currentValues = watch();
+  const isSystemConfig = existingConfig?.isSystemConfig;
 
   // Reset form when existingConfig changes
   useEffect(() => {
@@ -233,7 +234,9 @@ export function TeesheetConfigDialog({
               : "Create New Configuration"}
           </DialogTitle>
           <DialogDescription>
-            Configure when and how tee times are scheduled
+            {isSystemConfig
+              ? "This is a system configuration. You can view its settings but cannot modify them."
+              : "Configure when and how tee times are scheduled"}
           </DialogDescription>
         </DialogHeader>
 
@@ -262,6 +265,7 @@ export function TeesheetConfigDialog({
                     id="name"
                     {...register("name", { required: true })}
                     placeholder="e.g., Weekday Morning Schedule"
+                    disabled={isSystemConfig}
                   />
                 </div>
 
@@ -274,6 +278,7 @@ export function TeesheetConfigDialog({
                         scheduleType === "weekdays" ? "default" : "outline"
                       }
                       onClick={() => setScheduleType("weekdays")}
+                      disabled={isSystemConfig}
                     >
                       Specific Days
                     </Button>
@@ -285,6 +290,7 @@ export function TeesheetConfigDialog({
                           : "outline"
                       }
                       onClick={() => setScheduleType("specific-dates")}
+                      disabled={isSystemConfig}
                     >
                       Date Range
                     </Button>
@@ -311,6 +317,7 @@ export function TeesheetConfigDialog({
                                   );
                                 }
                               }}
+                              disabled={isSystemConfig}
                             />
                             <Label htmlFor={`day-${day.value}`}>
                               {day.label}
@@ -334,6 +341,7 @@ export function TeesheetConfigDialog({
                                 start: e.target.value,
                               })
                             }
+                            disabled={isSystemConfig}
                           />
                         </div>
                         <div className="space-y-2">
@@ -348,6 +356,7 @@ export function TeesheetConfigDialog({
                                 end: e.target.value,
                               })
                             }
+                            disabled={isSystemConfig}
                           />
                         </div>
                       </div>
@@ -363,6 +372,7 @@ export function TeesheetConfigDialog({
                       max={10}
                       value={priority}
                       onChange={(e) => setPriority(Number(e.target.value))}
+                      disabled={isSystemConfig}
                     />
                     <p className="text-sm text-gray-500">
                       Higher priority configurations will override lower
@@ -382,6 +392,7 @@ export function TeesheetConfigDialog({
                       id="startTime"
                       type="time"
                       {...register("startTime", { required: true })}
+                      disabled={isSystemConfig}
                     />
                   </div>
                   <div className="space-y-2">
@@ -390,6 +401,7 @@ export function TeesheetConfigDialog({
                       id="endTime"
                       type="time"
                       {...register("endTime", { required: true })}
+                      disabled={isSystemConfig}
                     />
                   </div>
                 </div>
@@ -408,6 +420,7 @@ export function TeesheetConfigDialog({
                         min: 5,
                         max: 60,
                       })}
+                      disabled={isSystemConfig}
                     />
                   </div>
                   <div className="space-y-2">
@@ -422,6 +435,7 @@ export function TeesheetConfigDialog({
                         min: 1,
                         max: 8,
                       })}
+                      disabled={isSystemConfig}
                     />
                   </div>
                 </div>
@@ -431,6 +445,7 @@ export function TeesheetConfigDialog({
                     id="isActive"
                     checked={watch("isActive")}
                     onCheckedChange={(checked) => setValue("isActive", checked)}
+                    disabled={isSystemConfig}
                   />
                   <Label htmlFor="isActive">Active</Label>
                 </div>
@@ -442,9 +457,11 @@ export function TeesheetConfigDialog({
             <Button type="button" variant="outline" onClick={onClose}>
               Cancel
             </Button>
-            <Button type="submit" className="ml-2" disabled={!hasChanges()}>
-              Save Changes
-            </Button>
+            {!isSystemConfig && (
+              <Button type="submit" className="ml-2" disabled={!hasChanges()}>
+                Save Changes
+              </Button>
+            )}
           </DialogFooter>
         </form>
       </DialogContent>

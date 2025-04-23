@@ -1,6 +1,3 @@
-"use client";
-
-import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
@@ -21,46 +18,37 @@ import {
   SelectTrigger,
   SelectValue,
 } from "~/components/ui/select";
+import { memberFormSchema } from "./memberFormSchema";
 import type { Member } from "~/app/types/MemberTypes";
-import toast from "react-hot-toast";
-
-const memberFormSchema = z.object({
-  memberNumber: z.string().min(1, "Member number is required"),
-  firstName: z.string().min(1, "First name is required"),
-  lastName: z.string().min(1, "Last name is required"),
-  username: z.string().min(1, "Username is required"),
-  email: z.string().email("Invalid email address"),
-  class: z.string().min(1, "Class is required"),
-  gender: z.string().optional(),
-  dateOfBirth: z.string().optional(),
-  handicap: z.string().optional(),
-  bagNumber: z.string().optional(),
-});
 
 type MemberFormValues = z.infer<typeof memberFormSchema>;
 
-interface MemberFormProps {
-  member?: Member;
+interface EditMemberFormProps {
+  member: Member;
   onSubmit: (values: MemberFormValues) => Promise<void>;
   onCancel: () => void;
 }
 
-export function MemberForm({ member, onSubmit, onCancel }: MemberFormProps) {
+export function EditMemberForm({
+  member,
+  onSubmit,
+  onCancel,
+}: EditMemberFormProps) {
   const form = useForm<MemberFormValues>({
     resolver: zodResolver(memberFormSchema),
     defaultValues: {
-      memberNumber: member?.memberNumber || "",
-      firstName: member?.firstName || "",
-      lastName: member?.lastName || "",
-      username: member?.username || "",
-      email: member?.email || "",
-      class: member?.class || "",
-      gender: member?.gender || "",
-      dateOfBirth: member?.dateOfBirth
+      memberNumber: member.memberNumber,
+      firstName: member.firstName,
+      lastName: member.lastName,
+      username: member.username,
+      email: member.email,
+      class: member.class,
+      gender: member.gender || "",
+      dateOfBirth: member.dateOfBirth
         ? new Date(member.dateOfBirth).toISOString().split("T")[0]
         : "",
-      handicap: member?.handicap || "",
-      bagNumber: member?.bagNumber || "",
+      handicap: member.handicap || "",
+      bagNumber: member.bagNumber || "",
     },
   });
 
@@ -304,9 +292,7 @@ export function MemberForm({ member, onSubmit, onCancel }: MemberFormProps) {
           <Button variant="outline" onClick={onCancel}>
             Cancel
           </Button>
-          <Button type="submit">
-            {member ? "Update Member" : "Create Member"}
-          </Button>
+          <Button type="submit">Update Member</Button>
         </div>
       </form>
     </Form>

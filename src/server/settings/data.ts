@@ -20,6 +20,8 @@ function convertToTeesheetConfig(dbConfig: any): TeesheetConfig {
   };
 }
 
+export { convertToTeesheetConfig };
+
 export async function initializeDefaultConfigs() {
   try {
     const clerkOrgId = await getOrganizationId();
@@ -44,6 +46,7 @@ export async function initializeDefaultConfigs() {
         interval: 15,
         maxMembersPerBlock: 4,
         isActive: true,
+        isSystemConfig: true,
       })
       .returning()
       .then((result) => convertToTeesheetConfig(result[0]));
@@ -63,6 +66,7 @@ export async function initializeDefaultConfigs() {
         interval: 20,
         maxMembersPerBlock: 4,
         isActive: true,
+        isSystemConfig: true,
       })
       .returning()
       .then((result) => convertToTeesheetConfig(result[0]));
@@ -71,20 +75,20 @@ export async function initializeDefaultConfigs() {
       throw new Error("Failed to create weekend config");
     }
 
-    // Create rules
+    // Create rules with lowest priority (0)
     await db.insert(teesheetConfigRules).values([
       {
         clerkOrgId,
         configId: weekdayConfig.id,
         daysOfWeek: [1, 2, 3, 4, 5], // Mon-Fri
-        priority: 1,
+        priority: 0,
         isActive: true,
       },
       {
         clerkOrgId,
         configId: weekendConfig.id,
         daysOfWeek: [0, 6], // Sat-Sun
-        priority: 1,
+        priority: 0,
         isActive: true,
       },
     ]);
@@ -129,6 +133,7 @@ export async function getConfigForDate(date: Date): Promise<TeesheetConfig> {
       where: and(
         eq(teesheetConfigs.clerkOrgId, clerkOrgId),
         eq(teesheetConfigs.id, specificDateRules[0].configId),
+        eq(teesheetConfigs.isActive, true),
       ),
       with: {
         rules: true,
@@ -166,6 +171,7 @@ export async function getConfigForDate(date: Date): Promise<TeesheetConfig> {
       where: and(
         eq(teesheetConfigs.clerkOrgId, clerkOrgId),
         eq(teesheetConfigs.id, recurringRules[0].configId),
+        eq(teesheetConfigs.isActive, true),
       ),
       with: {
         rules: true,
@@ -179,7 +185,32 @@ export async function getConfigForDate(date: Date): Promise<TeesheetConfig> {
     return convertToTeesheetConfig(config);
   }
 
-  throw new Error("No matching configuration found");
+  // If no specific or recurring rules found, fall back to system configs
+  const systemConfigs = await db.query.teesheetConfigs.findMany({
+    where: and(
+      eq(teesheetConfigs.clerkOrgId, clerkOrgId),
+      eq(teesheetConfigs.isSystemConfig, true),
+      eq(teesheetConfigs.isActive, true),
+    ),
+    with: {
+      rules: true,
+    },
+  });
+
+  if (systemConfigs.length === 0) {
+    throw new Error("No system configurations found");
+  }
+
+  // Find the appropriate system config based on day of week
+  const weekdayConfig = systemConfigs.find((config) =>
+    config.rules?.some((rule) => rule.daysOfWeek?.includes(dayOfWeek)),
+  );
+
+  if (!weekdayConfig) {
+    throw new Error("No matching system configuration found");
+  }
+
+  return convertToTeesheetConfig(weekdayConfig);
 }
 
 export async function getTeesheetConfigs() {

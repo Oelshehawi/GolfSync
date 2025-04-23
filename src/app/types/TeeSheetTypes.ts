@@ -54,12 +54,14 @@ export interface TeesheetConfigInput {
   interval: number;
   maxMembersPerBlock: number;
   isActive: boolean;
+  isSystemConfig?: boolean;
   rules: TeesheetConfigRuleInput[];
 }
 
 export interface TeesheetConfig extends Omit<TeesheetConfigInput, "rules"> {
   id: number;
   clerkOrgId: string;
+  isSystemConfig: boolean;
   createdAt: Date;
   updatedAt: Date | null;
   rules: TeesheetConfigRule[];
