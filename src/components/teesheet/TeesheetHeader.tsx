@@ -1,6 +1,6 @@
 "use client";
 
-import { format, parse, isSameDay } from "date-fns";
+import { parse, isSameDay } from "date-fns";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "~/components/ui/button";
 import { Card } from "~/components/ui/card";
@@ -11,7 +11,7 @@ import {
   Calendar as CalendarIcon,
   X,
 } from "lucide-react";
-import { ConfigInfo } from "./ConfigInfo";
+import { ConfigInfo } from "../settings/teesheet/ConfigInfo";
 import type { TeesheetConfig } from "~/app/types/TeeSheetTypes";
 import {
   formatLocalDate,

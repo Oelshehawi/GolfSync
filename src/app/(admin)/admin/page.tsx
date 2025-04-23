@@ -5,7 +5,8 @@ import {
 import { TeesheetView } from "~/components/teesheet/TeesheetView";
 import { TeesheetHeader } from "~/components/teesheet/TeesheetHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
-import { getConfigForDate, getOrganizationTheme } from "~/server/config/data";
+import { getOrganizationTheme } from "~/server/config/data";
+import { getConfigForDate } from "~/server/settings/data";
 
 interface PageProps {
   searchParams?: {
@@ -28,11 +29,7 @@ export default async function AdminPage({ searchParams }: PageProps) {
       date = new Date();
     }
 
-    const [teesheet, config, theme] = await Promise.all([
-      getOrCreateTeesheet(date),
-      getConfigForDate(date),
-      getOrganizationTheme(),
-    ]);
+    const { teesheet, config } = await getOrCreateTeesheet(date);
 
     if (!teesheet) {
       return (
@@ -50,6 +47,7 @@ export default async function AdminPage({ searchParams }: PageProps) {
     }
 
     const timeBlocks = await getTimeBlocksForTeesheet(teesheet.id);
+    const theme = await getOrganizationTheme();
 
     return (
       <div className="container mx-auto space-y-2 p-6">

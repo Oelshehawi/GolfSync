@@ -13,6 +13,7 @@ import {
   unique,
   boolean,
 } from "drizzle-orm/pg-core";
+import { relations } from "drizzle-orm";
 
 /**
  * This is an example of how to use the multi-project schema feature of Drizzle ORM. Use the same
@@ -112,6 +113,24 @@ export const teesheetConfigRules = createTable(
     index("rules_config_id_idx").on(table.configId),
     index("rules_days_of_week_idx").on(table.daysOfWeek),
   ],
+);
+
+// Define relations
+export const teesheetConfigsRelations = relations(
+  teesheetConfigs,
+  ({ many }) => ({
+    rules: many(teesheetConfigRules),
+  }),
+);
+
+export const teesheetConfigRulesRelations = relations(
+  teesheetConfigRules,
+  ({ one }) => ({
+    config: one(teesheetConfigs, {
+      fields: [teesheetConfigRules.configId],
+      references: [teesheetConfigs.id],
+    }),
+  }),
 );
 
 // Teesheets table

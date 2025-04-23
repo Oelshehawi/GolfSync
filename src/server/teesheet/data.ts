@@ -13,8 +13,7 @@ import type {
   TimeBlockWithMembers,
   TeesheetConfig,
 } from "~/app/types/TeeSheetTypes";
-import { getConfigForDate } from "~/server/config/data";
-import { format } from "date-fns";
+import { getConfigForDate } from "~/server/settings/data";
 import { generateTimeBlocks } from "~/lib/utils";
 import { localToUTCMidnight } from "~/lib/utils";
 
@@ -46,7 +45,9 @@ async function createTimeBlocksForTeesheet(
   await db.insert(timeBlocks).values(blocks);
 }
 
-export async function getOrCreateTeesheet(date: Date): Promise<TeeSheet> {
+export async function getOrCreateTeesheet(
+  date: Date,
+): Promise<{ teesheet: TeeSheet; config: TeesheetConfig }> {
   const clerkOrgId = await getOrganizationId();
 
   // Convert input date to UTC midnight
@@ -61,12 +62,12 @@ export async function getOrCreateTeesheet(date: Date): Promise<TeeSheet> {
     ),
   });
 
-  if (existingTeesheet) {
-    return existingTeesheet;
-  }
-
   // Get config for the date
   const config = await getConfigForDate(date);
+
+  if (existingTeesheet) {
+    return { teesheet: existingTeesheet, config };
+  }
 
   // Create new teesheet with UTC date
   const newTeesheet = await db
@@ -86,7 +87,7 @@ export async function getOrCreateTeesheet(date: Date): Promise<TeeSheet> {
   // Create time blocks for the new teesheet
   await createTimeBlocksForTeesheet(newTeesheet.id, config, utcDate);
 
-  return newTeesheet;
+  return { teesheet: newTeesheet, config };
 }
 
 export async function getTimeBlocksForTeesheet(
