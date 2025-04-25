@@ -123,3 +123,39 @@
     transform: translate(-50%, -50%) scale(0.98);
   }
 }
+
+/* Popover specific animations */
+.popover-content {
+  opacity: 0;
+  transform: scale(0.95);
+}
+
+.popover-content[data-state="open"] {
+  animation: popoverZoomIn 0.2s ease-out forwards;
+}
+
+.popover-content[data-state="closed"] {
+  animation: popoverZoomOut 0.15s ease-in forwards;
+}
+
+@keyframes popoverZoomIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes popoverZoomOut {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+}

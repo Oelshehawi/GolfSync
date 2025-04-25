@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { cn } from "~/lib/utils";
+import { getOrganizationColors } from "~/lib/utils";
 
 export interface InputProps
   extends React.InputHTMLAttributes<HTMLInputElement> {
@@ -13,11 +14,14 @@ export interface InputProps
 }
 
 const Input = React.forwardRef<HTMLInputElement, InputProps>(
-  ({ className, type, theme, ...props }, ref) => {
+  ({ className, type, theme, style, ...props }, ref) => {
+    const colors = getOrganizationColors(theme);
+
     const themeStyles = {
-      ["--org-primary" as string]: theme?.primary || "#1b4d3e", // Default primary color
-      ["--org-secondary" as string]: theme?.secondary,
-      ["--org-tertiary" as string]: theme?.tertiary,
+      ["--org-primary" as string]: colors.primary,
+      ["--org-secondary" as string]: colors.secondary,
+      ["--org-tertiary" as string]: colors.tertiary,
+      ...style,
     } as React.CSSProperties;
 
     return (

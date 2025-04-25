@@ -12,6 +12,8 @@ import {
   date,
   unique,
   boolean,
+  text,
+  real,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 
@@ -290,3 +292,146 @@ export const timeBlocksRelations = relations(timeBlocks, ({ many }) => ({
   members: many(timeBlockMembers),
   guests: many(timeBlockGuests),
 }));
+
+// Restrictions table for member classes and guests
+export const restrictions = createTable(
+  "restrictions",
+  {
+    id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+    clerkOrgId: varchar("clerk_org_id", { length: 50 }).notNull(),
+    entityType: varchar("entity_type", { length: 10 }).notNull(), // 'CLASS' or 'GUEST'
+    entityId: varchar("entity_id", { length: 50 }), // class name for 'CLASS', null for 'GUEST'
+    restrictionType: varchar("restriction_type", { length: 10 }).notNull(), // 'TIME' or 'FREQUENCY'
+    name: varchar("name", { length: 100 }).notNull(),
+    description: text("description"),
+    isActive: boolean("is_active").notNull().default(true),
+
+    // Time restriction fields
+    startTime: varchar("start_time", { length: 5 }), // Format: HH:MM (24h)
+    endTime: varchar("end_time", { length: 5 }), // Format: HH:MM (24h)
+    daysOfWeek: integer("days_of_week").array(), // [0,1,2,3,4,5,6] for Sun-Sat
+
+    // Frequency restriction fields
+    maxCount: integer("max_count"), // Maximum number of bookings allowed
+    periodDays: integer("period_days"), // Period in days (30 for monthly)
+    applyCharge: boolean("apply_charge"), // Whether to apply a charge after max count
+    chargeAmount: real("charge_amount"), // Amount to charge
+
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).$onUpdate(
+      () => new Date(),
+    ),
+  },
+  (table) => [
+    index("restrictions_org_id_idx").on(table.clerkOrgId),
+    index("restrictions_entity_type_idx").on(table.entityType),
+    index("restrictions_entity_id_idx").on(table.entityId),
+    index("restrictions_type_idx").on(table.restrictionType),
+  ],
+);
+
+// Guest booking history table for tracking frequency restrictions
+export const guestBookingHistory = createTable(
+  "guest_booking_history",
+  {
+    id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+    clerkOrgId: varchar("clerk_org_id", { length: 50 }).notNull(),
+    guestId: integer("guest_id")
+      .references(() => guests.id, { onDelete: "cascade" })
+      .notNull(),
+    bookingDate: timestamp("booking_date", { withTimezone: true }).notNull(),
+    wasCharged: boolean("was_charged").notNull().default(false),
+    chargeAmount: real("charge_amount"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+  },
+  (table) => [
+    index("guest_booking_history_org_id_idx").on(table.clerkOrgId),
+    index("guest_booking_history_guest_id_idx").on(table.guestId),
+    index("guest_booking_history_booking_date_idx").on(table.bookingDate),
+  ],
+);
+
+// Member booking history table for tracking frequency restrictions
+export const memberBookingHistory = createTable(
+  "member_booking_history",
+  {
+    id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+    clerkOrgId: varchar("clerk_org_id", { length: 50 }).notNull(),
+    memberId: integer("member_id")
+      .references(() => members.id, { onDelete: "cascade" })
+      .notNull(),
+    bookingDate: timestamp("booking_date", { withTimezone: true }).notNull(),
+    wasCharged: boolean("was_charged").notNull().default(false),
+    chargeAmount: real("charge_amount"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+  },
+  (table) => [
+    index("member_booking_history_org_id_idx").on(table.clerkOrgId),
+    index("member_booking_history_member_id_idx").on(table.memberId),
+    index("member_booking_history_booking_date_idx").on(table.bookingDate),
+  ],
+);
+
+// Restriction override log for auditing
+export const restrictionOverrides = createTable(
+  "restriction_overrides",
+  {
+    id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+    clerkOrgId: varchar("clerk_org_id", { length: 50 }).notNull(),
+    restrictionId: integer("restriction_id").references(() => restrictions.id, {
+      onDelete: "set null",
+    }),
+    overriddenBy: varchar("overridden_by", { length: 100 }).notNull(), // Admin user who overrode
+    entityType: varchar("entity_type", { length: 10 }).notNull(), // 'CLASS' or 'GUEST'
+    entityId: varchar("entity_id", { length: 50 }), // Member class or guest ID
+    reason: text("reason"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+  },
+  (table) => [
+    index("restriction_overrides_org_id_idx").on(table.clerkOrgId),
+    index("restriction_overrides_restriction_id_idx").on(table.restrictionId),
+  ],
+);
+
+// Define relations for restrictions
+export const restrictionsRelations = relations(restrictions, ({ many }) => ({
+  overrides: many(restrictionOverrides),
+}));
+
+export const guestBookingHistoryRelations = relations(
+  guestBookingHistory,
+  ({ one }) => ({
+    guest: one(guests, {
+      fields: [guestBookingHistory.guestId],
+      references: [guests.id],
+    }),
+  }),
+);
+
+export const memberBookingHistoryRelations = relations(
+  memberBookingHistory,
+  ({ one }) => ({
+    member: one(members, {
+      fields: [memberBookingHistory.memberId],
+      references: [members.id],
+    }),
+  }),
+);
+
+export const restrictionOverridesRelations = relations(
+  restrictionOverrides,
+  ({ one }) => ({
+    restriction: one(restrictions, {
+      fields: [restrictionOverrides.restrictionId],
+      references: [restrictions.id],
+    }),
+  }),
+);

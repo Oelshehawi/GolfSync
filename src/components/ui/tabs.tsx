@@ -5,23 +5,28 @@ import * as TabsPrimitive from "@radix-ui/react-tabs";
 import { cn } from "~/lib/utils";
 import { getOrganizationColors } from "~/lib/utils";
 
+interface ThemeProps {
+  theme?: {
+    primary?: string;
+    secondary?: string;
+    tertiary?: string;
+    ["--org-primary"]?: string;
+    ["--org-secondary"]?: string;
+    ["--org-tertiary"]?: string;
+  };
+}
+
 const Tabs = TabsPrimitive.Root;
 
 const TabsList = React.forwardRef<
   React.ElementRef<typeof TabsPrimitive.List>,
-  React.ComponentPropsWithoutRef<typeof TabsPrimitive.List> & {
-    theme?: {
-      primary?: string;
-      secondary?: string;
-      tertiary?: string;
-    };
-  }
+  React.ComponentPropsWithoutRef<typeof TabsPrimitive.List> & ThemeProps
 >(({ className, theme, ...props }, ref) => {
   const colors = getOrganizationColors(theme);
   const themeStyles = {
-    ["--org-primary" as string]: colors.primary,
-    ["--org-secondary" as string]: colors.secondary,
-    ["--org-tertiary" as string]: colors.tertiary,
+    ["--org-primary"]: colors.primary,
+    ["--org-secondary"]: colors.secondary,
+    ["--org-tertiary"]: colors.tertiary,
   } as React.CSSProperties;
 
   return (
@@ -40,19 +45,13 @@ TabsList.displayName = TabsPrimitive.List.displayName;
 
 const TabsTrigger = React.forwardRef<
   React.ElementRef<typeof TabsPrimitive.Trigger>,
-  React.ComponentPropsWithoutRef<typeof TabsPrimitive.Trigger> & {
-    theme?: {
-      primary?: string;
-      secondary?: string;
-      tertiary?: string;
-    };
-  }
+  React.ComponentPropsWithoutRef<typeof TabsPrimitive.Trigger> & ThemeProps
 >(({ className, theme, ...props }, ref) => {
   const colors = getOrganizationColors(theme);
   const themeStyles = {
-    ["--org-primary" as string]: colors.primary,
-    ["--org-secondary" as string]: colors.secondary,
-    ["--org-tertiary" as string]: colors.tertiary,
+    ["--org-primary"]: colors.primary,
+    ["--org-secondary"]: colors.secondary,
+    ["--org-tertiary"]: colors.tertiary,
   } as React.CSSProperties;
 
   return (
@@ -71,19 +70,13 @@ TabsTrigger.displayName = TabsPrimitive.Trigger.displayName;
 
 const TabsContent = React.forwardRef<
   React.ElementRef<typeof TabsPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof TabsPrimitive.Content> & {
-    theme?: {
-      primary?: string;
-      secondary?: string;
-      tertiary?: string;
-    };
-  }
+  React.ComponentPropsWithoutRef<typeof TabsPrimitive.Content> & ThemeProps
 >(({ className, theme, ...props }, ref) => {
   const colors = getOrganizationColors(theme);
   const themeStyles = {
-    ["--org-primary" as string]: colors.primary,
-    ["--org-secondary" as string]: colors.secondary,
-    ["--org-tertiary" as string]: colors.tertiary,
+    ["--org-primary"]: colors.primary,
+    ["--org-secondary"]: colors.secondary,
+    ["--org-tertiary"]: colors.tertiary,
   } as React.CSSProperties;
 
   return (

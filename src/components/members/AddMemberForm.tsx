@@ -18,6 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "~/components/ui/select";
+import { SearchableSelect } from "~/components/ui/searchable-select";
 import { memberFormSchema } from "./memberFormSchema";
 
 type MemberFormValues = z.infer<typeof memberFormSchema>;
@@ -48,6 +49,35 @@ export function AddMemberForm({ onSubmit, onCancel }: AddMemberFormProps) {
     await onSubmit(values);
   };
 
+  // Define member class options
+  const memberClassOptions = [
+    { value: "UNLIMITED PLAY MALE", label: "Unlimited Play Male" },
+    { value: "UNLIMITED PLAY FEMALE", label: "Unlimited Play Female" },
+    { value: "FULL PLAY MALE", label: "Full Play Male" },
+    { value: "FULL PLAY FEMALE", label: "Full Play Female" },
+    { value: "SOCIAL MALE", label: "Social Male" },
+    { value: "SOCIAL FEMALE", label: "Social Female" },
+    { value: "INTERMEDIATE MALE", label: "Intermediate Male" },
+    { value: "INTERMEDIATE FEMALE", label: "Intermediate Female" },
+    { value: "JR INTERMEDIATE MALE", label: "Jr Intermediate Male" },
+    { value: "JR INTERMEDIATE FEMALE", label: "Jr Intermediate Female" },
+    { value: "JUNIOR BOY", label: "Junior Boy" },
+    { value: "JUNIOR GIRL", label: "Junior Girl" },
+    { value: "WEEKDAY PLAY MALE", label: "Weekday Play Male" },
+    { value: "WEEKDAY PLAY FEMALE", label: "Weekday Play Female" },
+    { value: "NON-RESIDENT MALE", label: "Non-Resident Male" },
+    { value: "NON-RESIDENT FEMALE", label: "Non-Resident Female" },
+    { value: "STAFF PLAY", label: "Staff Play" },
+    { value: "MGMT / PRO", label: "Management/Pro" },
+    { value: "DINING", label: "Dining" },
+    { value: "PRIVILEGED MALE", label: "Privileged Male" },
+    { value: "PRIVILEGED FEMALE", label: "Privileged Female" },
+    { value: "SENIOR RETIRED MALE", label: "Senior Retired Male" },
+    { value: "SENIOR RETIRED FEMALE", label: "Senior Retired Female" },
+    { value: "HONORARY MALE", label: "Honorary Male" },
+    { value: "HONORARY FEMALE", label: "Honorary Female" },
+  ];
+
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
@@ -72,77 +102,14 @@ export function AddMemberForm({ onSubmit, onCancel }: AddMemberFormProps) {
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Class</FormLabel>
-                <Select
-                  onValueChange={field.onChange}
-                  defaultValue={field.value}
-                >
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select class" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem value="UNLIMITED PLAY MALE">
-                      Unlimited Play Male
-                    </SelectItem>
-                    <SelectItem value="UNLIMITED PLAY FEMALE">
-                      Unlimited Play Female
-                    </SelectItem>
-                    <SelectItem value="FULL PLAY MALE">
-                      Full Play Male
-                    </SelectItem>
-                    <SelectItem value="FULL PLAY FEMALE">
-                      Full Play Female
-                    </SelectItem>
-                    <SelectItem value="SOCIAL MALE">Social Male</SelectItem>
-                    <SelectItem value="SOCIAL FEMALE">Social Female</SelectItem>
-                    <SelectItem value="INTERMEDIATE MALE">
-                      Intermediate Male
-                    </SelectItem>
-                    <SelectItem value="INTERMEDIATE FEMALE">
-                      Intermediate Female
-                    </SelectItem>
-                    <SelectItem value="JR INTERMEDIATE MALE">
-                      Jr Intermediate Male
-                    </SelectItem>
-                    <SelectItem value="JR INTERMEDIATE FEMALE">
-                      Jr Intermediate Female
-                    </SelectItem>
-                    <SelectItem value="JUNIOR BOY">Junior Boy</SelectItem>
-                    <SelectItem value="JUNIOR GIRL">Junior Girl</SelectItem>
-                    <SelectItem value="WEEKDAY PLAY MALE">
-                      Weekday Play Male
-                    </SelectItem>
-                    <SelectItem value="WEEKDAY PLAY FEMALE">
-                      Weekday Play Female
-                    </SelectItem>
-                    <SelectItem value="NON-RESIDENT MALE">
-                      Non-Resident Male
-                    </SelectItem>
-                    <SelectItem value="NON-RESIDENT FEMALE">
-                      Non-Resident Female
-                    </SelectItem>
-                    <SelectItem value="STAFF PLAY">Staff Play</SelectItem>
-                    <SelectItem value="MGMT / PRO">Management/Pro</SelectItem>
-                    <SelectItem value="DINING">Dining</SelectItem>
-                    <SelectItem value="PRIVILEGED MALE">
-                      Privileged Male
-                    </SelectItem>
-                    <SelectItem value="PRIVILEGED FEMALE">
-                      Privileged Female
-                    </SelectItem>
-                    <SelectItem value="SENIOR RETIRED MALE">
-                      Senior Retired Male
-                    </SelectItem>
-                    <SelectItem value="SENIOR RETIRED FEMALE">
-                      Senior Retired Female
-                    </SelectItem>
-                    <SelectItem value="HONORARY MALE">Honorary Male</SelectItem>
-                    <SelectItem value="HONORARY FEMALE">
-                      Honorary Female
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
+                <FormControl>
+                  <SearchableSelect
+                    options={memberClassOptions}
+                    value={field.value}
+                    onValueChange={field.onChange}
+                    placeholder="Select or search member class"
+                  />
+                </FormControl>
                 <FormMessage className="text-red-500" />
               </FormItem>
             )}

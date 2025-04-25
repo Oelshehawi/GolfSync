@@ -6,13 +6,35 @@ import {
 } from "~/components/ui/card";
 import { getTeesheetConfigs } from "~/server/settings/data";
 import { TeesheetSettings } from "~/components/settings/teesheet/TeesheetSettings";
+import { RestrictionSettings } from "~/components/settings/restrictions/RestrictionSettings";
+import { getRestrictions, getMemberClasses } from "~/server/restrictions/data";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
+import { getOrganizationColors } from "~/lib/utils";
+import { getOrganizationTheme } from "~/server/config/data";
 
 export default async function SettingsPage() {
-  const result = await getTeesheetConfigs();
-  const configs = "success" in result ? [] : result;
+  const teesheetResult = await getTeesheetConfigs();
+  const teesheetConfigs = "success" in teesheetResult ? [] : teesheetResult;
+
+  const restrictionsResult = await getRestrictions();
+  const restrictions =
+    "success" in restrictionsResult ? [] : restrictionsResult;
+
+  const memberClassesResult = await getMemberClasses();
+  const memberClasses =
+    "success" in memberClassesResult ? [] : memberClassesResult;
+
+  const theme = await getOrganizationTheme();
+
+  // Extract the actual theme properties instead of CSS variables
+  const themeProps = {
+    primary: theme?.primary,
+    secondary: theme?.secondary,
+    tertiary: theme?.tertiary,
+  };
 
   return (
-    <div className="space-y-8">
+    <div className="mx-auto max-w-[1200px] space-y-6">
       {/* Header */}
       <Card className="rounded-lg">
         <CardHeader>
@@ -25,8 +47,40 @@ export default async function SettingsPage() {
         </CardHeader>
       </Card>
 
-      {/* Teesheet Settings */}
-      <TeesheetSettings initialConfigs={configs} />
+      {/* Tabbed Interface */}
+      <Tabs defaultValue="teesheet" className="w-full">
+        <div className="mb-6 flex justify-center">
+          <TabsList className="flex w-[400px]" theme={themeProps}>
+            <TabsTrigger value="teesheet" className="flex-1" theme={themeProps}>
+              Teesheet Settings
+            </TabsTrigger>
+            <TabsTrigger
+              value="restrictions"
+              className="flex-1"
+              theme={themeProps}
+            >
+              Booking Restrictions
+            </TabsTrigger>
+          </TabsList>
+        </div>
+
+        <TabsContent value="teesheet" className="mt-4" theme={themeProps}>
+          {/* Teesheet Settings */}
+          <TeesheetSettings
+            initialConfigs={teesheetConfigs}
+            theme={themeProps}
+          />
+        </TabsContent>
+
+        <TabsContent value="restrictions" className="mt-4" theme={themeProps}>
+          {/* Booking Restrictions */}
+          <RestrictionSettings
+            initialRestrictions={restrictions}
+            memberClasses={memberClasses}
+            theme={themeProps}
+          />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

@@ -41,18 +41,28 @@ export function getOrganizationColors(theme?: {
   primary?: string;
   secondary?: string;
   tertiary?: string;
+  ["--org-primary"]?: string;
+  ["--org-secondary"]?: string;
+  ["--org-tertiary"]?: string;
 }) {
+  // Handle both formats of theme properties
+  const primaryColor = theme?.primary || theme?.["--org-primary"] || "#000000";
+  const secondaryColor =
+    theme?.secondary || theme?.["--org-secondary"] || "#f3f4f6";
+  const tertiaryColor =
+    theme?.tertiary || theme?.["--org-tertiary"] || "#9ca3af";
+
   return {
-    primary: theme?.primary || "#000000",
-    secondary: theme?.secondary || "#f3f4f6",
-    tertiary: theme?.tertiary || "#9ca3af",
+    primary: primaryColor,
+    secondary: secondaryColor,
+    tertiary: tertiaryColor,
     text: {
-      primary: theme?.primary || "#000000",
+      primary: primaryColor,
       secondary: "#4B5563",
     },
     background: {
       primary: "#FFFFFF",
-      secondary: theme?.secondary || "#f3f4f6",
+      secondary: secondaryColor,
     },
   };
 }

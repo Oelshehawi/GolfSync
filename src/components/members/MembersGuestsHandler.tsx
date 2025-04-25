@@ -32,16 +32,20 @@ export function MembersGuestsHandler({
       <h1 className="text-2xl font-bold">Manage Members & Guests</h1>
 
       <Tabs defaultValue="members" className="w-full">
-        <TabsList className="mb-4">
-          <TabsTrigger value="members">Members</TabsTrigger>
-          <TabsTrigger value="guests">Guests</TabsTrigger>
+        <TabsList className="mb-4" theme={theme}>
+          <TabsTrigger value="members" theme={theme}>
+            Members
+          </TabsTrigger>
+          <TabsTrigger value="guests" theme={theme}>
+            Guests
+          </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="members">
+        <TabsContent value="members" theme={theme}>
           <MembersHandler initialMembers={initialMembers} theme={theme} />
         </TabsContent>
 
-        <TabsContent value="guests">
+        <TabsContent value="guests" theme={theme}>
           <GuestsHandler initialGuests={initialGuests} theme={theme} />
         </TabsContent>
       </Tabs>

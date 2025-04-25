@@ -41,9 +41,10 @@ const DialogContent = React.forwardRef<
 >(({ className, children, theme, ...props }, ref) => {
   const colors = getOrganizationColors(theme);
   const themeStyles = {
-    ["--org-primary" as string]: colors.primary,
-    ["--org-secondary" as string]: colors.secondary,
-    ["--org-tertiary" as string]: colors.tertiary,
+    ["--org-primary"]: colors.primary,
+    ["--org-secondary"]: colors.secondary,
+    ["--org-tertiary"]: colors.tertiary,
+    borderColor: colors.primary,
   } as React.CSSProperties;
 
   return (
@@ -52,14 +53,19 @@ const DialogContent = React.forwardRef<
       <DialogPrimitive.Content
         ref={ref}
         className={cn(
-          "fixed top-[50%] left-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-white p-6 shadow-lg sm:rounded-lg",
+          "fixed top-[50%] left-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-white shadow-lg sm:rounded-lg",
+          "max-h-[85vh] overflow-y-auto",
+          "p-4 sm:p-6",
           className,
         )}
         style={themeStyles}
         {...props}
       >
         {children}
-        <DialogPrimitive.Close className="ring-offset-background data-[state=open]:bg-accent data-[state=open]:text-muted-foreground absolute top-4 right-4 rounded-sm opacity-70 transition-opacity hover:cursor-pointer hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-none disabled:pointer-events-none">
+        <DialogPrimitive.Close
+          className="ring-offset-background data-[state=open]:bg-accent data-[state=open]:text-muted-foreground absolute top-4 right-4 rounded-sm opacity-70 transition-opacity hover:cursor-pointer hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-none disabled:pointer-events-none"
+          style={{ color: colors.primary }}
+        >
           <X className="h-4 w-4" />
           <span className="sr-only">Close</span>
         </DialogPrimitive.Close>

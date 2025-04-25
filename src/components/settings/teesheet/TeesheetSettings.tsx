@@ -41,9 +41,17 @@ import { Badge } from "~/components/ui/badge";
 
 interface TeesheetSettingsProps {
   initialConfigs: TeesheetConfig[];
+  theme?: {
+    primary?: string;
+    secondary?: string;
+    tertiary?: string;
+  };
 }
 
-export function TeesheetSettings({ initialConfigs }: TeesheetSettingsProps) {
+export function TeesheetSettings({
+  initialConfigs,
+  theme,
+}: TeesheetSettingsProps) {
   const [configs, setConfigs] = useState<TeesheetConfig[]>(initialConfigs);
   const [selectedConfig, setSelectedConfig] = useState<
     TeesheetConfig | undefined
@@ -250,6 +258,7 @@ export function TeesheetSettings({ initialConfigs }: TeesheetSettingsProps) {
         onClose={handleCloseDialog}
         onSave={handleSaveConfig}
         existingConfig={selectedConfig}
+        theme={theme}
       />
 
       <AlertDialog

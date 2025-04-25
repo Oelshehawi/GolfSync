@@ -23,6 +23,9 @@ import {
 } from "./TimeBlockPeopleList";
 import toast from "react-hot-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
+import { checkRestrictionsAction } from "~/server/restrictions/actions";
+import { RestrictionViolation } from "~/app/types/RestrictionTypes";
+import { RestrictionViolationAlert } from "~/components/restrictions/RestrictionViolationAlert";
 
 type TimeBlockGuest = {
   id: number;
@@ -80,6 +83,15 @@ export function TimeBlockMemberManager({
   const [isGuestSearching, setIsGuestSearching] = useState(false);
   const [selectedMemberId, setSelectedMemberId] = useState<number | null>(null);
 
+  // Restriction violation state
+  const [restrictionViolations, setRestrictionViolations] = useState<
+    RestrictionViolation[]
+  >([]);
+  const [showViolationAlert, setShowViolationAlert] = useState(false);
+  const [pendingAction, setPendingAction] = useState<
+    (() => Promise<void>) | null
+  >(null);
+
   // Constants
   const MAX_PEOPLE = 4;
   const totalPeople = timeBlock.members.length + timeBlockGuests.length;
@@ -129,7 +141,94 @@ export function TimeBlockMemberManager({
   const debouncedMemberSearch = useDebouncedCallback(handleMemberSearch, 300);
   const debouncedGuestSearch = useDebouncedCallback(handleGuestSearch, 300);
 
+  // Check for restrictions before adding a member
+  const checkMemberRestrictions = async (
+    memberId: number,
+    memberClass: string,
+  ) => {
+    try {
+      const result = await checkRestrictionsAction({
+        memberId,
+        memberClass,
+        bookingTime: timeBlock.startTime,
+      });
+
+      if ("success" in result && !result.success) {
+        toast.error(result.error || "Failed to check restrictions");
+        return false;
+      }
+
+      if ("hasViolations" in result && result.hasViolations) {
+        setRestrictionViolations(result.violations);
+        setShowViolationAlert(true);
+        return true;
+      }
+
+      return false;
+    } catch (error) {
+      console.error("Error checking restrictions:", error);
+      toast.error("Failed to check restrictions");
+      return false;
+    }
+  };
+
+  // Check for restrictions before adding a guest
+  const checkGuestRestrictions = async (guestId: number) => {
+    try {
+      const result = await checkRestrictionsAction({
+        guestId,
+        bookingTime: timeBlock.startTime,
+      });
+
+      if ("success" in result && !result.success) {
+        toast.error(result.error || "Failed to check restrictions");
+        return false;
+      }
+
+      if ("hasViolations" in result && result.hasViolations) {
+        setRestrictionViolations(result.violations);
+        setShowViolationAlert(true);
+        return true;
+      }
+
+      return false;
+    } catch (error) {
+      console.error("Error checking restrictions:", error);
+      toast.error("Failed to check restrictions");
+      return false;
+    }
+  };
+
   const handleAddMember = async (memberId: number) => {
+    // Find the member to get their class
+    const member = memberSearchResults.find((m) => m.id === memberId);
+    if (!member) {
+      toast.error("Member not found");
+      return;
+    }
+
+    // Check for restrictions
+    const hasViolations = await checkMemberRestrictions(memberId, member.class);
+
+    if (hasViolations) {
+      // Save the action for later if admin overrides
+      setPendingAction(async () => {
+        try {
+          const result = await addMemberToTimeBlock(timeBlock.id, memberId);
+          if (result.success) {
+            toast.success("Member added successfully");
+          } else {
+            toast.error(result.error || "Failed to add member");
+          }
+        } catch (error) {
+          toast.error("An error occurred while adding the member");
+          console.error(error);
+        }
+      });
+      return;
+    }
+
+    // No violations, proceed as normal
     try {
       const result = await addMemberToTimeBlock(timeBlock.id, memberId);
       if (result.success) {
@@ -163,6 +262,33 @@ export function TimeBlockMemberManager({
       return;
     }
 
+    // Check for guest restrictions
+    const hasViolations = await checkGuestRestrictions(guestId);
+
+    if (hasViolations) {
+      // Save the action for later if admin overrides
+      setPendingAction(async () => {
+        try {
+          const result = await addGuestToTimeBlock(
+            timeBlock.id,
+            guestId,
+            selectedMemberId,
+          );
+
+          if (result.success) {
+            toast.success("Guest added successfully");
+          } else {
+            toast.error(result.error || "Failed to add guest");
+          }
+        } catch (error) {
+          toast.error("An error occurred while adding the guest");
+          console.error(error);
+        }
+      });
+      return;
+    }
+
+    // No violations, proceed as normal
     try {
       const result = await addGuestToTimeBlock(
         timeBlock.id,
@@ -199,6 +325,17 @@ export function TimeBlockMemberManager({
     setSelectedMemberId(memberId);
   };
 
+  const handleOverrideAndContinue = async () => {
+    // Close the alert
+    setShowViolationAlert(false);
+
+    // Execute the pending action if it exists
+    if (pendingAction) {
+      await pendingAction();
+      setPendingAction(null);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <TimeBlockPageHeader timeBlock={timeBlock} theme={theme} />
@@ -210,12 +347,16 @@ export function TimeBlockMemberManager({
       />
 
       <Tabs defaultValue="members" className="mt-8 w-full">
-        <TabsList className="mb-4">
-          <TabsTrigger value="members">Add Members</TabsTrigger>
-          <TabsTrigger value="guests">Add Guests</TabsTrigger>
+        <TabsList className="mb-4" theme={theme}>
+          <TabsTrigger value="members" theme={theme}>
+            Add Members
+          </TabsTrigger>
+          <TabsTrigger value="guests" theme={theme}>
+            Add Guests
+          </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="members" className="space-y-6">
+        <TabsContent value="members" className="space-y-6" theme={theme}>
           <TimeBlockMemberSearch
             searchQuery={memberSearchQuery}
             onSearch={(query: string) => {
@@ -230,7 +371,7 @@ export function TimeBlockMemberManager({
           />
         </TabsContent>
 
-        <TabsContent value="guests">
+        <TabsContent value="guests" theme={theme}>
           <TimeBlockGuestSearch
             searchQuery={guestSearchQuery}
             onSearch={(query: string) => {
@@ -256,6 +397,19 @@ export function TimeBlockMemberManager({
         onRemoveMember={handleRemoveMember}
         onRemoveGuest={handleRemoveGuest}
         maxPeople={MAX_PEOPLE}
+        theme={theme}
+      />
+
+      {/* Restriction Violation Alert */}
+      <RestrictionViolationAlert
+        open={showViolationAlert}
+        onOpenChange={setShowViolationAlert}
+        violations={restrictionViolations}
+        onContinue={handleOverrideAndContinue}
+        onCancel={() => {
+          setShowViolationAlert(false);
+          setPendingAction(null);
+        }}
         theme={theme}
       />
     </div>
