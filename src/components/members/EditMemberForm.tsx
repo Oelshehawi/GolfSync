@@ -18,8 +18,23 @@ import {
   SelectTrigger,
   SelectValue,
 } from "~/components/ui/select";
+import { Check, ChevronsUpDown } from "lucide-react";
+import { cn } from "~/lib/utils";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+} from "~/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "~/components/ui/popover";
 import { memberFormSchema } from "./memberFormSchema";
 import type { Member } from "~/app/types/MemberTypes";
+import { ThemeConfig } from "~/app/types/UITypes";
 
 type MemberFormValues = z.infer<typeof memberFormSchema>;
 
@@ -27,12 +42,43 @@ interface EditMemberFormProps {
   member: Member;
   onSubmit: (values: MemberFormValues) => Promise<void>;
   onCancel: () => void;
+  theme: ThemeConfig;
 }
+
+// Member class options
+const memberClasses = [
+  { label: "Unlimited Play Male", value: "UNLIMITED PLAY MALE" },
+  { label: "Unlimited Play Female", value: "UNLIMITED PLAY FEMALE" },
+  { label: "Full Play Male", value: "FULL PLAY MALE" },
+  { label: "Full Play Female", value: "FULL PLAY FEMALE" },
+  { label: "Social Male", value: "SOCIAL MALE" },
+  { label: "Social Female", value: "SOCIAL FEMALE" },
+  { label: "Intermediate Male", value: "INTERMEDIATE MALE" },
+  { label: "Intermediate Female", value: "INTERMEDIATE FEMALE" },
+  { label: "Jr Intermediate Male", value: "JR INTERMEDIATE MALE" },
+  { label: "Jr Intermediate Female", value: "JR INTERMEDIATE FEMALE" },
+  { label: "Junior Boy", value: "JUNIOR BOY" },
+  { label: "Junior Girl", value: "JUNIOR GIRL" },
+  { label: "Weekday Play Male", value: "WEEKDAY PLAY MALE" },
+  { label: "Weekday Play Female", value: "WEEKDAY PLAY FEMALE" },
+  { label: "Non-Resident Male", value: "NON-RESIDENT MALE" },
+  { label: "Non-Resident Female", value: "NON-RESIDENT FEMALE" },
+  { label: "Staff Play", value: "STAFF PLAY" },
+  { label: "Management/Pro", value: "MGMT / PRO" },
+  { label: "Dining", value: "DINING" },
+  { label: "Privileged Male", value: "PRIVILEGED MALE" },
+  { label: "Privileged Female", value: "PRIVILEGED FEMALE" },
+  { label: "Senior Retired Male", value: "SENIOR RETIRED MALE" },
+  { label: "Senior Retired Female", value: "SENIOR RETIRED FEMALE" },
+  { label: "Honorary Male", value: "HONORARY MALE" },
+  { label: "Honorary Female", value: "HONORARY FEMALE" },
+];
 
 export function EditMemberForm({
   member,
   onSubmit,
   onCancel,
+  theme,
 }: EditMemberFormProps) {
   const form = useForm<MemberFormValues>({
     resolver: zodResolver(memberFormSchema),
@@ -78,79 +124,64 @@ export function EditMemberForm({
             control={form.control}
             name="class"
             render={({ field }) => (
-              <FormItem>
+              <FormItem className="flex flex-col">
                 <FormLabel>Class</FormLabel>
-                <Select
-                  onValueChange={field.onChange}
-                  defaultValue={field.value}
-                >
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select class" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem value="UNLIMITED PLAY MALE">
-                      Unlimited Play Male
-                    </SelectItem>
-                    <SelectItem value="UNLIMITED PLAY FEMALE">
-                      Unlimited Play Female
-                    </SelectItem>
-                    <SelectItem value="FULL PLAY MALE">
-                      Full Play Male
-                    </SelectItem>
-                    <SelectItem value="FULL PLAY FEMALE">
-                      Full Play Female
-                    </SelectItem>
-                    <SelectItem value="SOCIAL MALE">Social Male</SelectItem>
-                    <SelectItem value="SOCIAL FEMALE">Social Female</SelectItem>
-                    <SelectItem value="INTERMEDIATE MALE">
-                      Intermediate Male
-                    </SelectItem>
-                    <SelectItem value="INTERMEDIATE FEMALE">
-                      Intermediate Female
-                    </SelectItem>
-                    <SelectItem value="JR INTERMEDIATE MALE">
-                      Jr Intermediate Male
-                    </SelectItem>
-                    <SelectItem value="JR INTERMEDIATE FEMALE">
-                      Jr Intermediate Female
-                    </SelectItem>
-                    <SelectItem value="JUNIOR BOY">Junior Boy</SelectItem>
-                    <SelectItem value="JUNIOR GIRL">Junior Girl</SelectItem>
-                    <SelectItem value="WEEKDAY PLAY MALE">
-                      Weekday Play Male
-                    </SelectItem>
-                    <SelectItem value="WEEKDAY PLAY FEMALE">
-                      Weekday Play Female
-                    </SelectItem>
-                    <SelectItem value="NON-RESIDENT MALE">
-                      Non-Resident Male
-                    </SelectItem>
-                    <SelectItem value="NON-RESIDENT FEMALE">
-                      Non-Resident Female
-                    </SelectItem>
-                    <SelectItem value="STAFF PLAY">Staff Play</SelectItem>
-                    <SelectItem value="MGMT / PRO">Management/Pro</SelectItem>
-                    <SelectItem value="DINING">Dining</SelectItem>
-                    <SelectItem value="PRIVILEGED MALE">
-                      Privileged Male
-                    </SelectItem>
-                    <SelectItem value="PRIVILEGED FEMALE">
-                      Privileged Female
-                    </SelectItem>
-                    <SelectItem value="SENIOR RETIRED MALE">
-                      Senior Retired Male
-                    </SelectItem>
-                    <SelectItem value="SENIOR RETIRED FEMALE">
-                      Senior Retired Female
-                    </SelectItem>
-                    <SelectItem value="HONORARY MALE">Honorary Male</SelectItem>
-                    <SelectItem value="HONORARY FEMALE">
-                      Honorary Female
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <FormControl>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        className={cn(
+                          "w-full justify-between",
+                          !field.value && "text-muted-foreground",
+                        )}
+                      >
+                        {field.value
+                          ? memberClasses.find(
+                              (memberClass) =>
+                                memberClass.value === field.value,
+                            )?.label
+                          : "Select class"}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </FormControl>
+                  </PopoverTrigger>
+                  <PopoverContent className="p-0" theme={theme}>
+                    <Command theme={theme}>
+                      <CommandInput placeholder="Search for class..." />
+                      <CommandEmpty>No class found.</CommandEmpty>
+                      <CommandGroup className="max-h-64 overflow-y-auto">
+                        {memberClasses.map((memberClass) => (
+                          <CommandItem
+                            key={memberClass.value}
+                            value={memberClass.value}
+                            onSelect={(value) => {
+                              field.onChange(
+                                memberClasses.find(
+                                  (item) =>
+                                    item.value.toLowerCase() ===
+                                    value.toLowerCase(),
+                                )?.value,
+                              );
+                            }}
+                            theme={theme}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                field.value === memberClass.value
+                                  ? "opacity-100"
+                                  : "opacity-0",
+                              )}
+                            />
+                            {memberClass.label}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
                 <FormMessage className="text-red-500" />
               </FormItem>
             )}

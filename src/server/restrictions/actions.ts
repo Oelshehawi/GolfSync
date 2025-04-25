@@ -30,9 +30,10 @@ export async function checkRestrictionsAction(params: {
   bookingTime: Date;
 }) {
   try {
-    return await checkRestrictions(params);
+    const results = await checkRestrictions(params);
+    return results;
   } catch (error) {
-    console.error("Error checking restrictions:", error);
+    console.error("Error in checkRestrictionsAction:", error);
     return { success: false, error: "Failed to check restrictions" };
   }
 }
@@ -210,15 +211,15 @@ export async function deleteRestriction(id: number): Promise<ResultType> {
 export async function recordOverride(params: {
   restrictionId: number;
   entityType: RestrictedEntityType;
-  entityId: string | null;
+  entityId?: string | null;
   reason: string;
 }): Promise<ResultType> {
   try {
-    const { userId } = await auth();
     const orgId = await getOrganizationId();
+    const { userId } = await auth();
 
     if (!userId) {
-      return { success: false, error: "Not authenticated" };
+      return { success: false, error: "Unauthorized" };
     }
 
     await db.insert(restrictionOverrides).values({
@@ -226,13 +227,13 @@ export async function recordOverride(params: {
       restrictionId: params.restrictionId,
       overriddenBy: userId,
       entityType: params.entityType,
-      entityId: params.entityId,
+      entityId: params.entityId || null,
       reason: params.reason,
     });
 
     return { success: true };
   } catch (error) {
-    console.error("Error recording override:", error);
+    console.error("Error in recordOverride:", error);
     return { success: false, error: "Failed to record override" };
   }
 }

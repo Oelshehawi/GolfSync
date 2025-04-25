@@ -87,15 +87,15 @@ export function RestrictionViolationAlert({
               ? `${violations.length} Booking Restrictions Violated`
               : "Booking Restriction Violated"}
           </AlertDialogTitle>
-          <AlertDialogDescription className="text-left">
+          <div className="text-muted-foreground text-left text-sm">
             <div className="space-y-4">
-              <p>
+              <div>
                 The following booking{" "}
                 {violations.length > 1
                   ? "restrictions have"
                   : "restriction has"}{" "}
                 been violated:
-              </p>
+              </div>
 
               <ul className="ml-6 list-disc space-y-2">
                 {violations.map((violation, index) => (
@@ -109,26 +109,26 @@ export function RestrictionViolationAlert({
               </ul>
 
               {isAdmin && (
-                <div className="mt-4 space-y-2 rounded-md border border-amber-200 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-950">
-                  <p className="font-medium text-amber-800 dark:text-amber-400">
+                <div className="mt-6 space-y-3 rounded-md border border-blue-600 bg-blue-100 p-4 dark:border-blue-700 dark:bg-blue-900">
+                  <div className="font-medium text-blue-900 dark:text-blue-100">
                     Admin Override
-                  </p>
-                  <p className="text-sm text-amber-700 dark:text-amber-300">
+                  </div>
+                  <div className="text-sm text-blue-900 dark:text-blue-100">
                     As an administrator, you can override these restrictions.
                     Please provide a reason for the override:
-                  </p>
+                  </div>
                   <Textarea
                     value={overrideReason}
                     onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
                       setOverrideReason(e.target.value)
                     }
                     placeholder="Reason for override..."
-                    className="mt-2"
+                    className="mt-2 border-blue-300 bg-white"
                   />
                 </div>
               )}
             </div>
-          </AlertDialogDescription>
+          </div>
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel onClick={onCancel}>
@@ -138,10 +138,7 @@ export function RestrictionViolationAlert({
             <AlertDialogAction
               onClick={handleOverride}
               disabled={!overrideReason.trim()}
-              style={
-                theme?.primary ? { backgroundColor: theme.primary } : undefined
-              }
-              className="hover:opacity-90"
+              className="bg-blue-700 text-white hover:bg-blue-800 dark:bg-blue-600 dark:hover:bg-blue-700"
             >
               Override & Continue
             </AlertDialogAction>

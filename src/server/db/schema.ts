@@ -64,6 +64,11 @@ export const members = createTable(
   ],
 );
 
+// Define relations for members
+export const membersRelations = relations(members, ({ many }) => ({
+  timeBlockMembers: many(timeBlockMembers),
+}));
+
 // Teesheet configurations
 export const teesheetConfigs = createTable(
   "teesheet_configs",
@@ -264,6 +269,21 @@ export const timeBlockGuests = createTable(
   ],
 );
 
+// Define relations for timeBlockMembers
+export const timeBlockMembersRelations = relations(
+  timeBlockMembers,
+  ({ one }) => ({
+    timeBlock: one(timeBlocks, {
+      fields: [timeBlockMembers.timeBlockId],
+      references: [timeBlocks.id],
+    }),
+    member: one(members, {
+      fields: [timeBlockMembers.memberId],
+      references: [members.id],
+    }),
+  }),
+);
+
 // Define relations for guests and timeBlockGuests
 export const guestsRelations = relations(guests, ({ many }) => ({
   timeBlockGuests: many(timeBlockGuests),
@@ -287,10 +307,10 @@ export const timeBlockGuestsRelations = relations(
   }),
 );
 
-// Update timeBlocks relations to include guests
+// Update timeBlocks relations to include timeBlockMembers and timeBlockGuests
 export const timeBlocksRelations = relations(timeBlocks, ({ many }) => ({
-  members: many(timeBlockMembers),
-  guests: many(timeBlockGuests),
+  timeBlockMembers: many(timeBlockMembers),
+  timeBlockGuests: many(timeBlockGuests),
 }));
 
 // Restrictions table for member classes and guests

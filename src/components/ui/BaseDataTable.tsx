@@ -18,7 +18,7 @@ import {
 } from "~/components/ui/dropdown-menu";
 import { MoreHorizontal } from "lucide-react";
 import { SearchBar } from "~/components/ui/search-bar";
-import { ThemeConfig, PaginationProps } from "~/app/types/UITypes";
+import { ThemeConfig } from "~/app/types/UITypes";
 
 export interface BaseDataItem {
   id: number;

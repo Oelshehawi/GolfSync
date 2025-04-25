@@ -212,18 +212,20 @@ export function TimeBlockMemberManager({
 
     if (hasViolations) {
       // Save the action for later if admin overrides
-      setPendingAction(async () => {
-        try {
-          const result = await addMemberToTimeBlock(timeBlock.id, memberId);
-          if (result.success) {
-            toast.success("Member added successfully");
-          } else {
-            toast.error(result.error || "Failed to add member");
+      setPendingAction(() => {
+        return async () => {
+          try {
+            const result = await addMemberToTimeBlock(timeBlock.id, memberId);
+            if (result.success) {
+              toast.success("Member added successfully");
+            } else {
+              toast.error(result.error || "Failed to add member");
+            }
+          } catch (error) {
+            toast.error("An error occurred while adding the member");
+            console.error(error);
           }
-        } catch (error) {
-          toast.error("An error occurred while adding the member");
-          console.error(error);
-        }
+        };
       });
       return;
     }
@@ -262,28 +264,30 @@ export function TimeBlockMemberManager({
       return;
     }
 
-    // Check for guest restrictions
+    // Check for restrictions
     const hasViolations = await checkGuestRestrictions(guestId);
 
     if (hasViolations) {
       // Save the action for later if admin overrides
-      setPendingAction(async () => {
-        try {
-          const result = await addGuestToTimeBlock(
-            timeBlock.id,
-            guestId,
-            selectedMemberId,
-          );
-
-          if (result.success) {
-            toast.success("Guest added successfully");
-          } else {
-            toast.error(result.error || "Failed to add guest");
+      setPendingAction(() => {
+        return async () => {
+          try {
+            const result = await addGuestToTimeBlock(
+              timeBlock.id,
+              guestId,
+              selectedMemberId,
+            );
+            if (result.success) {
+              toast.success("Guest added successfully");
+              setSelectedMemberId(null);
+            } else {
+              toast.error(result.error || "Failed to add guest");
+            }
+          } catch (error) {
+            toast.error("An error occurred while adding the guest");
+            console.error(error);
           }
-        } catch (error) {
-          toast.error("An error occurred while adding the guest");
-          console.error(error);
-        }
+        };
       });
       return;
     }
@@ -295,9 +299,9 @@ export function TimeBlockMemberManager({
         guestId,
         selectedMemberId,
       );
-
       if (result.success) {
         toast.success("Guest added successfully");
+        setSelectedMemberId(null);
       } else {
         toast.error(result.error || "Failed to add guest");
       }
@@ -326,14 +330,11 @@ export function TimeBlockMemberManager({
   };
 
   const handleOverrideAndContinue = async () => {
-    // Close the alert
-    setShowViolationAlert(false);
-
-    // Execute the pending action if it exists
     if (pendingAction) {
       await pendingAction();
       setPendingAction(null);
     }
+    setShowViolationAlert(false);
   };
 
   return (

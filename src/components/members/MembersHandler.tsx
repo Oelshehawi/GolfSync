@@ -154,6 +154,7 @@ export function MembersHandler({ initialMembers, theme }: MembersHandlerProps) {
           currentPage={currentPage}
           totalPages={totalPages}
           onPageChange={setCurrentPage}
+          theme={theme}
         />
       </div>
 
@@ -175,6 +176,7 @@ export function MembersHandler({ initialMembers, theme }: MembersHandlerProps) {
               member={selectedMember}
               onSubmit={handleUpdateMember}
               onCancel={resetForm}
+              theme={theme}
             />
           ) : (
             <AddMemberForm onSubmit={handleCreateMember} onCancel={resetForm} />
