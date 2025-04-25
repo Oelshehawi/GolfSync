@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { Plus } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { MembersTable } from "~/components/members/MembersTable";
-import { MemberSearchBar } from "~/components/members/MemberSearchBar";
+import { SearchBar } from "~/components/ui/search-bar";
 import {
   Dialog,
   DialogContent,
@@ -33,13 +33,18 @@ import toast from "react-hot-toast";
 import { AddMemberForm } from "./AddMemberForm";
 import { EditMemberForm } from "./EditMemberForm";
 
-interface MembersClientProps {
+interface MembersHandlerProps {
   initialMembers: Member[];
+  theme: {
+    primary?: string;
+    secondary?: string;
+    tertiary?: string;
+  };
 }
 
 const ITEMS_PER_PAGE = 6;
 
-export function MembersClient({ initialMembers }: MembersClientProps) {
+export function MembersHandler({ initialMembers, theme }: MembersHandlerProps) {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const [members, setMembers] = useState<Member[]>(initialMembers);
@@ -129,7 +134,12 @@ export function MembersClient({ initialMembers }: MembersClientProps) {
       </div>
 
       <div className="space-y-4">
-        <MemberSearchBar value={searchQuery} onChange={setSearchQuery} />
+        <SearchBar
+          value={searchQuery}
+          onChange={setSearchQuery}
+          placeholder="Search members by name or number..."
+          theme={theme}
+        />
 
         <MembersTable
           members={getCurrentPageMembers()}

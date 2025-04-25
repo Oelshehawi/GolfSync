@@ -6,7 +6,7 @@ import type {
   TimeBlockWithMembers,
   TeesheetConfig,
 } from "~/app/types/TeeSheetTypes";
-import { TimeBlock as TimeBlockComponent } from "./TimeBlock";
+import { TimeBlock as TimeBlockComponent } from "../timeblock/TimeBlock";
 import { Button } from "~/components/ui/button";
 import { Settings } from "lucide-react";
 import {

@@ -207,3 +207,86 @@ export const timeBlockMembers = createTable(
     ),
   ],
 );
+
+// Guests table
+export const guests = createTable(
+  "guests",
+  {
+    id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+    clerkOrgId: varchar("clerk_org_id", { length: 50 }).notNull(),
+    firstName: varchar("first_name", { length: 50 }).notNull(),
+    lastName: varchar("last_name", { length: 50 }).notNull(),
+    email: varchar("email", { length: 100 }),
+    phone: varchar("phone", { length: 20 }),
+    handicap: varchar("handicap", { length: 20 }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).$onUpdate(
+      () => new Date(),
+    ),
+  },
+  (table) => [
+    index("guests_org_id_idx").on(table.clerkOrgId),
+    index("guests_name_idx").on(table.firstName, table.lastName),
+  ],
+);
+
+// Time block guests (join table)
+export const timeBlockGuests = createTable(
+  "time_block_guests",
+  {
+    id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+    clerkOrgId: varchar("clerk_org_id", { length: 50 }).notNull(),
+    timeBlockId: integer("time_block_id")
+      .references(() => timeBlocks.id, { onDelete: "cascade" })
+      .notNull(),
+    guestId: integer("guest_id")
+      .references(() => guests.id, { onDelete: "cascade" })
+      .notNull(),
+    invitedByMemberId: integer("invited_by_member_id")
+      .references(() => members.id)
+      .notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+  },
+  (table) => [
+    index("block_guests_org_id_idx").on(table.clerkOrgId),
+    index("block_guests_time_block_id_idx").on(table.timeBlockId),
+    index("block_guests_guest_id_idx").on(table.guestId),
+    unique("block_guests_time_block_guest_unq").on(
+      table.timeBlockId,
+      table.guestId,
+    ),
+  ],
+);
+
+// Define relations for guests and timeBlockGuests
+export const guestsRelations = relations(guests, ({ many }) => ({
+  timeBlockGuests: many(timeBlockGuests),
+}));
+
+export const timeBlockGuestsRelations = relations(
+  timeBlockGuests,
+  ({ one }) => ({
+    guest: one(guests, {
+      fields: [timeBlockGuests.guestId],
+      references: [guests.id],
+    }),
+    timeBlock: one(timeBlocks, {
+      fields: [timeBlockGuests.timeBlockId],
+      references: [timeBlocks.id],
+    }),
+    invitedByMember: one(members, {
+      fields: [timeBlockGuests.invitedByMemberId],
+      references: [members.id],
+    }),
+  }),
+);
+
+// Update timeBlocks relations to include guests
+export const timeBlocksRelations = relations(timeBlocks, ({ many }) => ({
+  members: many(timeBlockMembers),
+  guests: many(timeBlockGuests),
+}));

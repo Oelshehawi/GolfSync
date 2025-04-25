@@ -6,6 +6,8 @@ import type { TimeBlockWithMembers } from "~/app/types/TeeSheetTypes";
 
 interface TimeBlockHeaderProps {
   timeBlock: TimeBlockWithMembers;
+  guestsCount?: number;
+  maxPeople?: number;
   theme?: {
     primary?: string;
     secondary?: string;
@@ -13,7 +15,14 @@ interface TimeBlockHeaderProps {
   };
 }
 
-export function TimeBlockHeader({ timeBlock, theme }: TimeBlockHeaderProps) {
+export function TimeBlockHeader({
+  timeBlock,
+  guestsCount = 0,
+  maxPeople = 4,
+  theme,
+}: TimeBlockHeaderProps) {
+  const totalPeople = timeBlock.members.length + guestsCount;
+
   return (
     <Card theme={theme}>
       <CardHeader className="flex flex-row items-center justify-between">
@@ -29,20 +38,22 @@ export function TimeBlockHeader({ timeBlock, theme }: TimeBlockHeaderProps) {
               {format(new Date(timeBlock.startTime), "h:mm a")}
             </CardTitle>
             <p className="text-sm text-gray-500">
-              {timeBlock.members.length} / 4 members booked
+              {totalPeople} / {maxPeople} people booked
+              {totalPeople > 0 &&
+                ` (${timeBlock.members.length} members, ${guestsCount} guests)`}
             </p>
           </div>
         </div>
         <Badge
-          variant={timeBlock.members.length >= 4 ? "destructive" : "default"}
+          variant={totalPeople >= maxPeople ? "destructive" : "default"}
           theme={theme}
           style={
-            timeBlock.members.length >= 4
+            totalPeople >= maxPeople
               ? { backgroundColor: "#FEE2E2", color: "#B91C1C" }
               : { backgroundColor: "#D1FAE5", color: "#065F46" }
           }
         >
-          {timeBlock.members.length >= 4 ? "Full" : "Available"}
+          {totalPeople >= maxPeople ? "Full" : "Available"}
         </Badge>
       </CardHeader>
     </Card>

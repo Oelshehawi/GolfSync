@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
-import { TimeBlockMemberManager } from "~/components/teesheet/TimeBlockMemberManager";
+import { TimeBlockMemberManager } from "~/components/timeblock/TimeBlockMemberManager";
 import { getTimeBlockWithMembers } from "~/server/teesheet/data";
+import { getTimeBlockGuests } from "~/server/guests/data";
 import { getOrganizationTheme } from "~/server/config/data";
 
 interface TimeBlockPageProps {
@@ -17,8 +18,9 @@ export default async function TimeBlockPage({ params }: TimeBlockPageProps) {
     notFound();
   }
 
-  const [timeBlock, theme] = await Promise.all([
+  const [timeBlock, timeBlockGuests, theme] = await Promise.all([
     getTimeBlockWithMembers(timeBlockId),
+    getTimeBlockGuests(timeBlockId),
     getOrganizationTheme(),
   ]);
 
@@ -28,7 +30,11 @@ export default async function TimeBlockPage({ params }: TimeBlockPageProps) {
 
   return (
     <div className="container mx-auto p-6">
-      <TimeBlockMemberManager timeBlock={timeBlock} theme={theme} />
+      <TimeBlockMemberManager
+        timeBlock={timeBlock}
+        timeBlockGuests={timeBlockGuests}
+        theme={theme}
+      />
     </div>
   );
 }

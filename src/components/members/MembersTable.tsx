@@ -1,24 +1,25 @@
 "use client";
 
-import { Edit, Trash2 } from "lucide-react";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "~/components/ui/table";
-import { Button } from "~/components/ui/button";
+import { Pencil, Trash } from "lucide-react";
 import type { Member } from "~/app/types/MemberTypes";
+import {
+  BaseDataTable,
+  type ActionDef,
+  type ColumnDef,
+} from "~/components/ui/BaseDataTable";
+import { ThemeConfig } from "~/app/types/UITypes";
 
 interface MembersTableProps {
   members: Member[];
-  onEdit: (member: Member) => void;
-  onDelete: (member: Member) => void;
+  onEdit?: (member: Member) => void;
+  onDelete?: (member: Member) => void;
   currentPage: number;
   totalPages: number;
   onPageChange: (page: number) => void;
+  showSearch?: boolean;
+  title?: string;
+  emptyMessage?: string;
+  theme?: ThemeConfig;
 }
 
 export function MembersTable({
@@ -28,75 +29,72 @@ export function MembersTable({
   currentPage,
   totalPages,
   onPageChange,
+  showSearch = false,
+  title = "Members",
+  emptyMessage = "No members found",
+  theme,
 }: MembersTableProps) {
-  return (
-    <div className="space-y-4">
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Member Number</TableHead>
-              <TableHead>Name</TableHead>
-              <TableHead>Class</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead className="w-[100px]">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {members.map((member) => (
-              <TableRow key={member.id}>
-                <TableCell>{member.memberNumber}</TableCell>
-                <TableCell>
-                  {member.firstName} {member.lastName}
-                </TableCell>
-                <TableCell>{member.class}</TableCell>
-                <TableCell>{member.email}</TableCell>
-                <TableCell>
-                  <div className="flex space-x-2">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => onEdit(member)}
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => onDelete(member)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
+  const columns: ColumnDef<Member>[] = [
+    {
+      header: "Member Number",
+      accessorKey: "memberNumber",
+    },
+    {
+      header: "Name",
+      cell: (member) => `${member.firstName} ${member.lastName}`,
+    },
+    {
+      header: "Class",
+      accessorKey: "class",
+    },
+    {
+      header: "Email",
+      accessorKey: "email",
+    },
+  ];
 
-      {/* Pagination */}
-      <div className="flex items-center justify-center space-x-2">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => onPageChange(currentPage - 1)}
-          disabled={currentPage === 1}
-        >
-          Previous
-        </Button>
-        <div className="text-sm">
-          Page {currentPage} of {totalPages}
-        </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => onPageChange(currentPage + 1)}
-          disabled={currentPage === totalPages}
-        >
-          Next
-        </Button>
-      </div>
-    </div>
+  const actions: ActionDef<Member>[] = [];
+
+  if (onEdit) {
+    actions.push({
+      label: "Edit",
+      icon: <Pencil className="mr-2 h-4 w-4" />,
+      onClick: onEdit,
+    });
+  }
+
+  if (onDelete) {
+    actions.push({
+      label: "Delete",
+      icon: <Trash className="mr-2 h-4 w-4" />,
+      onClick: onDelete,
+      className: "text-red-600",
+    });
+  }
+
+  const filterMembers = (member: Member, searchTerm: string) => {
+    const term = searchTerm.toLowerCase();
+    return (
+      `${member.firstName} ${member.lastName}`.toLowerCase().includes(term) ||
+      member.email.toLowerCase().includes(term) ||
+      member.memberNumber.toLowerCase().includes(term) ||
+      member.class.toLowerCase().includes(term)
+    );
+  };
+
+  return (
+    <BaseDataTable
+      data={members}
+      columns={columns}
+      actions={actions}
+      showSearch={showSearch}
+      searchPlaceholder="Search members..."
+      emptyMessage={emptyMessage}
+      currentPage={currentPage}
+      totalPages={totalPages}
+      onPageChange={onPageChange}
+      filterFunction={filterMembers}
+      theme={theme}
+    />
   );
 }
