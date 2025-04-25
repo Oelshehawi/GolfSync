@@ -86,7 +86,7 @@ export function TeesheetView({
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
-      <div className="grid grid-cols-1 gap-4">
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
         {sortedTimeBlocks.map((block) => (
           <TimeBlockComponent
             key={block.id}
@@ -95,6 +95,7 @@ export function TeesheetView({
               startTime: new Date(block.startTime),
               endTime: new Date(block.endTime),
               members: block.members || [],
+              guests: block.guests || [],
             }}
           />
         ))}

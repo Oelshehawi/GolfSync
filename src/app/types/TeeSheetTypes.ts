@@ -1,3 +1,5 @@
+import { TimeBlockGuest } from "./GuestTypes";
+
 export interface TeeSheet {
   id: number;
   clerkOrgId: string;
@@ -26,6 +28,7 @@ export interface TimeBlockMemberView {
 
 export interface TimeBlockWithMembers extends TimeBlock {
   members: TimeBlockMemberView[];
+  guests: TimeBlockGuest[];
 }
 
 export interface TeesheetConfigRuleInput {

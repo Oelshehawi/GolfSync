@@ -4,8 +4,10 @@ import {
   timeBlocks,
   timeBlockMembers,
   members,
+  timeBlockGuests,
+  guests,
 } from "~/server/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 import { getOrganizationId } from "~/lib/auth";
 import type {
   TeeSheet,
@@ -120,6 +122,38 @@ export async function getTimeBlocksForTeesheet(
       ),
     );
 
+  // Fetch guests data separately
+  const guestsResult = await db
+    .select({
+      timeBlockId: timeBlockGuests.timeBlockId,
+      guest: {
+        id: guests.id,
+        firstName: guests.firstName,
+        lastName: guests.lastName,
+        email: guests.email,
+        phone: guests.phone,
+        handicap: guests.handicap,
+      },
+      invitedByMember: {
+        id: members.id,
+        firstName: members.firstName,
+        lastName: members.lastName,
+        memberNumber: members.memberNumber,
+      },
+    })
+    .from(timeBlockGuests)
+    .innerJoin(guests, eq(timeBlockGuests.guestId, guests.id))
+    .innerJoin(members, eq(timeBlockGuests.invitedByMemberId, members.id))
+    .where(
+      and(
+        eq(timeBlockGuests.clerkOrgId, clerkOrgId),
+        inArray(
+          timeBlockGuests.timeBlockId,
+          result.map((r) => r.id),
+        ),
+      ),
+    );
+
   if (!result || result.length === 0) {
     return [];
   }
@@ -138,6 +172,7 @@ export async function getTimeBlocksForTeesheet(
         createdAt: row.createdAt,
         updatedAt: row.updatedAt,
         members: [],
+        guests: [],
       });
     }
 
@@ -148,6 +183,29 @@ export async function getTimeBlocksForTeesheet(
         firstName: row.members.firstName!,
         lastName: row.members.lastName!,
         memberNumber: row.members.memberNumber!,
+      });
+    }
+  });
+
+  // Add guests to the corresponding time blocks
+  guestsResult.forEach((row) => {
+    const timeBlock = timeBlocksMap.get(row.timeBlockId);
+    if (timeBlock && row.guest?.id) {
+      timeBlock.guests.push({
+        id: row.guest.id,
+        firstName: row.guest.firstName!,
+        lastName: row.guest.lastName!,
+        email: row.guest.email,
+        phone: row.guest.phone,
+        handicap: row.guest.handicap,
+        invitedByMember: row.invitedByMember
+          ? {
+              id: row.invitedByMember.id,
+              firstName: row.invitedByMember.firstName!,
+              lastName: row.invitedByMember.lastName!,
+              memberNumber: row.invitedByMember.memberNumber!,
+            }
+          : undefined,
       });
     }
   });
@@ -190,6 +248,34 @@ export async function getTimeBlockWithMembers(
     return null;
   }
 
+  // Fetch guests separately
+  const guestsResult = await db
+    .select({
+      guest: {
+        id: guests.id,
+        firstName: guests.firstName,
+        lastName: guests.lastName,
+        email: guests.email,
+        phone: guests.phone,
+        handicap: guests.handicap,
+      },
+      invitedByMember: {
+        id: members.id,
+        firstName: members.firstName,
+        lastName: members.lastName,
+        memberNumber: members.memberNumber,
+      },
+    })
+    .from(timeBlockGuests)
+    .innerJoin(guests, eq(timeBlockGuests.guestId, guests.id))
+    .innerJoin(members, eq(timeBlockGuests.invitedByMemberId, members.id))
+    .where(
+      and(
+        eq(timeBlockGuests.timeBlockId, timeBlockId),
+        eq(timeBlockGuests.clerkOrgId, clerkOrgId),
+      ),
+    );
+
   // Group members by time block
   const timeBlock = result[0]!;
   const blockMembers = result
@@ -201,6 +287,24 @@ export async function getTimeBlockWithMembers(
       memberNumber: row.members!.memberNumber!,
     }));
 
+  // Process guests
+  const blockGuests = guestsResult.map((row) => ({
+    id: row.guest!.id!,
+    firstName: row.guest!.firstName!,
+    lastName: row.guest!.lastName!,
+    email: row.guest!.email,
+    phone: row.guest!.phone,
+    handicap: row.guest!.handicap,
+    invitedByMember: row.invitedByMember
+      ? {
+          id: row.invitedByMember.id,
+          firstName: row.invitedByMember.firstName!,
+          lastName: row.invitedByMember.lastName!,
+          memberNumber: row.invitedByMember.memberNumber!,
+        }
+      : undefined,
+  }));
+
   return {
     id: timeBlock.id,
     clerkOrgId: timeBlock.clerkOrgId,
@@ -210,5 +314,6 @@ export async function getTimeBlockWithMembers(
     createdAt: timeBlock.createdAt,
     updatedAt: timeBlock.updatedAt,
     members: blockMembers || [], // Ensure members is always an array
+    guests: blockGuests || [], // Ensure guests is always an array
   };
 }
