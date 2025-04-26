@@ -103,6 +103,7 @@ export async function getTimeBlocksForTeesheet(
       teesheetId: timeBlocks.teesheetId,
       startTime: timeBlocks.startTime,
       endTime: timeBlocks.endTime,
+      notes: timeBlocks.notes,
       createdAt: timeBlocks.createdAt,
       updatedAt: timeBlocks.updatedAt,
       members: {
@@ -110,6 +111,8 @@ export async function getTimeBlocksForTeesheet(
         firstName: members.firstName,
         lastName: members.lastName,
         memberNumber: members.memberNumber,
+        checkedIn: timeBlockMembers.checkedIn,
+        checkedInAt: timeBlockMembers.checkedInAt,
       },
     })
     .from(timeBlocks)
@@ -134,6 +137,8 @@ export async function getTimeBlocksForTeesheet(
         phone: guests.phone,
         handicap: guests.handicap,
       },
+      checkedIn: timeBlockGuests.checkedIn,
+      checkedInAt: timeBlockGuests.checkedInAt,
       invitedByMember: {
         id: members.id,
         firstName: members.firstName,
@@ -169,6 +174,7 @@ export async function getTimeBlocksForTeesheet(
         teesheetId: row.teesheetId,
         startTime: row.startTime,
         endTime: row.endTime,
+        notes: row.notes,
         createdAt: row.createdAt,
         updatedAt: row.updatedAt,
         members: [],
@@ -183,6 +189,8 @@ export async function getTimeBlocksForTeesheet(
         firstName: row.members.firstName!,
         lastName: row.members.lastName!,
         memberNumber: row.members.memberNumber!,
+        checkedIn: row.members.checkedIn || false,
+        checkedInAt: row.members.checkedInAt,
       });
     }
   });
@@ -198,6 +206,8 @@ export async function getTimeBlocksForTeesheet(
         email: row.guest.email,
         phone: row.guest.phone,
         handicap: row.guest.handicap,
+        checkedIn: row.checkedIn || false,
+        checkedInAt: row.checkedInAt,
         invitedByMember: row.invitedByMember
           ? {
               id: row.invitedByMember.id,
@@ -225,6 +235,7 @@ export async function getTimeBlockWithMembers(
       teesheetId: timeBlocks.teesheetId,
       startTime: timeBlocks.startTime,
       endTime: timeBlocks.endTime,
+      notes: timeBlocks.notes,
       createdAt: timeBlocks.createdAt,
       updatedAt: timeBlocks.updatedAt,
       members: {
@@ -232,6 +243,8 @@ export async function getTimeBlockWithMembers(
         firstName: members.firstName,
         lastName: members.lastName,
         memberNumber: members.memberNumber,
+        checkedIn: timeBlockMembers.checkedIn,
+        checkedInAt: timeBlockMembers.checkedInAt,
       },
     })
     .from(timeBlocks)
@@ -239,8 +252,8 @@ export async function getTimeBlockWithMembers(
     .leftJoin(members, eq(timeBlockMembers.memberId, members.id))
     .where(
       and(
-        eq(timeBlocks.id, timeBlockId),
         eq(timeBlocks.clerkOrgId, clerkOrgId),
+        eq(timeBlocks.id, timeBlockId),
       ),
     );
 
@@ -248,7 +261,24 @@ export async function getTimeBlockWithMembers(
     return null;
   }
 
-  // Fetch guests separately
+  // Get the basic time block info from the first row
+  const firstRow = result[0];
+  if (!firstRow) {
+    return null;
+  }
+
+  const timeBlock = {
+    id: firstRow.id,
+    clerkOrgId: firstRow.clerkOrgId,
+    teesheetId: firstRow.teesheetId,
+    startTime: firstRow.startTime,
+    endTime: firstRow.endTime,
+    notes: firstRow.notes,
+    createdAt: firstRow.createdAt,
+    updatedAt: firstRow.updatedAt,
+  };
+
+  // Fetch guests data separately
   const guestsResult = await db
     .select({
       guest: {
@@ -259,6 +289,8 @@ export async function getTimeBlockWithMembers(
         phone: guests.phone,
         handicap: guests.handicap,
       },
+      checkedIn: timeBlockGuests.checkedIn,
+      checkedInAt: timeBlockGuests.checkedInAt,
       invitedByMember: {
         id: members.id,
         firstName: members.firstName,
@@ -271,13 +303,12 @@ export async function getTimeBlockWithMembers(
     .innerJoin(members, eq(timeBlockGuests.invitedByMemberId, members.id))
     .where(
       and(
-        eq(timeBlockGuests.timeBlockId, timeBlockId),
         eq(timeBlockGuests.clerkOrgId, clerkOrgId),
+        eq(timeBlockGuests.timeBlockId, timeBlockId),
       ),
     );
 
-  // Group members by time block
-  const timeBlock = result[0]!;
+  // Process members
   const blockMembers = result
     .filter((row) => row.members?.id)
     .map((row) => ({
@@ -285,6 +316,8 @@ export async function getTimeBlockWithMembers(
       firstName: row.members!.firstName!,
       lastName: row.members!.lastName!,
       memberNumber: row.members!.memberNumber!,
+      checkedIn: row.members!.checkedIn || false,
+      checkedInAt: row.members!.checkedInAt,
     }));
 
   // Process guests
@@ -295,6 +328,8 @@ export async function getTimeBlockWithMembers(
     email: row.guest!.email,
     phone: row.guest!.phone,
     handicap: row.guest!.handicap,
+    checkedIn: row.checkedIn || false,
+    checkedInAt: row.checkedInAt,
     invitedByMember: row.invitedByMember
       ? {
           id: row.invitedByMember.id,
@@ -311,9 +346,10 @@ export async function getTimeBlockWithMembers(
     teesheetId: timeBlock.teesheetId,
     startTime: timeBlock.startTime,
     endTime: timeBlock.endTime,
+    notes: timeBlock.notes,
     createdAt: timeBlock.createdAt,
     updatedAt: timeBlock.updatedAt,
-    members: blockMembers || [], // Ensure members is always an array
-    guests: blockGuests || [], // Ensure guests is always an array
+    members: blockMembers || [],
+    guests: blockGuests || [],
   };
 }

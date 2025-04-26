@@ -2,50 +2,18 @@
 
 import { getOrganizationId } from "~/lib/auth";
 import { db } from "~/server/db";
-import { timeBlockMembers, timeBlockGuests } from "~/server/db/schema";
+import {
+  timeBlockMembers,
+  timeBlockGuests,
+  timeBlocks,
+} from "~/server/db/schema";
 import { and, eq } from "drizzle-orm";
+import { revalidatePath } from "next/cache";
 
 type ActionResult = {
   success: boolean;
   error?: string;
 };
-
-export async function createTimeBlock(
-  teesheetId: number,
-  startTime: Date,
-  endTime: Date,
-  memberIds?: number[],
-) {
-  try {
-    return "Time block created successfully";
-  } catch (error) {
-    console.error("Error creating time block:", error);
-    throw error;
-  }
-}
-
-export async function updateTimeBlock(
-  timeBlockId: number,
-  memberIds: number[],
-) {
-  try {
-    // First, delete existing member associations
-
-    return "Time block updated successfully";
-  } catch (error) {
-    console.error("Error updating time block:", error);
-    throw error;
-  }
-}
-
-export async function deleteTimeBlock(timeBlockId: number) {
-  try {
-    await db.delete(timeBlocks).where(eq(timeBlocks.id, timeBlockId));
-  } catch (error) {
-    console.error("Error deleting time block:", error);
-    throw error;
-  }
-}
 
 export async function removeTimeBlockMember(
   timeBlockId: number,
@@ -73,6 +41,7 @@ export async function removeTimeBlockMember(
       };
     }
 
+    revalidatePath(`/teesheet`);
     return { success: true };
   } catch (error) {
     console.error("Error removing time block member:", error);
@@ -109,12 +78,177 @@ export async function removeTimeBlockGuest(
       };
     }
 
+    revalidatePath(`/teesheet`);
     return { success: true };
   } catch (error) {
     console.error("Error removing time block guest:", error);
     return {
       success: false,
       error: "Failed to remove guest from time block",
+    };
+  }
+}
+
+export async function checkInMember(
+  timeBlockId: number,
+  memberId: number,
+  isCheckedIn: boolean,
+): Promise<ActionResult> {
+  try {
+    const clerkOrgId = await getOrganizationId();
+
+    const result = await db
+      .update(timeBlockMembers)
+      .set({
+        checkedIn: isCheckedIn,
+        checkedInAt: isCheckedIn ? new Date() : null,
+      })
+      .where(
+        and(
+          eq(timeBlockMembers.timeBlockId, timeBlockId),
+          eq(timeBlockMembers.memberId, memberId),
+          eq(timeBlockMembers.clerkOrgId, clerkOrgId),
+        ),
+      )
+      .returning();
+
+    if (!result || result.length === 0) {
+      return {
+        success: false,
+        error: "Member not found in time block",
+      };
+    }
+
+    revalidatePath(`/teesheet`);
+    return { success: true };
+  } catch (error) {
+    console.error("Error checking in member:", error);
+    return {
+      success: false,
+      error: "Failed to check in member",
+    };
+  }
+}
+
+export async function checkInGuest(
+  timeBlockId: number,
+  guestId: number,
+  isCheckedIn: boolean,
+): Promise<ActionResult> {
+  try {
+    const clerkOrgId = await getOrganizationId();
+
+    const result = await db
+      .update(timeBlockGuests)
+      .set({
+        checkedIn: isCheckedIn,
+        checkedInAt: isCheckedIn ? new Date() : null,
+      })
+      .where(
+        and(
+          eq(timeBlockGuests.timeBlockId, timeBlockId),
+          eq(timeBlockGuests.guestId, guestId),
+          eq(timeBlockGuests.clerkOrgId, clerkOrgId),
+        ),
+      )
+      .returning();
+
+    if (!result || result.length === 0) {
+      return {
+        success: false,
+        error: "Guest not found in time block",
+      };
+    }
+
+    revalidatePath(`/teesheet`);
+    return { success: true };
+  } catch (error) {
+    console.error("Error checking in guest:", error);
+    return {
+      success: false,
+      error: "Failed to check in guest",
+    };
+  }
+}
+
+export async function checkInAllTimeBlockParticipants(
+  timeBlockId: number,
+  isCheckedIn: boolean,
+): Promise<ActionResult> {
+  try {
+    const clerkOrgId = await getOrganizationId();
+
+    // Check in all members
+    await db
+      .update(timeBlockMembers)
+      .set({
+        checkedIn: isCheckedIn,
+        checkedInAt: isCheckedIn ? new Date() : null,
+      })
+      .where(
+        and(
+          eq(timeBlockMembers.timeBlockId, timeBlockId),
+          eq(timeBlockMembers.clerkOrgId, clerkOrgId),
+        ),
+      );
+
+    // Check in all guests
+    await db
+      .update(timeBlockGuests)
+      .set({
+        checkedIn: isCheckedIn,
+        checkedInAt: isCheckedIn ? new Date() : null,
+      })
+      .where(
+        and(
+          eq(timeBlockGuests.timeBlockId, timeBlockId),
+          eq(timeBlockGuests.clerkOrgId, clerkOrgId),
+        ),
+      );
+
+    revalidatePath(`/teesheet`);
+    return { success: true };
+  } catch (error) {
+    console.error("Error checking in all participants:", error);
+    return {
+      success: false,
+      error: "Failed to check in all participants",
+    };
+  }
+}
+
+export async function updateTimeBlockNotes(
+  timeBlockId: number,
+  notes: string | null,
+): Promise<ActionResult> {
+  try {
+    const clerkOrgId = await getOrganizationId();
+
+    const result = await db
+      .update(timeBlocks)
+      .set({ notes })
+      .where(
+        and(
+          eq(timeBlocks.id, timeBlockId),
+          eq(timeBlocks.clerkOrgId, clerkOrgId),
+        ),
+      )
+      .returning();
+
+    if (!result || result.length === 0) {
+      return {
+        success: false,
+        error: "Time block not found",
+      };
+    }
+
+    revalidatePath(`/teesheet`);
+    return { success: true };
+  } catch (error) {
+    console.error("Error updating time block notes:", error);
+    return {
+      success: false,
+      error: "Failed to update time block notes",
     };
   }
 }

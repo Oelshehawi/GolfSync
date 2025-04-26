@@ -46,8 +46,7 @@ export function TeesheetView({
       const result = await updateTeesheetConfigForDate(teesheet.id, configId);
       if (result.success) {
         toast.success("Teesheet configuration updated successfully");
-        // Refresh the page to show new time blocks
-        window.location.reload();
+        // The page will be automatically refreshed via revalidatePath
       } else {
         toast.error(result.error || "Failed to update teesheet configuration");
       }
@@ -103,6 +102,7 @@ export function TeesheetView({
               members: block.members || [],
               guests: block.guests || [],
             }}
+            theme={theme}
           />
         ))}
       </div>

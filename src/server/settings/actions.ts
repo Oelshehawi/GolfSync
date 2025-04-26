@@ -318,26 +318,34 @@ export async function updateTeesheetConfigForDate(
   }
 
   try {
-    // Get the new config
+    // First get the teesheet
+    const [teesheet] = await db
+      .select()
+      .from(teesheets)
+      .where(
+        and(eq(teesheets.id, teesheetId), eq(teesheets.clerkOrgId, orgId)),
+      );
+
+    if (!teesheet) {
+      return { success: false, error: "Teesheet not found" };
+    }
+
+    // Get the config
     const config = await db.query.teesheetConfigs.findFirst({
       where: and(
         eq(teesheetConfigs.id, configId),
         eq(teesheetConfigs.clerkOrgId, orgId),
       ),
       with: {
-        rules: {
-          where: eq(teesheetConfigRules.clerkOrgId, orgId),
-        },
+        rules: true,
       },
     });
 
     if (!config) {
-      return { success: false, error: "Configuration not found" };
+      return { success: false, error: "Config not found" };
     }
 
-    const newConfig = convertToTeesheetConfig(config);
-
-    // Update the teesheet's config
+    // Update the teesheet to use the new config
     const [updatedTeesheet] = await db
       .update(teesheets)
       .set({ configId })
@@ -358,17 +366,22 @@ export async function updateTeesheetConfigForDate(
         ),
       );
 
-    // Recreate time blocks for the teesheet with the new config
-    await createTimeBlocksForTeesheet(
-      teesheetId,
-      newConfig,
-      updatedTeesheet.date,
+    // Create new time blocks with the new config
+    const fullConfig = convertToTeesheetConfig(config);
+    await createTimeBlocksForTeesheet(teesheetId, fullConfig, teesheet.date);
+
+    // Revalidate paths
+    revalidatePath(`/teesheet`);
+    revalidatePath(
+      `/admin/teesheet/${teesheet.date.toISOString().split("T")[0]}`,
     );
 
-    revalidatePath("/teesheet");
     return { success: true, data: updatedTeesheet };
   } catch (error) {
-    console.error("Error updating teesheet config:", error);
-    return { success: false, error: "Failed to update teesheet configuration" };
+    console.error("Error updating teesheet config for date:", error);
+    return {
+      success: false,
+      error: "Failed to update teesheet configuration",
+    };
   }
 }

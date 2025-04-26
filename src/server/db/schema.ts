@@ -174,6 +174,7 @@ export const timeBlocks = createTable(
       .notNull(),
     startTime: timestamp("start_time", { withTimezone: true }).notNull(),
     endTime: timestamp("end_time", { withTimezone: true }).notNull(),
+    notes: text("notes"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .default(sql`CURRENT_TIMESTAMP`)
       .notNull(),
@@ -200,6 +201,8 @@ export const timeBlockMembers = createTable(
     memberId: integer("member_id")
       .references(() => members.id, { onDelete: "cascade" })
       .notNull(),
+    checkedIn: boolean("checked_in").default(false),
+    checkedInAt: timestamp("checked_in_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .default(sql`CURRENT_TIMESTAMP`)
       .notNull(),
@@ -259,6 +262,8 @@ export const timeBlockGuests = createTable(
     invitedByMemberId: integer("invited_by_member_id")
       .references(() => members.id)
       .notNull(),
+    checkedIn: boolean("checked_in").default(false),
+    checkedInAt: timestamp("checked_in_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .default(sql`CURRENT_TIMESTAMP`)
       .notNull(),

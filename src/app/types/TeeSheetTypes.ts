@@ -24,11 +24,14 @@ export interface TimeBlockMemberView {
   firstName: string;
   lastName: string;
   memberNumber: string;
+  checkedIn?: boolean;
+  checkedInAt?: Date | null;
 }
 
 export interface TimeBlockWithMembers extends TimeBlock {
   members: TimeBlockMemberView[];
   guests: TimeBlockGuest[];
+  notes?: string | null;
 }
 
 export interface TeesheetConfigRuleInput {
