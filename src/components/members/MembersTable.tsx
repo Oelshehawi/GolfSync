@@ -1,6 +1,7 @@
 "use client";
 
-import { Pencil, Trash } from "lucide-react";
+import { useState } from "react";
+import { Pencil, Trash, History } from "lucide-react";
 import type { Member } from "~/app/types/MemberTypes";
 import {
   BaseDataTable,
@@ -8,11 +9,14 @@ import {
   type ColumnDef,
 } from "~/components/ui/BaseDataTable";
 import { ThemeConfig } from "~/app/types/UITypes";
+import { getMemberBookingHistoryAction } from "~/server/members/actions";
+import { BookingHistoryDialog } from "~/components/booking/BookingHistoryDialog";
 
 interface MembersTableProps {
   members: Member[];
   onEdit?: (member: Member) => void;
   onDelete?: (member: Member) => void;
+  onViewHistory?: (member: Member) => void;
   currentPage: number;
   totalPages: number;
   onPageChange: (page: number) => void;
@@ -26,6 +30,7 @@ export function MembersTable({
   members,
   onEdit,
   onDelete,
+  onViewHistory,
   currentPage,
   totalPages,
   onPageChange,
@@ -34,6 +39,14 @@ export function MembersTable({
   emptyMessage = "No members found",
   theme,
 }: MembersTableProps) {
+  const [selectedMember, setSelectedMember] = useState<Member | null>(null);
+  const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
+
+  const handleViewHistory = (member: Member) => {
+    setSelectedMember(member);
+    setHistoryDialogOpen(true);
+  };
+
   const columns: ColumnDef<Member>[] = [
     {
       header: "Member Number",
@@ -54,6 +67,12 @@ export function MembersTable({
   ];
 
   const actions: ActionDef<Member>[] = [];
+
+  actions.push({
+    label: "Booking History",
+    icon: <History className="mr-2 h-4 w-4" />,
+    onClick: handleViewHistory,
+  });
 
   if (onEdit) {
     actions.push({
@@ -82,19 +101,37 @@ export function MembersTable({
     );
   };
 
+  const fetchMemberHistory = async () => {
+    if (!selectedMember) return [];
+    return await getMemberBookingHistoryAction(selectedMember.id);
+  };
+
   return (
-    <BaseDataTable
-      data={members}
-      columns={columns}
-      actions={actions}
-      showSearch={showSearch}
-      searchPlaceholder="Search members..."
-      emptyMessage={emptyMessage}
-      currentPage={currentPage}
-      totalPages={totalPages}
-      onPageChange={onPageChange}
-      filterFunction={filterMembers}
-      theme={theme}
-    />
+    <>
+      <BaseDataTable
+        data={members}
+        columns={columns}
+        actions={actions}
+        showSearch={showSearch}
+        searchPlaceholder="Search members..."
+        emptyMessage={emptyMessage}
+        currentPage={currentPage}
+        totalPages={totalPages}
+        onPageChange={onPageChange}
+        filterFunction={filterMembers}
+        theme={theme}
+      />
+
+      {selectedMember && (
+        <BookingHistoryDialog
+          isOpen={historyDialogOpen}
+          onClose={() => setHistoryDialogOpen(false)}
+          title="Member Booking History"
+          fetchHistory={fetchMemberHistory}
+          theme={theme}
+          entityName={`${selectedMember.firstName} ${selectedMember.lastName}`}
+        />
+      )}
+    </>
   );
 }

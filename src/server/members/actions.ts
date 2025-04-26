@@ -5,7 +5,7 @@ import { members, timeBlockMembers } from "~/server/db/schema";
 import { eq, and } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { getOrganizationId } from "~/lib/auth";
-import { searchMembers } from "./data";
+import { searchMembers, getMemberBookingHistory } from "./data";
 
 // Time block related functions
 export async function addMemberToTimeBlock(
@@ -138,4 +138,9 @@ export async function searchMembersAction(query: string = "") {
     createdAt: new Date(member.createdAt),
     updatedAt: member.updatedAt ? new Date(member.updatedAt) : null,
   }));
+}
+
+export async function getMemberBookingHistoryAction(memberId: number) {
+  const bookings = await getMemberBookingHistory(memberId);
+  return bookings;
 }

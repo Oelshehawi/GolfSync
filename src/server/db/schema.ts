@@ -208,6 +208,11 @@ export const timeBlockMembers = createTable(
     index("block_members_org_id_idx").on(table.clerkOrgId),
     index("block_members_time_block_id_idx").on(table.timeBlockId),
     index("block_members_member_id_idx").on(table.memberId),
+    index("block_members_created_at_idx").on(table.createdAt),
+    index("block_members_member_created_idx").on(
+      table.memberId,
+      table.createdAt,
+    ),
     unique("block_members_time_block_member_unq").on(
       table.timeBlockId,
       table.memberId,
@@ -262,6 +267,8 @@ export const timeBlockGuests = createTable(
     index("block_guests_org_id_idx").on(table.clerkOrgId),
     index("block_guests_time_block_id_idx").on(table.timeBlockId),
     index("block_guests_guest_id_idx").on(table.guestId),
+    index("block_guests_created_at_idx").on(table.createdAt),
+    index("block_guests_guest_created_idx").on(table.guestId, table.createdAt),
     unique("block_guests_time_block_guest_unq").on(
       table.timeBlockId,
       table.guestId,
@@ -352,52 +359,6 @@ export const restrictions = createTable(
   ],
 );
 
-// Guest booking history table for tracking frequency restrictions
-export const guestBookingHistory = createTable(
-  "guest_booking_history",
-  {
-    id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
-    clerkOrgId: varchar("clerk_org_id", { length: 50 }).notNull(),
-    guestId: integer("guest_id")
-      .references(() => guests.id, { onDelete: "cascade" })
-      .notNull(),
-    bookingDate: timestamp("booking_date", { withTimezone: true }).notNull(),
-    wasCharged: boolean("was_charged").notNull().default(false),
-    chargeAmount: real("charge_amount"),
-    createdAt: timestamp("created_at", { withTimezone: true })
-      .default(sql`CURRENT_TIMESTAMP`)
-      .notNull(),
-  },
-  (table) => [
-    index("guest_booking_history_org_id_idx").on(table.clerkOrgId),
-    index("guest_booking_history_guest_id_idx").on(table.guestId),
-    index("guest_booking_history_booking_date_idx").on(table.bookingDate),
-  ],
-);
-
-// Member booking history table for tracking frequency restrictions
-export const memberBookingHistory = createTable(
-  "member_booking_history",
-  {
-    id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
-    clerkOrgId: varchar("clerk_org_id", { length: 50 }).notNull(),
-    memberId: integer("member_id")
-      .references(() => members.id, { onDelete: "cascade" })
-      .notNull(),
-    bookingDate: timestamp("booking_date", { withTimezone: true }).notNull(),
-    wasCharged: boolean("was_charged").notNull().default(false),
-    chargeAmount: real("charge_amount"),
-    createdAt: timestamp("created_at", { withTimezone: true })
-      .default(sql`CURRENT_TIMESTAMP`)
-      .notNull(),
-  },
-  (table) => [
-    index("member_booking_history_org_id_idx").on(table.clerkOrgId),
-    index("member_booking_history_member_id_idx").on(table.memberId),
-    index("member_booking_history_booking_date_idx").on(table.bookingDate),
-  ],
-);
-
 // Restriction override log for auditing
 export const restrictionOverrides = createTable(
   "restriction_overrides",
@@ -425,26 +386,6 @@ export const restrictionOverrides = createTable(
 export const restrictionsRelations = relations(restrictions, ({ many }) => ({
   overrides: many(restrictionOverrides),
 }));
-
-export const guestBookingHistoryRelations = relations(
-  guestBookingHistory,
-  ({ one }) => ({
-    guest: one(guests, {
-      fields: [guestBookingHistory.guestId],
-      references: [guests.id],
-    }),
-  }),
-);
-
-export const memberBookingHistoryRelations = relations(
-  memberBookingHistory,
-  ({ one }) => ({
-    member: one(members, {
-      fields: [memberBookingHistory.memberId],
-      references: [members.id],
-    }),
-  }),
-);
 
 export const restrictionOverridesRelations = relations(
   restrictionOverrides,

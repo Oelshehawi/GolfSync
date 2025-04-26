@@ -5,6 +5,7 @@ import { guests, timeBlockGuests } from "~/server/db/schema";
 import { eq, and, like, or } from "drizzle-orm";
 import { getOrganizationId } from "~/lib/auth";
 import { revalidatePath } from "next/cache";
+import { getGuestBookingHistory } from "./data";
 
 export async function searchGuestsAction(searchTerm: string) {
   const orgId = await getOrganizationId();
@@ -181,4 +182,9 @@ export async function removeGuestFromTimeBlock(
     console.error("Error removing guest from time block:", error);
     return { success: false, error: "Failed to remove guest from time block" };
   }
+}
+
+export async function getGuestBookingHistoryAction(guestId: number) {
+  const bookings = await getGuestBookingHistory(guestId);
+  return bookings;
 }

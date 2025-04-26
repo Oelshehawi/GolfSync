@@ -3,12 +3,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { db } from "~/server/db";
 import { and, eq } from "drizzle-orm";
-import {
-  restrictions,
-  restrictionOverrides,
-  guestBookingHistory,
-  memberBookingHistory,
-} from "~/server/db/schema";
+import { restrictions, restrictionOverrides } from "~/server/db/schema";
 import {
   RestrictionFormValues,
   RestrictionType,
@@ -235,53 +230,5 @@ export async function recordOverride(params: {
   } catch (error) {
     console.error("Error in recordOverride:", error);
     return { success: false, error: "Failed to record override" };
-  }
-}
-
-export async function recordBooking(params: {
-  memberId?: number;
-  guestId?: number;
-  bookingDate: Date;
-  wasCharged?: boolean;
-  chargeAmount?: number;
-}): Promise<ResultType> {
-  try {
-    const orgId = await getOrganizationId();
-
-    const {
-      memberId,
-      guestId,
-      bookingDate,
-      wasCharged = false,
-      chargeAmount = null,
-    } = params;
-
-    if (memberId) {
-      await db.insert(memberBookingHistory).values({
-        clerkOrgId: orgId,
-        memberId,
-        bookingDate,
-        wasCharged,
-        chargeAmount,
-      });
-    } else if (guestId) {
-      await db.insert(guestBookingHistory).values({
-        clerkOrgId: orgId,
-        guestId,
-        bookingDate,
-        wasCharged,
-        chargeAmount,
-      });
-    } else {
-      return {
-        success: false,
-        error: "Either memberId or guestId must be provided",
-      };
-    }
-
-    return { success: true };
-  } catch (error) {
-    console.error("Error recording booking:", error);
-    return { success: false, error: "Failed to record booking" };
   }
 }

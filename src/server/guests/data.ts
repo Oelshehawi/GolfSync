@@ -1,6 +1,6 @@
 import { db } from "~/server/db";
 import { guests, timeBlockGuests, members } from "~/server/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, desc } from "drizzle-orm";
 import { getOrganizationId } from "~/lib/auth";
 
 export async function getGuests() {
@@ -60,4 +60,39 @@ export async function searchGuests(searchTerm: string) {
       (guest.phone && guest.phone.includes(searchTerm))
     );
   });
+}
+
+export async function getGuestBookingHistory(
+  guestId: number,
+  limit: number = 20,
+): Promise<any[]> {
+  try {
+    const orgId = await getOrganizationId();
+
+    const bookings = await db.query.timeBlockGuests.findMany({
+      where: and(
+        eq(timeBlockGuests.guestId, guestId),
+        eq(timeBlockGuests.clerkOrgId, orgId),
+      ),
+      with: {
+        timeBlock: true,
+        invitedByMember: true,
+      },
+      orderBy: desc(timeBlockGuests.createdAt),
+      limit,
+    });
+
+    return bookings.map((booking) => ({
+      id: booking.id,
+      date: booking.timeBlock.startTime,
+      teesheetId: booking.timeBlock.teesheetId,
+      timeBlockId: booking.timeBlockId,
+      invitedBy: `${booking.invitedByMember.firstName} ${booking.invitedByMember.lastName}`,
+      invitedByMemberId: booking.invitedByMemberId,
+      createdAt: booking.createdAt,
+    }));
+  } catch (error) {
+    console.error("Error getting guest booking history:", error);
+    return [];
+  }
 }

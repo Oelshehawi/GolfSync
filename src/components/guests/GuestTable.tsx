@@ -2,7 +2,7 @@
 
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
-import { UserMinus, Pencil, Trash } from "lucide-react";
+import { UserMinus, Pencil, Trash, History } from "lucide-react";
 import { useState } from "react";
 import {
   BaseDataTable,
@@ -11,6 +11,8 @@ import {
 } from "~/components/ui/BaseDataTable";
 import { BaseGuest, TimeBlockGuest } from "~/app/types/GuestTypes";
 import { ThemeConfig, PaginationProps } from "~/app/types/UITypes";
+import { getGuestBookingHistoryAction } from "~/server/guests/actions";
+import { BookingHistoryDialog } from "~/components/booking/BookingHistoryDialog";
 
 interface GuestTableProps {
   guests: BaseGuest[] | TimeBlockGuest[];
@@ -18,6 +20,7 @@ interface GuestTableProps {
   onEdit?: (guest: BaseGuest) => void;
   onDelete?: (guest: BaseGuest) => void;
   onRemove?: (guestId: number) => Promise<void>;
+  onViewHistory?: (guest: BaseGuest) => void;
   showSearch?: boolean;
   title?: string;
   emptyMessage?: string;
@@ -33,6 +36,7 @@ export function GuestTable({
   onEdit,
   onDelete,
   onRemove,
+  onViewHistory,
   showSearch = false,
   title = "Guests",
   emptyMessage = "No guests found",
@@ -41,64 +45,101 @@ export function GuestTable({
   onPageChange,
   theme,
 }: GuestTableProps) {
+  const [selectedGuest, setSelectedGuest] = useState<BaseGuest | null>(null);
+  const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
+
+  const handleViewHistory = (guest: BaseGuest) => {
+    setSelectedGuest(guest);
+    setHistoryDialogOpen(true);
+  };
+
+  const fetchGuestHistory = async () => {
+    if (!selectedGuest) return [];
+    return await getGuestBookingHistoryAction(selectedGuest.id);
+  };
+
   if (variant === "timeblock") {
     return (
-      <Card theme={theme} className="mt-6">
-        <CardHeader>
-          <CardTitle theme={theme}>{title}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {guests.length === 0 ? (
-            <div className="rounded-lg border border-dashed p-4 text-center text-gray-500">
-              {emptyMessage}
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {guests.map((item) => {
-                const timeblockGuest = item as TimeBlockGuest;
-                return (
-                  <div
-                    key={item.id}
-                    className="flex items-center justify-between rounded-lg border p-3 transition-colors hover:bg-gray-50"
-                  >
-                    <div className="grid flex-1 grid-cols-2 gap-x-6 gap-y-1">
-                      <div>
-                        <p className="font-medium">
-                          {item.firstName} {item.lastName}
-                        </p>
-                        <p className="text-sm text-gray-500">
-                          {item.email || item.phone || "No contact"}
-                        </p>
-                      </div>
-                      {timeblockGuest.invitedByMember && (
+      <>
+        <Card theme={theme} className="mt-6">
+          <CardHeader>
+            <CardTitle theme={theme}>{title}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {guests.length === 0 ? (
+              <div className="rounded-lg border border-dashed p-4 text-center text-gray-500">
+                {emptyMessage}
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {guests.map((item) => {
+                  const timeblockGuest = item as TimeBlockGuest;
+                  return (
+                    <div
+                      key={item.id}
+                      className="flex items-center justify-between rounded-lg border p-3 transition-colors hover:bg-gray-50"
+                    >
+                      <div className="grid flex-1 grid-cols-2 gap-x-6 gap-y-1">
                         <div>
-                          <p className="font-medium">Invited by</p>
+                          <p className="font-medium">
+                            {item.firstName} {item.lastName}
+                          </p>
                           <p className="text-sm text-gray-500">
-                            {timeblockGuest.invitedByMember.firstName}{" "}
-                            {timeblockGuest.invitedByMember.lastName} (
-                            {timeblockGuest.invitedByMember.memberNumber})
+                            {item.email || item.phone || "No contact"}
                           </p>
                         </div>
-                      )}
+                        {timeblockGuest.invitedByMember && (
+                          <div>
+                            <p className="font-medium">Invited by</p>
+                            <p className="text-sm text-gray-500">
+                              {timeblockGuest.invitedByMember.firstName}{" "}
+                              {timeblockGuest.invitedByMember.lastName} (
+                              {timeblockGuest.invitedByMember.memberNumber})
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex space-x-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleViewHistory(item)}
+                          theme={theme}
+                        >
+                          <History className="mr-2 h-4 w-4" />
+                          History
+                        </Button>
+                        {onRemove && (
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => onRemove(item.id)}
+                            theme={theme}
+                          >
+                            <UserMinus className="mr-2 h-4 w-4" />
+                            Remove
+                          </Button>
+                        )}
+                      </div>
                     </div>
-                    {onRemove && (
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => onRemove(item.id)}
-                        theme={theme}
-                      >
-                        <UserMinus className="mr-2 h-4 w-4" />
-                        Remove
-                      </Button>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                  );
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {selectedGuest && (
+          <BookingHistoryDialog
+            isOpen={historyDialogOpen}
+            onClose={() => setHistoryDialogOpen(false)}
+            title="Guest Booking History"
+            fetchHistory={fetchGuestHistory}
+            theme={theme}
+            entityName={`${selectedGuest.firstName} ${selectedGuest.lastName}`}
+          />
+        )}
+      </>
     );
   }
 
@@ -122,6 +163,12 @@ export function GuestTable({
   ];
 
   const actions: ActionDef<BaseGuest>[] = [];
+
+  actions.push({
+    label: "Booking History",
+    icon: <History className="mr-2 h-4 w-4" />,
+    onClick: handleViewHistory,
+  });
 
   if (onEdit) {
     actions.push({
@@ -152,18 +199,31 @@ export function GuestTable({
   };
 
   return (
-    <BaseDataTable
-      data={guests}
-      columns={columns}
-      actions={actions}
-      showSearch={showSearch}
-      searchPlaceholder="Search guests..."
-      emptyMessage={emptyMessage}
-      currentPage={currentPage}
-      totalPages={totalPages}
-      onPageChange={onPageChange}
-      filterFunction={filterGuests}
-      theme={theme || {}}
-    />
+    <>
+      <BaseDataTable
+        data={guests}
+        columns={columns}
+        actions={actions}
+        showSearch={showSearch}
+        searchPlaceholder="Search guests..."
+        emptyMessage={emptyMessage}
+        currentPage={currentPage}
+        totalPages={totalPages}
+        onPageChange={onPageChange}
+        filterFunction={filterGuests}
+        theme={theme || {}}
+      />
+
+      {selectedGuest && (
+        <BookingHistoryDialog
+          isOpen={historyDialogOpen}
+          onClose={() => setHistoryDialogOpen(false)}
+          title="Guest Booking History"
+          fetchHistory={fetchGuestHistory}
+          theme={theme}
+          entityName={`${selectedGuest.firstName} ${selectedGuest.lastName}`}
+        />
+      )}
+    </>
   );
 }

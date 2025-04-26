@@ -1,10 +1,11 @@
 import { db } from "~/server/db";
-import { and, eq, isNull, or } from "drizzle-orm";
+import { and, eq, isNull, or, gt } from "drizzle-orm";
 import {
   restrictions,
   members,
-  guestBookingHistory,
-  memberBookingHistory,
+  timeBlockMembers,
+  timeBlockGuests,
+  timeBlocks,
 } from "~/server/db/schema";
 import {
   RestrictedEntityType,
@@ -186,28 +187,36 @@ export async function checkRestrictions(params: {
         let bookingCount = 0;
 
         if (guestId) {
-          // Check guest booking history
-          const guestBookings = await db.query.guestBookingHistory.findMany({
+          // Check guest booking history directly from timeBlockGuests
+          const guestBookings = await db.query.timeBlockGuests.findMany({
             where: and(
-              eq(guestBookingHistory.clerkOrgId, orgId),
-              eq(guestBookingHistory.guestId, guestId),
+              eq(timeBlockGuests.clerkOrgId, orgId),
+              eq(timeBlockGuests.guestId, guestId),
             ),
+            with: {
+              timeBlock: true,
+            },
           });
 
+          // Filter bookings within the restriction period
           bookingCount = guestBookings.filter(
-            (booking) => booking.bookingDate >= periodStartDate,
+            (booking) => booking.timeBlock.startTime >= periodStartDate,
           ).length;
         } else if (memberId) {
-          // Check member booking history
-          const memberBookings = await db.query.memberBookingHistory.findMany({
+          // Check member booking history directly from timeBlockMembers
+          const memberBookings = await db.query.timeBlockMembers.findMany({
             where: and(
-              eq(memberBookingHistory.clerkOrgId, orgId),
-              eq(memberBookingHistory.memberId, memberId),
+              eq(timeBlockMembers.clerkOrgId, orgId),
+              eq(timeBlockMembers.memberId, memberId),
             ),
+            with: {
+              timeBlock: true,
+            },
           });
 
+          // Filter bookings within the restriction period
           bookingCount = memberBookings.filter(
-            (booking) => booking.bookingDate >= periodStartDate,
+            (booking) => booking.timeBlock.startTime >= periodStartDate,
           ).length;
         }
 

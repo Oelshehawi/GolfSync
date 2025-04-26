@@ -1,8 +1,9 @@
 import { db } from "~/server/db";
 import { members } from "~/server/db/schema";
-import { eq, sql, and } from "drizzle-orm";
+import { eq, sql, and, desc } from "drizzle-orm";
 import { getOrganizationId } from "~/lib/auth";
 import type { Member } from "~/app/types/MemberTypes";
+import { timeBlockMembers } from "~/server/db/schema";
 
 // Helper function to map members to their full names
 export function mapMembersToNames(members: Member[]): string[] {
@@ -69,4 +70,36 @@ export async function searchMembers(
   const items = results.slice(0, pageSize);
 
   return { results: items, hasMore };
+}
+
+export async function getMemberBookingHistory(
+  memberId: number,
+  limit: number = 20,
+): Promise<any[]> {
+  try {
+    const orgId = await getOrganizationId();
+
+    const bookings = await db.query.timeBlockMembers.findMany({
+      where: and(
+        eq(timeBlockMembers.memberId, memberId),
+        eq(timeBlockMembers.clerkOrgId, orgId),
+      ),
+      with: {
+        timeBlock: true,
+      },
+      orderBy: desc(timeBlockMembers.createdAt),
+      limit,
+    });
+
+    return bookings.map((booking) => ({
+      id: booking.id,
+      date: booking.timeBlock.startTime,
+      teesheetId: booking.timeBlock.teesheetId,
+      timeBlockId: booking.timeBlockId,
+      createdAt: booking.createdAt,
+    }));
+  } catch (error) {
+    console.error("Error getting member booking history:", error);
+    return [];
+  }
 }
