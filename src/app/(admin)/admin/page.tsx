@@ -7,6 +7,7 @@ import { TeesheetHeader } from "~/components/teesheet/TeesheetHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { getOrganizationTheme } from "~/server/config/data";
 import { getTeesheetConfigs } from "~/server/settings/data";
+import { ThemeConfig } from "~/app/types/UITypes";
 
 interface PageProps {
   searchParams?: {
@@ -47,8 +48,15 @@ export default async function AdminPage({ searchParams }: PageProps) {
     }
 
     const timeBlocks = await getTimeBlocksForTeesheet(teesheet.id);
-    const theme = await getOrganizationTheme();
+    const themeData = await getOrganizationTheme();
     const configsResult = await getTeesheetConfigs();
+
+    // Create a properly typed theme object
+    const theme: ThemeConfig = {
+      primary: themeData?.primary,
+      secondary: themeData?.secondary,
+      tertiary: themeData?.tertiary,
+    };
 
     if (!Array.isArray(configsResult)) {
       throw new Error(configsResult.error || "Failed to load configurations");
@@ -63,6 +71,7 @@ export default async function AdminPage({ searchParams }: PageProps) {
               teesheet={teesheet}
               timeBlocks={timeBlocks}
               availableConfigs={configsResult}
+              theme={theme}
             />
           </CardContent>
         </Card>

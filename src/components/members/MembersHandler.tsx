@@ -179,7 +179,7 @@ export function MembersHandler({ initialMembers, theme }: MembersHandlerProps) {
               theme={theme}
             />
           ) : (
-            <AddMemberForm onSubmit={handleCreateMember} onCancel={resetForm} />
+            <AddMemberForm onSubmit={handleCreateMember} onCancel={resetForm} theme={theme} />
           )}
         </DialogContent>
       </Dialog>

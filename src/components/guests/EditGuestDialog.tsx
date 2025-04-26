@@ -1,7 +1,7 @@
 "use client";
 import { useForm } from "react-hook-form";
+import { useEffect } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
 import {
   Dialog,
   DialogContent,
@@ -51,7 +51,7 @@ export function EditGuestDialog({
   });
 
   // Update form values when guest changes
-  React.useEffect(() => {
+  useEffect(() => {
     if (guest) {
       form.reset({
         firstName: guest.firstName,
@@ -88,7 +88,7 @@ export function EditGuestDialog({
                 <FormItem>
                   <FormLabel>First Name</FormLabel>
                   <FormControl>
-                    <Input placeholder="Enter first name" {...field} />
+                    <Input theme={theme} placeholder="Enter first name" {...field} />
                   </FormControl>
                   <FormMessage className="text-red-500" />
                 </FormItem>
@@ -102,7 +102,7 @@ export function EditGuestDialog({
                 <FormItem>
                   <FormLabel>Last Name</FormLabel>
                   <FormControl>
-                    <Input placeholder="Enter last name" {...field} />
+                    <Input theme={theme} placeholder="Enter last name" {...field} />
                   </FormControl>
                   <FormMessage className="text-red-500" />
                 </FormItem>
@@ -116,7 +116,7 @@ export function EditGuestDialog({
                 <FormItem>
                   <FormLabel>Email</FormLabel>
                   <FormControl>
-                    <Input type="email" placeholder="Enter email" {...field} />
+                    <Input theme={theme} type="email" placeholder="Enter email" {...field} />
                   </FormControl>
                   <FormMessage className="text-red-500" />
                 </FormItem>
@@ -130,7 +130,7 @@ export function EditGuestDialog({
                 <FormItem>
                   <FormLabel>Phone</FormLabel>
                   <FormControl>
-                    <Input placeholder="Enter phone" {...field} />
+                    <Input theme={theme} placeholder="Enter phone" {...field} />
                   </FormControl>
                   <FormMessage className="text-red-500" />
                 </FormItem>
@@ -144,7 +144,7 @@ export function EditGuestDialog({
                 <FormItem>
                   <FormLabel>Handicap</FormLabel>
                   <FormControl>
-                    <Input placeholder="Enter handicap" {...field} />
+                    <Input theme={theme} placeholder="Enter handicap" {...field} />
                   </FormControl>
                   <FormMessage className="text-red-500" />
                 </FormItem>
@@ -152,7 +152,7 @@ export function EditGuestDialog({
             />
 
             <DialogFooter>
-              <Button type="submit">Save Changes</Button>
+              <Button type="submit" theme={theme} >Save Changes</Button>
             </DialogFooter>
           </form>
         </Form>

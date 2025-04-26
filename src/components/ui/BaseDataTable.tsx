@@ -168,7 +168,7 @@ export function BaseDataTable<T extends BaseDataItem>({
                   ))}
                   {actions && actions.length > 0 && (
                     <TableCell>
-                      <DropdownMenu>
+                      <DropdownMenu >
                         <DropdownMenuTrigger asChild>
                           <Button variant="ghost" size="icon">
                             <MoreHorizontal className="h-4 w-4" />
@@ -181,6 +181,7 @@ export function BaseDataTable<T extends BaseDataItem>({
                               key={index}
                               onClick={() => action.onClick(item)}
                               className={`cursor-pointer ${action.className || ""}`}
+                              theme={theme || {}}
                             >
                               {action.icon} {action.label}
                             </DropdownMenuItem>

@@ -27,7 +27,7 @@ const DropdownMenuSubTrigger = React.forwardRef<
   <DropdownMenuPrimitive.SubTrigger
     ref={ref}
     className={cn(
-      "flex cursor-default items-center rounded-sm px-2 py-1.5 text-sm outline-none select-none focus:bg-[var(--org-secondary)] data-[state=open]:bg-[var(--org-secondary)]",
+      "flex cursor-default items-center rounded-sm px-2 py-1.5 text-sm outline-none select-none focus:bg-[var(--org-secondary)]",
       inset && "pl-8",
       className,
     )}
@@ -61,7 +61,7 @@ const DropdownMenuSubContent = React.forwardRef<
     <DropdownMenuPrimitive.SubContent
       ref={ref}
       className={cn(
-        "text-popover-foreground data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 z-50 min-w-[8rem] overflow-hidden rounded-md border bg-[var(--org-primary)] p-1 shadow-lg",
+        "z-50 min-w-[8rem] overflow-hidden rounded-md border bg-[var(--org-primary)] p-1 shadow-lg",
         className,
       )}
       style={themeStyles}
@@ -95,7 +95,7 @@ const DropdownMenuContent = React.forwardRef<
         ref={ref}
         sideOffset={sideOffset}
         className={cn(
-          "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 z-50 min-w-[8rem] overflow-hidden rounded-md border border-[var(--color-sand)] bg-white p-1 text-[var(--color-neutral-dark)] shadow-md",
+          "z-50 min-w-[8rem] overflow-hidden rounded-md border bg-white p-1 text-slate-800 shadow-md",
           className,
         )}
         style={themeStyles}
@@ -110,18 +110,32 @@ const DropdownMenuItem = React.forwardRef<
   React.ElementRef<typeof DropdownMenuPrimitive.Item>,
   React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.Item> & {
     inset?: boolean;
+    theme?: {
+      primary?: string;
+      secondary?: string;
+      tertiary?: string;
+    };
   }
->(({ className, inset, ...props }, ref) => (
-  <DropdownMenuPrimitive.Item
+>(({ className, inset, theme, ...props }, ref) => {
+  const colors = getOrganizationColors(theme);
+  const themeStyles = {
+    ["--org-primary" as string]: colors.primary,
+    ["--org-secondary" as string]: colors.secondary,
+    ["--org-tertiary" as string]: colors.tertiary,
+  } as React.CSSProperties;
+  return (
+    <DropdownMenuPrimitive.Item
     ref={ref}
     className={cn(
-      "relative flex cursor-pointer items-center rounded-sm px-2 py-1.5 text-sm transition-colors outline-none select-none hover:bg-[var(--color-primary-light)] hover:text-white focus:bg-[var(--color-primary-light)] focus:text-white data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
-      inset && "pl-8",
-      className,
-    )}
-    {...props}
-  />
-));
+      "relative flex cursor-pointer items-center rounded-sm px-2 py-1.5 text-sm transition-colors outline-none select-none hover:bg-[var(--org-primary)] hover:text-white focus:bg-[var(--org-primary)] focus:text-white",
+        inset && "pl-8",
+        className,
+      )}
+      style={themeStyles}
+      {...props}
+    />
+  );
+});
 DropdownMenuItem.displayName = DropdownMenuPrimitive.Item.displayName;
 
 const DropdownMenuCheckboxItem = React.forwardRef<

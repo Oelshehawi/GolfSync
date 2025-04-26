@@ -17,17 +17,19 @@ import {
 } from "~/components/ui/dropdown-menu";
 import { updateTeesheetConfigForDate } from "~/server/settings/actions";
 import toast from "react-hot-toast";
-
+import { ThemeConfig } from "~/app/types/UITypes";
 interface TeesheetViewProps {
   teesheet: TeeSheet;
   timeBlocks: TimeBlockWithMembers[];
   availableConfigs: TeesheetConfig[];
+  theme: ThemeConfig;
 }
 
 export function TeesheetView({
   teesheet,
   timeBlocks,
   availableConfigs,
+  theme,
 }: TeesheetViewProps) {
   const [isUpdating, setIsUpdating] = useState(false);
 
@@ -65,19 +67,23 @@ export function TeesheetView({
               variant="outline"
               size="sm"
               disabled={isUpdating}
-              className="cursor-pointer shadow-sm transition-colors hover:bg-[var(--org-secondary)] hover:text-white"
+              className="cursor-pointer shadow-sm transition-colors hover:text-white"
             >
               <Settings className="mr-2 h-4 w-4" />
               Change Configuration
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent className="rounded-md border bg-white shadow-lg">
+          <DropdownMenuContent
+            theme={theme}
+            className="rounded-md border bg-white shadow-lg"
+          >
             {availableConfigs.map((config) => (
               <DropdownMenuItem
                 key={config.id}
                 onClick={() => handleConfigChange(config.id)}
                 disabled={config.id === teesheet.configId || isUpdating}
-                className="cursor-pointer transition-colors hover:bg-[var(--org-secondary)] hover:text-white"
+                className="cursor-pointer transition-colors hover:bg-[var(--org-primary)] hover:text-white"
+                theme={theme}
               >
                 {config.name}
                 {config.id === teesheet.configId && " (Current)"}

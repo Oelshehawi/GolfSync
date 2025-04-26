@@ -113,7 +113,11 @@ export function EditMemberForm({
               <FormItem>
                 <FormLabel>Member Number</FormLabel>
                 <FormControl>
-                  <Input placeholder="Enter member number" {...field} />
+                  <Input
+                    theme={theme}
+                    placeholder="Enter member number"
+                    {...field}
+                  />
                 </FormControl>
                 <FormMessage className="text-red-500" />
               </FormItem>
@@ -136,6 +140,7 @@ export function EditMemberForm({
                           "w-full justify-between",
                           !field.value && "text-muted-foreground",
                         )}
+                        theme={theme}
                       >
                         {field.value
                           ? memberClasses.find(
@@ -196,7 +201,11 @@ export function EditMemberForm({
               <FormItem>
                 <FormLabel>First Name</FormLabel>
                 <FormControl>
-                  <Input placeholder="Enter first name" {...field} />
+                  <Input
+                    theme={theme}
+                    placeholder="Enter first name"
+                    {...field}
+                  />
                 </FormControl>
                 <FormMessage className="text-red-500" />
               </FormItem>
@@ -210,7 +219,11 @@ export function EditMemberForm({
               <FormItem>
                 <FormLabel>Last Name</FormLabel>
                 <FormControl>
-                  <Input placeholder="Enter last name" {...field} />
+                  <Input
+                    theme={theme}
+                    placeholder="Enter last name"
+                    {...field}
+                  />
                 </FormControl>
                 <FormMessage className="text-red-500" />
               </FormItem>
@@ -226,7 +239,11 @@ export function EditMemberForm({
               <FormItem>
                 <FormLabel>Username</FormLabel>
                 <FormControl>
-                  <Input placeholder="Enter username" {...field} />
+                  <Input
+                    theme={theme}
+                    placeholder="Enter username"
+                    {...field}
+                  />
                 </FormControl>
                 <FormMessage className="text-red-500" />
               </FormItem>
@@ -240,7 +257,12 @@ export function EditMemberForm({
               <FormItem>
                 <FormLabel>Email</FormLabel>
                 <FormControl>
-                  <Input type="email" placeholder="Enter email" {...field} />
+                  <Input
+                    theme={theme}
+                    type="email"
+                    placeholder="Enter email"
+                    {...field}
+                  />
                 </FormControl>
                 <FormMessage className="text-red-500" />
               </FormItem>
@@ -260,13 +282,17 @@ export function EditMemberForm({
                   defaultValue={field.value}
                 >
                   <FormControl>
-                    <SelectTrigger>
+                    <SelectTrigger theme={theme}>
                       <SelectValue placeholder="Select gender" />
                     </SelectTrigger>
                   </FormControl>
-                  <SelectContent>
-                    <SelectItem value="M">Male</SelectItem>
-                    <SelectItem value="F">Female</SelectItem>
+                  <SelectContent theme={theme}>
+                    <SelectItem value="M" theme={theme}>
+                      Male
+                    </SelectItem>
+                    <SelectItem value="F" theme={theme}>
+                      Female
+                    </SelectItem>
                   </SelectContent>
                 </Select>
                 <FormMessage className="text-red-500" />
@@ -281,7 +307,12 @@ export function EditMemberForm({
               <FormItem>
                 <FormLabel>Date of Birth</FormLabel>
                 <FormControl>
-                  <Input type="date" {...field} />
+                  <Input
+                    type="date"
+                    {...field}
+                    className="cursor-pointer focus:border-[var(--org-primary)] focus:ring-2 focus:ring-[var(--org-primary)]"
+                    theme={theme}
+                  />
                 </FormControl>
                 <FormMessage className="text-red-500" />
               </FormItem>
@@ -297,7 +328,11 @@ export function EditMemberForm({
               <FormItem>
                 <FormLabel>Handicap</FormLabel>
                 <FormControl>
-                  <Input placeholder="Enter handicap" {...field} />
+                  <Input
+                    theme={theme}
+                    placeholder="Enter handicap"
+                    {...field}
+                  />
                 </FormControl>
                 <FormMessage className="text-red-500" />
               </FormItem>
@@ -311,7 +346,11 @@ export function EditMemberForm({
               <FormItem>
                 <FormLabel>Bag Number</FormLabel>
                 <FormControl>
-                  <Input placeholder="Enter bag number" {...field} />
+                  <Input
+                    theme={theme}
+                    placeholder="Enter bag number"
+                    {...field}
+                  />
                 </FormControl>
                 <FormMessage className="text-red-500" />
               </FormItem>

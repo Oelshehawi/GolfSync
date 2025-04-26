@@ -38,6 +38,7 @@ export function AddGuestDialog({
         <AddGuestForm
           onSubmit={handleSubmit}
           onCancel={() => onOpenChange(false)}
+          theme={theme || {}}
         />
       </DialogContent>
     </Dialog>

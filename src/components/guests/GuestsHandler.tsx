@@ -196,6 +196,7 @@ export function GuestsHandler({ initialGuests, theme }: GuestsHandlerProps) {
         open={isAddDialogOpen}
         onOpenChange={setIsAddDialogOpen}
         onSubmit={handleAddGuest}
+        theme={theme}
       />
 
       <EditGuestDialog
@@ -203,6 +204,7 @@ export function GuestsHandler({ initialGuests, theme }: GuestsHandlerProps) {
         open={isEditDialogOpen}
         onOpenChange={setIsEditDialogOpen}
         onSave={handleEditGuest}
+        theme={theme}
       />
 
       <AlertDialog
