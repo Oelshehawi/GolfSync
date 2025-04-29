@@ -1,9 +1,9 @@
 "use client";
 
-import * as React from "react";
 import { DayPicker, type DayPickerProps } from "react-day-picker";
 import { cn } from "~/lib/utils";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useState, useEffect } from "react";
 
 export interface CalendarProps
   extends Omit<DayPickerProps, "mode" | "selected" | "onSelect"> {
@@ -29,10 +29,10 @@ function Calendar({
     ["--org-tertiary" as string]: theme?.tertiary,
   } as React.CSSProperties;
 
-  const [month, setMonth] = React.useState<Date>(selected || new Date());
-  const [numberOfMonths, setNumberOfMonths] = React.useState(3);
+  const [month, setMonth] = useState<Date>(selected || new Date());
+  const [numberOfMonths, setNumberOfMonths] = useState(3);
 
-  React.useEffect(() => {
+  useEffect(() => {
     const handleResize = () => {
       setNumberOfMonths(window.innerWidth <= 1024 ? 2 : 3);
     };

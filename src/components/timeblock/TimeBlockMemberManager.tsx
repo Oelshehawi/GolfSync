@@ -25,7 +25,7 @@ import toast from "react-hot-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { checkRestrictionsAction } from "~/server/restrictions/actions";
 import { RestrictionViolation } from "~/app/types/RestrictionTypes";
-import { RestrictionViolationAlert } from "~/components/restrictions/RestrictionViolationAlert";
+import { RestrictionViolationAlert } from "~/components/settings/restrictions/RestrictionViolationAlert";
 
 type TimeBlockGuest = {
   id: number;

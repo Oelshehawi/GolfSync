@@ -57,6 +57,9 @@ export async function createRestriction(
       }
     }
 
+    revalidatePath("/admin/settings");
+
+
     await db.insert(restrictions).values({
       clerkOrgId: orgId,
       entityType: values.entityType,
@@ -98,7 +101,6 @@ export async function createRestriction(
           : null,
     });
 
-    revalidatePath("/admin/settings");
 
     return { success: true };
   } catch (error) {

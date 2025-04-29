@@ -109,6 +109,8 @@ A simple application to help golf clubs manage members, track scores, and organi
 
 # Recent Fixes
 
+## Don't have to constantly refresh member teesheet for updates
+
 ## Member Numbering System Standardization ✅
 
 Fixed inconsistent member numbering system with the following changes:
@@ -162,3 +164,9 @@ Total Changes:
 - Empty numbers standardized: 25
 - Duplicate numbers identified: 14 (7 original + 7 additional)
 - Unchanged members: 898
+
+
+
+issues:
+
+- in login page we hardcode org id which is an issue for other orgs that want to use members.

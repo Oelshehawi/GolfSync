@@ -8,7 +8,7 @@ export interface Member {
   username: string;
   email: string;
   gender: string | null;
-  dateOfBirth: Date | null;
+  dateOfBirth: Date | string | null;
   handicap: string | null;
   bagNumber: string | null;
   createdAt: Date;

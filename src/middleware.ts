@@ -3,25 +3,40 @@ import { NextResponse } from "next/server";
 
 const isPublicRoute = createRouteMatcher(["/sign-in(.*)", "/sign-up(.*)"]);
 const isAdminRoute = createRouteMatcher(["/admin(.*)"]);
-const isMemberRoute = createRouteMatcher(["/"]);
+const isMemberRoute = createRouteMatcher(["/members(.*)"]);
+const isRootRoute = createRouteMatcher(["/"]);
 
 export default clerkMiddleware(async (auth, req) => {
-  // Check if user is an admin (has course manager permission)
-  const isAdmin = await auth
-    .protect((has) => {
-      return has({ permission: "org:coursemanager:allow" });
-    })
-    .catch(() => false);
+  const { sessionClaims } = await auth();
 
-  // If trying to access admin route without admin permission
-  if (isAdminRoute(req) && !isAdmin) {
-    return NextResponse.redirect(new URL("/", req.url));
+  // Check user types using metadata
+  const isAdmin = (sessionClaims as any)?.publicMetadata?.isAdmin === true;
+  const isMember = (sessionClaims as any)?.publicMetadata?.isMember === true;
+
+  // Redirect root path based on user role
+  if (isRootRoute(req)) {
+    if (isAdmin) {
+      return NextResponse.redirect(new URL("/admin", req.url));
+    }
+    if (isMember) {
+      return NextResponse.redirect(new URL("/members", req.url));
+    }
+    return NextResponse.redirect(new URL("/sign-in", req.url));
   }
 
-  // If trying to access member route with admin permission
-  if (isMemberRoute(req) && isAdmin) {
+  // If trying to access admin route without admin permission, redirect to members
+  if (isAdminRoute(req) && !isAdmin) {
+    return NextResponse.redirect(new URL("/members", req.url));
+  }
 
-    return NextResponse.redirect(new URL("/admin", req.url));
+  // If trying to access member route with admin permission, allow access
+  if (isMemberRoute(req) && isAdmin) {
+    return NextResponse.next();
+  }
+
+  // If trying to access member route without member permission, redirect to sign-in
+  if (isMemberRoute(req) && !isMember && !isAdmin) {
+    return NextResponse.redirect(new URL("/sign-in", req.url));
   }
 
   // If not a public route, require authentication

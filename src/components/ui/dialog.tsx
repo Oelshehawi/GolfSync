@@ -53,9 +53,10 @@ const DialogContent = React.forwardRef<
       <DialogPrimitive.Content
         ref={ref}
         className={cn(
-          "fixed top-[50%] left-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-white shadow-lg sm:rounded-lg",
+          "fixed top-[50%] left-[50%] z-50 grid w-[calc(100%-2rem)] max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-white shadow-lg md:w-full md:rounded-lg",
           "max-h-[85vh] overflow-y-auto",
           "p-4 sm:p-6",
+          "mx-auto my-4",
           className,
         )}
         style={themeStyles}

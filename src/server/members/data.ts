@@ -1,9 +1,10 @@
 import { db } from "~/server/db";
-import { members } from "~/server/db/schema";
+import { members, timeBlockMembers } from "~/server/db/schema";
 import { eq, sql, and, desc } from "drizzle-orm";
 import { getOrganizationId } from "~/lib/auth";
 import type { Member } from "~/app/types/MemberTypes";
-import { timeBlockMembers } from "~/server/db/schema";
+import { timeBlockMembers as timeBlockMembersSchema } from "~/server/db/schema";
+import { getMemberSession } from "./auth";
 
 // Helper function to map members to their full names
 export function mapMembersToNames(members: Member[]): string[] {
@@ -81,13 +82,13 @@ export async function getMemberBookingHistory(
 
     const bookings = await db.query.timeBlockMembers.findMany({
       where: and(
-        eq(timeBlockMembers.memberId, memberId),
-        eq(timeBlockMembers.clerkOrgId, orgId),
+        eq(timeBlockMembersSchema.memberId, memberId),
+        eq(timeBlockMembersSchema.clerkOrgId, orgId),
       ),
       with: {
         timeBlock: true,
       },
-      orderBy: desc(timeBlockMembers.createdAt),
+      orderBy: desc(timeBlockMembersSchema.createdAt),
       limit,
     });
 

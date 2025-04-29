@@ -20,7 +20,8 @@
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,mdx}\" --cache",
     "import-users": "tsx scripts/import-users.ts",
     "analyze-duplicates": "tsx scripts/analyze-duplicates.ts",
-    "fix-member-numbers": "tsx scripts/fix-member-numbers.ts"
+    "fix-member-numbers": "tsx scripts/fix-member-numbers.ts",
+    "export-members-for-clerk": "tsx scripts/export-members-for-clerk.ts"
   },
   "dependencies": {
     "@clerk/nextjs": "^6.14.3",
