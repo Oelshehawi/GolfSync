@@ -401,3 +401,27 @@ export const restrictionOverridesRelations = relations(
     }),
   }),
 );
+
+// Course Info table
+export const courseInfo = createTable(
+  "course_info",
+  {
+    id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+    clerkOrgId: varchar("clerk_org_id", { length: 50 }).notNull(),
+    weatherStatus: varchar("weather_status", { length: 30 }), // Fair, Light Rain, etc.
+    forecast: varchar("forecast", { length: 50 }), // e.g. "11°C"
+    rainfall: varchar("rainfall", { length: 50 }), // e.g. "24 Hour Rainfall Total: 5mm"
+    notes: text("notes"),
+    lastUpdatedBy: varchar("last_updated_by", { length: 100 }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).$onUpdate(
+      () => new Date(),
+    ),
+  },
+  (table) => [
+    unique("course_info_org_id_unq").on(table.clerkOrgId),
+    index("course_info_org_id_idx").on(table.clerkOrgId),
+  ],
+);

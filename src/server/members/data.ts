@@ -1,10 +1,9 @@
 import { db } from "~/server/db";
-import { members, timeBlockMembers } from "~/server/db/schema";
+import { members} from "~/server/db/schema";
 import { eq, sql, and, desc } from "drizzle-orm";
 import { getOrganizationId } from "~/lib/auth";
 import type { Member } from "~/app/types/MemberTypes";
 import { timeBlockMembers as timeBlockMembersSchema } from "~/server/db/schema";
-import { getMemberSession } from "./auth";
 
 // Helper function to map members to their full names
 export function mapMembersToNames(members: Member[]): string[] {

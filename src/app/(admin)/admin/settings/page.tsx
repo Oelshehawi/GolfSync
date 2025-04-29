@@ -11,6 +11,8 @@ import { getRestrictions, getMemberClasses } from "~/server/restrictions/data";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { getOrganizationColors } from "~/lib/utils";
 import { getOrganizationTheme } from "~/server/config/data";
+import { CourseInfoSettings } from "~/components/settings/course-info/CourseInfoSettings";
+import { getCourseInfo } from "~/server/settings/data";
 
 export default async function SettingsPage() {
   const teesheetResult = await getTeesheetConfigs();
@@ -25,6 +27,9 @@ export default async function SettingsPage() {
     "success" in memberClassesResult ? [] : memberClassesResult;
 
   const theme = await getOrganizationTheme();
+
+  // Get course info
+  const courseInfo = await getCourseInfo();
 
   // Extract the actual theme properties instead of CSS variables
   const themeProps = {
@@ -50,7 +55,7 @@ export default async function SettingsPage() {
       {/* Tabbed Interface */}
       <Tabs defaultValue="teesheet" className="w-full">
         <div className="mb-6 flex justify-center">
-          <TabsList className="flex w-[400px]" theme={themeProps}>
+          <TabsList className="flex w-[600px]" theme={themeProps}>
             <TabsTrigger value="teesheet" className="flex-1" theme={themeProps}>
               Teesheet Settings
             </TabsTrigger>
@@ -60,6 +65,13 @@ export default async function SettingsPage() {
               theme={themeProps}
             >
               Booking Restrictions
+            </TabsTrigger>
+            <TabsTrigger
+              value="course-info"
+              className="flex-1"
+              theme={themeProps}
+            >
+              Course Info
             </TabsTrigger>
           </TabsList>
         </div>
@@ -79,6 +91,11 @@ export default async function SettingsPage() {
             memberClasses={memberClasses}
             theme={themeProps}
           />
+        </TabsContent>
+
+        <TabsContent value="course-info" className="mt-4" theme={themeProps}>
+          {/* Course Info Settings */}
+          <CourseInfoSettings initialData={courseInfo} theme={themeProps} />
         </TabsContent>
       </Tabs>
     </div>

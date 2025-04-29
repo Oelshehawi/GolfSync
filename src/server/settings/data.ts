@@ -1,12 +1,17 @@
 import { db } from "~/server/db";
 import { and, eq, or, desc, isNull, lte, gte, sql } from "drizzle-orm";
 import { getOrganizationId } from "~/lib/auth";
-import { teesheetConfigs, teesheetConfigRules } from "~/server/db/schema";
+import {
+  teesheetConfigs,
+  teesheetConfigRules,
+  courseInfo,
+} from "~/server/db/schema";
 import type {
   TeesheetConfig,
   TeesheetConfigRule,
 } from "~/app/types/TeeSheetTypes";
 import { format } from "date-fns";
+import { auth } from "@clerk/nextjs/server";
 
 function convertToTeesheetConfig(dbConfig: any): TeesheetConfig {
   return {
@@ -256,4 +261,24 @@ export async function getTeesheetConfig(id: number) {
   }
 
   return { success: true, data: convertToTeesheetConfig(config) };
+}
+
+// Get course info for the current organization
+export async function getCourseInfo() {
+  const orgId = await getOrganizationId();
+
+  if (!orgId) {
+    return { success: false, error: "Not authenticated" };
+  }
+
+  try {
+    const info = await db.query.courseInfo.findFirst({
+      where: eq(courseInfo.clerkOrgId, orgId),
+    });
+
+    return info ?? null;
+  } catch (error) {
+    console.error("Error fetching course info:", error);
+    return { success: false, error: "Error fetching course info" };
+  }
 }

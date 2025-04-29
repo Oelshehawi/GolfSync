@@ -111,6 +111,8 @@ A simple application to help golf clubs manage members, track scores, and organi
 
 ## Don't have to constantly refresh member teesheet for updates
 
+## navigation for members is broken (highlighting doesnt work)
+
 ## Member Numbering System Standardization ✅
 
 Fixed inconsistent member numbering system with the following changes:

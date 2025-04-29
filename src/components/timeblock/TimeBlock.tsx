@@ -23,7 +23,7 @@ interface TimeBlockProps {
   theme?: ThemeConfig;
 }
 
-export function TimeBlock({ timeBlock, theme }: TimeBlockProps) {
+export function TimeBlock({ timeBlock }: TimeBlockProps) {
   const formattedTime = format(new Date(timeBlock.startTime), "h:mm a");
   const totalPeople = timeBlock.members.length + timeBlock.guests.length;
   const [notes, setNotes] = useState(timeBlock.notes || "");

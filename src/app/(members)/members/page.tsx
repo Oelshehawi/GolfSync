@@ -1,13 +1,24 @@
 import Link from "next/link";
 import { auth } from "@clerk/nextjs/server";
 import { getMemberData } from "~/server/members-teesheet-client/data";
+import { getCourseInfo } from "~/server/settings/data";
+import { CourseInfoDisplay } from "~/components/course-info/CourseInfoDisplay";
+
 export default async function MembersHome() {
   const { sessionClaims } = await auth();
 
   const member = await getMemberData(sessionClaims?.userId as string);
 
+  // Get course info
+  const courseInfo = await getCourseInfo();
+
   return (
     <div className="flex flex-col gap-6 px-4 py-16 sm:px-12 md:pt-24">
+      {/* Course Info */}
+      {courseInfo && !("success" in courseInfo) && (
+        <CourseInfoDisplay data={courseInfo} />
+      )}
+
       <div className="rounded-lg bg-white p-6 shadow-md sm:p-8">
         <h2 className="mb-4 text-xl font-semibold sm:text-2xl">
           Welcome,{" "}

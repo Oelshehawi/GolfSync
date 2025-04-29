@@ -6,12 +6,14 @@ import {
   teesheetConfigRules,
   teesheets,
   timeBlocks,
+  courseInfo,
 } from "~/server/db/schema";
 import { eq, and } from "drizzle-orm";
 import { getOrganizationId } from "~/lib/auth";
 import { revalidatePath } from "next/cache";
 import { createTimeBlocksForTeesheet } from "~/server/teesheet/data";
 import { convertToTeesheetConfig } from "./data";
+import { auth } from "@clerk/nextjs/server";
 
 export async function createTeesheetConfig(data: {
   name: string;
@@ -383,5 +385,63 @@ export async function updateTeesheetConfigForDate(
       success: false,
       error: "Failed to update teesheet configuration",
     };
+  }
+}
+
+// Update or create course info
+export async function updateCourseInfo(data: {
+  weatherStatus?: string;
+  forecast?: string;
+  rainfall?: string;
+  notes?: string;
+}) {
+  const { userId, orgId } = await auth();
+
+  if (!orgId || !userId) {
+    return { success: false, error: "Not authenticated" };
+  }
+
+  try {
+    // Check if the course info exists
+    const existing = await db.query.courseInfo.findFirst({
+      where: eq(courseInfo.clerkOrgId, orgId),
+    });
+
+    if (existing) {
+      // Update existing record
+      const updated = await db
+        .update(courseInfo)
+        .set({
+          ...data,
+          lastUpdatedBy: userId,
+          updatedAt: new Date(),
+        })
+        .where(eq(courseInfo.clerkOrgId, orgId))
+        .returning();
+
+      revalidatePath("/members");
+      revalidatePath("/admin/settings");
+      return { success: true };
+    } else {
+      // Create new record
+      const created = await db
+        .insert(courseInfo)
+        .values({
+          clerkOrgId: orgId,
+          weatherStatus: data.weatherStatus,
+          forecast: data.forecast,
+          rainfall: data.rainfall,
+          notes: data.notes,
+          lastUpdatedBy: userId,
+        })
+        .returning();
+
+      revalidatePath("/members");
+      revalidatePath("/admin/settings");
+      return { success: true, data: created[0] };
+    }
+  } catch (error) {
+    console.error("Error updating course info:", error);
+    return { success: false, error: "Error updating course info" };
   }
 }

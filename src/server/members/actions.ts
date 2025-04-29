@@ -39,6 +39,7 @@ export async function addMemberToTimeBlock(
     });
 
     revalidatePath(`/admin/timeblock/${timeBlockId}`);
+    revalidatePath("/members/teesheet");
     return { success: true };
   } catch (error) {
     console.error("Error adding member to time block:", error);
