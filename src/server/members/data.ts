@@ -1,5 +1,5 @@
 import { db } from "~/server/db";
-import { members} from "~/server/db/schema";
+import { members } from "~/server/db/schema";
 import { eq, sql, and, desc } from "drizzle-orm";
 import { getOrganizationId } from "~/lib/auth";
 import type { Member } from "~/app/types/MemberTypes";
@@ -93,7 +93,8 @@ export async function getMemberBookingHistory(
 
     return bookings.map((booking) => ({
       id: booking.id,
-      date: booking.timeBlock.startTime,
+      date: booking.bookingDate,
+      time: booking.bookingTime,
       teesheetId: booking.timeBlock.teesheetId,
       timeBlockId: booking.timeBlockId,
       createdAt: booking.createdAt,

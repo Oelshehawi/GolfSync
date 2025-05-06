@@ -84,7 +84,8 @@ export async function getGuestBookingHistory(
 
     return bookings.map((booking) => ({
       id: booking.id,
-      date: booking.timeBlock.startTime,
+      date: booking.bookingDate,
+      time: booking.bookingTime,
       teesheetId: booking.timeBlock.teesheetId,
       timeBlockId: booking.timeBlockId,
       invitedBy: `${booking.invitedByMember.firstName} ${booking.invitedByMember.lastName}`,

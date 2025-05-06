@@ -1,12 +1,13 @@
 "use server";
 
 import { db } from "~/server/db";
-import { timeBlockMembers, timeBlocks } from "~/server/db/schema";
-import { eq, and } from "drizzle-orm";
+import { timeBlockMembers, timeBlocks, teesheets } from "~/server/db/schema";
+import { eq, and, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { getOrganizationId } from "~/lib/auth";
 import { auth } from "@clerk/nextjs/server";
 import { Member } from "~/app/types/MemberTypes";
+import { formatDateToYYYYMMDD } from "~/lib/utils";
 
 type ActionResult = {
   success: boolean;
@@ -33,7 +34,7 @@ export async function bookTeeTime(
       };
     }
 
-    // Get time block to check the booking time
+    // Get time block info and its teesheet date
     const timeBlock = await db.query.timeBlocks.findFirst({
       where: and(
         eq(timeBlocks.id, timeBlockId),
@@ -48,7 +49,23 @@ export async function bookTeeTime(
       };
     }
 
-    // Check for existing booking
+    // Get teesheet to get the date
+    const teesheet = await db.query.teesheets.findFirst({
+      where: eq(teesheets.id, timeBlock.teesheetId),
+    });
+
+    if (!teesheet) {
+      return {
+        success: false,
+        error: "Teesheet not found",
+      };
+    }
+
+    // Format the booking date and save the booking time
+    const bookingDate = formatDateToYYYYMMDD(teesheet.date);
+    const bookingTime = timeBlock.startTime;
+
+    // Check for existing booking on the same time block
     const existingBooking = await db.query.timeBlockMembers.findFirst({
       where: and(
         eq(timeBlockMembers.timeBlockId, timeBlockId),
@@ -64,11 +81,31 @@ export async function bookTeeTime(
       };
     }
 
+    // Check if member already has a tee time on the same day
+    const existingBookingsOnSameDay = await db.query.timeBlockMembers.findFirst(
+      {
+        where: and(
+          eq(timeBlockMembers.memberId, member.id),
+          eq(timeBlockMembers.clerkOrgId, organizationId),
+          eq(timeBlockMembers.bookingDate, bookingDate),
+        ),
+      },
+    );
+
+    if (existingBookingsOnSameDay) {
+      return {
+        success: false,
+        error: "You already have a tee time booked on this day",
+      };
+    }
+
     // Book the time slot
     await db.insert(timeBlockMembers).values({
       timeBlockId,
       memberId: member.id,
       clerkOrgId: organizationId,
+      bookingDate,
+      bookingTime,
       checkedIn: false,
     });
 

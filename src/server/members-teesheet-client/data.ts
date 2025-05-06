@@ -1,12 +1,13 @@
 import { getOrCreateTeesheet } from "~/server/teesheet/data";
 import { getTimeBlocksForTeesheet } from "~/server/teesheet/data";
 import { db } from "~/server/db";
-import { timeBlockMembers, members } from "~/server/db/schema";
-import { and, eq } from "drizzle-orm";
+import { timeBlockMembers, members, timeBlocks } from "~/server/db/schema";
+import { and, eq, or, gt, asc, inArray, gte } from "drizzle-orm";
 import { auth } from "@clerk/nextjs/server";
 import { getOrganizationId } from "~/lib/auth";
 import { checkBatchTimeblockRestrictions } from "~/server/timeblock-restrictions/data";
-import { formatCalendarDate } from "~/lib/utils";
+import { formatCalendarDate, formatDateToYYYYMMDD } from "~/lib/utils";
+import { Member } from "~/app/types/MemberTypes";
 
 /**
  * Get teesheet data for members
@@ -217,4 +218,64 @@ export async function getMemberTeesheetDataWithRestrictions(
     timeBlocks: timeBlocksWithRestrictions,
     member,
   };
+}
+
+/**
+ * Get upcoming tee times for the current member
+ */
+export async function getUpcomingTeeTimes(member: Member) {
+  const { userId } = await auth();
+  const organizationId = await getOrganizationId();
+
+  if (!userId) {
+    throw new Error("Not authenticated");
+  }
+
+  if (!member) {
+    throw new Error("Member not found");
+  }
+
+  // Current date for filtering
+  const now = new Date();
+  const today = formatDateToYYYYMMDD(now);
+  const currentHour = now.getHours();
+  const currentMinute = now.getMinutes();
+  const currentTimeString = `${currentHour.toString().padStart(2, "0")}:${currentMinute.toString().padStart(2, "0")}`;
+
+  // Get bookings with accurate time filtering
+  const bookings = await db.query.timeBlockMembers.findMany({
+    where: and(
+      eq(timeBlockMembers.clerkOrgId, organizationId),
+      eq(timeBlockMembers.memberId, member.id),
+      or(
+        // Future dates
+        gt(timeBlockMembers.bookingDate, today),
+        // Today but time hasn't passed yet
+        and(
+          eq(timeBlockMembers.bookingDate, today),
+          gte(timeBlockMembers.bookingTime, currentTimeString),
+        ),
+      ),
+    ),
+    with: {
+      timeBlock: true,
+    },
+    orderBy: [
+      asc(timeBlockMembers.bookingDate),
+      asc(timeBlockMembers.bookingTime),
+    ],
+  });
+
+  // Format the results
+  return bookings.map((booking) => ({
+    id: booking.id,
+    timeBlockId: booking.timeBlockId,
+    memberId: booking.memberId,
+    checkedIn: booking.checkedIn,
+    checkedInAt: booking.checkedInAt,
+    startTime: booking.bookingTime,
+    endTime: booking.timeBlock.endTime,
+    date: booking.bookingDate,
+    teesheetId: booking.timeBlock.teesheetId,
+  }));
 }

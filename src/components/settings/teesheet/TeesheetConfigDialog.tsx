@@ -444,11 +444,20 @@ export function TeesheetConfigDialog({
           </Tabs>
 
           <DialogFooter className="mt-6">
-            <Button type="button" variant="outline" onClick={onClose}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onClose}
+              className="w-full sm:w-auto"
+            >
               Cancel
             </Button>
             {!isSystemConfig && (
-              <Button type="submit" className="ml-2" disabled={!hasChanges()}>
+              <Button
+                type="submit"
+                className="w-full sm:w-auto"
+                disabled={!hasChanges()}
+              >
                 Save Changes
               </Button>
             )}

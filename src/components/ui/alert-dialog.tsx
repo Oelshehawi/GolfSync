@@ -27,12 +27,8 @@ AlertDialogOverlay.displayName = AlertDialogPrimitive.Overlay.displayName;
 
 const AlertDialogContent = React.forwardRef<
   React.ElementRef<typeof AlertDialogPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof AlertDialogPrimitive.Content> & {
-
-  }
->(({ className,  ...props }, ref) => {
-
-
+  React.ComponentPropsWithoutRef<typeof AlertDialogPrimitive.Content> & {}
+>(({ className, ...props }, ref) => {
   return (
     <AlertDialogPortal>
       <AlertDialogOverlay />
@@ -69,7 +65,7 @@ const AlertDialogFooter = ({
 }: React.HTMLAttributes<HTMLDivElement>) => (
   <div
     className={cn(
-      "flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2",
+      "flex flex-col-reverse space-y-2 space-y-reverse sm:flex-row sm:justify-end sm:space-y-0 sm:space-x-4",
       className,
     )}
     {...props}
@@ -104,16 +100,13 @@ AlertDialogDescription.displayName =
 
 const AlertDialogAction = React.forwardRef<
   React.ElementRef<typeof AlertDialogPrimitive.Action>,
-  React.ComponentPropsWithoutRef<typeof AlertDialogPrimitive.Action> & {
-
-  }
+  React.ComponentPropsWithoutRef<typeof AlertDialogPrimitive.Action> & {}
 >(({ className, ...props }, ref) => {
-
   return (
     <AlertDialogPrimitive.Action
       ref={ref}
       className={cn(
-        "inline-flex h-10 items-center justify-center rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:cursor-pointer hover:bg-red-800 focus-visible:ring-2 focus-visible:ring-[var(--org-primary)] focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50",
+        "inline-flex h-10 w-full items-center justify-center rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:cursor-pointer hover:bg-red-800 focus-visible:ring-2 focus-visible:ring-[var(--org-primary)] focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto",
         className,
       )}
       {...props}
@@ -124,17 +117,13 @@ AlertDialogAction.displayName = AlertDialogPrimitive.Action.displayName;
 
 const AlertDialogCancel = React.forwardRef<
   React.ElementRef<typeof AlertDialogPrimitive.Cancel>,
-  React.ComponentPropsWithoutRef<typeof AlertDialogPrimitive.Cancel> & {
-
-  }
+  React.ComponentPropsWithoutRef<typeof AlertDialogPrimitive.Cancel> & {}
 >(({ className, ...props }, ref) => {
-
-
   return (
     <AlertDialogPrimitive.Cancel
       ref={ref}
       className={cn(
-        "mt-2 inline-flex h-10 items-center justify-center rounded-md border px-4 py-2 text-sm font-semibold transition-colors hover:cursor-pointer hover:bg-gray-300 hover:text-[var(--org-primary)] focus-visible:ring-2 focus-visible:ring-[var(--org-primary)] focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 sm:mt-0",
+        "mt-2 inline-flex h-10 w-full items-center justify-center rounded-md border px-4 py-2 text-sm font-semibold transition-colors hover:cursor-pointer hover:bg-gray-300 hover:text-[var(--org-primary)] focus-visible:ring-2 focus-visible:ring-[var(--org-primary)] focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 sm:mt-0 sm:w-auto",
         className,
       )}
       {...props}

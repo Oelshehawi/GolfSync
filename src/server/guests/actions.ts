@@ -1,11 +1,17 @@
 "use server";
 
 import { db } from "~/server/db";
-import { guests, timeBlockGuests } from "~/server/db/schema";
+import {
+  guests,
+  timeBlockGuests,
+  timeBlocks,
+  teesheets,
+} from "~/server/db/schema";
 import { eq, and, like, or } from "drizzle-orm";
 import { getOrganizationId } from "~/lib/auth";
 import { revalidatePath } from "next/cache";
 import { getGuestBookingHistory } from "./data";
+import { formatDateToYYYYMMDD } from "~/lib/utils";
 
 export async function searchGuestsAction(searchTerm: string) {
   const orgId = await getOrganizationId();
@@ -114,41 +120,59 @@ export async function addGuestToTimeBlock(
   guestId: number,
   invitedByMemberId: number,
 ) {
-  const orgId = await getOrganizationId();
-  if (!orgId) {
-    return { success: false, error: "No organization selected" };
-  }
-
   try {
-    // Check if guest already exists in time block
-    const existingEntry = await db.query.timeBlockGuests.findFirst({
-      where: (tbg) =>
-        and(
-          eq(tbg.timeBlockId, timeBlockId),
-          eq(tbg.guestId, guestId),
-          eq(tbg.clerkOrgId, orgId),
-        ),
-    });
+    const orgId = await getOrganizationId();
 
-    if (existingEntry) {
-      return {
-        success: false,
-        error: "Guest already added to this time block",
-      };
+    if (!orgId) {
+      return { success: false, error: "No organization selected" };
     }
 
-    const [newTimeBlockGuest] = await db
-      .insert(timeBlockGuests)
-      .values({
-        clerkOrgId: orgId,
-        timeBlockId,
-        guestId,
-        invitedByMemberId,
-      })
-      .returning();
+    // Get the time block to get its teesheet
+    const timeBlock = await db.query.timeBlocks.findFirst({
+      where: eq(timeBlocks.id, timeBlockId),
+    });
+
+    if (!timeBlock) {
+      return { success: false, error: "Time block not found" };
+    }
+
+    // Get the teesheet to get its date
+    const teesheet = await db.query.teesheets.findFirst({
+      where: eq(teesheets.id, timeBlock.teesheetId),
+    });
+
+    if (!teesheet) {
+      return { success: false, error: "Teesheet not found" };
+    }
+
+    // Get the booking date and time
+    const bookingDate = formatDateToYYYYMMDD(teesheet.date);
+    const bookingTime = timeBlock.startTime;
+
+    // Check if guest is already in the time block
+    const existingGuest = await db.query.timeBlockGuests.findFirst({
+      where: and(
+        eq(timeBlockGuests.timeBlockId, timeBlockId),
+        eq(timeBlockGuests.guestId, guestId),
+      ),
+    });
+
+    if (existingGuest) {
+      return { success: false, error: "Guest is already in this time block" };
+    }
+
+    // Add guest to time block
+    await db.insert(timeBlockGuests).values({
+      clerkOrgId: orgId,
+      timeBlockId,
+      guestId,
+      invitedByMemberId,
+      bookingDate,
+      bookingTime,
+    });
 
     revalidatePath(`/admin/timeblock/${timeBlockId}`);
-    return { success: true, data: newTimeBlockGuest };
+    return { success: true };
   } catch (error) {
     console.error("Error adding guest to time block:", error);
     return { success: false, error: "Failed to add guest to time block" };

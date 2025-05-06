@@ -1,8 +1,12 @@
-import Link from "next/link";
 import { auth } from "@clerk/nextjs/server";
-import { getMemberData } from "~/server/members-teesheet-client/data";
+import {
+  getMemberData,
+  getUpcomingTeeTimes,
+} from "~/server/members-teesheet-client/data";
 import { getCourseInfo } from "~/server/settings/data";
 import { CourseInfoDisplay } from "~/components/course-info/CourseInfoDisplay";
+import { UpcomingTeeTimes } from "~/components/member-teesheet-client/UpcomingTeeTimes";
+import { Member } from "~/app/types/MemberTypes";
 
 export default async function MembersHome() {
   const { sessionClaims } = await auth();
@@ -11,6 +15,9 @@ export default async function MembersHome() {
 
   // Get course info
   const courseInfo = await getCourseInfo();
+
+  // Get upcoming tee times
+  const upcomingTeeTimes = await getUpcomingTeeTimes(member as Member);
 
   return (
     <div className="flex flex-col gap-6 px-4 py-16 sm:px-12 md:pt-24">
@@ -37,13 +44,7 @@ export default async function MembersHome() {
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
         <div className="rounded-lg bg-white p-6 shadow-md">
           <h3 className="mb-3 text-lg font-medium">Upcoming Tee Times</h3>
-          <p className="text-gray-500">No upcoming tee times found.</p>
-          <Link
-            href="/members/teesheet"
-            className="mt-4 inline-block text-sm text-green-700 hover:underline"
-          >
-            Book a tee time →
-          </Link>
+          <UpcomingTeeTimes teeTimes={upcomingTeeTimes} />
         </div>
 
         <div className="rounded-lg bg-white p-6 shadow-md">

@@ -327,3 +327,103 @@ export function formatCalendarDate(
     return String(date);
   }
 }
+
+/**
+ * Formats a YYYY-MM-DD date string to words WITHOUT using Date objects to avoid timezone issues
+ * This is crucial for displaying dates that are stored in the database without timezone shifts
+ * @param dateString A date string in YYYY-MM-DD format
+ * @returns A formatted date string like "Friday, May 9, 2025"
+ */
+export function formatDateStringToWords(
+  dateString: string | undefined,
+): string {
+  if (!dateString || !/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+    return dateString || ""; // Return original or empty string if undefined
+  }
+
+  // Extract components from the date string
+  const parts = dateString.split("-");
+  const year = parts[0] || "";
+  const monthStr = parts[1] || "";
+  const dayStr = parts[2] || "";
+
+  if (!year || !monthStr || !dayStr) {
+    return dateString; // Return original if any part is missing
+  }
+
+  const month = parseInt(monthStr, 10);
+  const day = parseInt(dayStr, 10);
+
+  // Month names
+  const monthNames = [
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
+  ];
+
+  // Day of week calculation (Zeller's Congruence)
+  // This is a direct algorithm to calculate day of week without Date objects
+  const m = month < 3 ? month + 12 : month;
+  const y = month < 3 ? parseInt(year) - 1 : parseInt(year);
+  let h =
+    (day +
+      Math.floor((13 * (m + 1)) / 5) +
+      y +
+      Math.floor(y / 4) -
+      Math.floor(y / 100) +
+      Math.floor(y / 400)) %
+    7;
+  // Adjust h to make 0 = Sunday, 1 = Monday, etc.
+  h = (h + 6) % 7;
+
+  const dayNames = [
+    "Sunday",
+    "Monday",
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday",
+  ];
+
+  // Format the date
+  return `${dayNames[h]}, ${monthNames[month - 1]} ${day}, ${year}`;
+}
+
+/**
+ * Simple function to get time in 12-hour format from 24-hour time string
+ * @param timeString Time string in "HH:MM" 24-hour format
+ * @returns Time in "h:MM AM/PM" format
+ */
+export function formatTimeStringTo12Hour(
+  timeString: string | undefined,
+): string {
+  if (!timeString || !/^\d{2}:\d{2}$/.test(timeString)) {
+    return timeString || ""; // Return original or empty string if undefined
+  }
+
+  const parts = timeString.split(":");
+  const hourStr = parts[0] || "";
+  const minuteStr = parts[1] || "";
+
+  if (!hourStr || !minuteStr) {
+    return timeString; // Return original if any part is missing
+  }
+
+  const hour = parseInt(hourStr, 10);
+
+  // Convert to 12-hour format
+  const hour12 = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
+  const ampm = hour >= 12 ? "PM" : "AM";
+
+  return `${hour12}:${minuteStr} ${ampm}`;
+}

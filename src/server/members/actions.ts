@@ -1,11 +1,17 @@
 "use server";
 
 import { db } from "~/server/db";
-import { members, timeBlockMembers } from "~/server/db/schema";
+import {
+  members,
+  timeBlockMembers,
+  timeBlocks,
+  teesheets,
+} from "~/server/db/schema";
 import { eq, and } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { getOrganizationId } from "~/lib/auth";
 import { searchMembers, getMemberBookingHistory } from "./data";
+import { formatDateToYYYYMMDD } from "~/lib/utils";
 
 // Time block related functions
 export async function addMemberToTimeBlock(
@@ -31,11 +37,51 @@ export async function addMemberToTimeBlock(
       return { success: false, error: "Member is already in this time block" };
     }
 
+    // Get the time block to get its teesheet
+    const timeBlock = await db.query.timeBlocks.findFirst({
+      where: eq(timeBlocks.id, timeBlockId),
+    });
+
+    if (!timeBlock) {
+      return { success: false, error: "Time block not found" };
+    }
+
+    // Get the teesheet to get its date
+    const teesheet = await db.query.teesheets.findFirst({
+      where: eq(teesheets.id, timeBlock.teesheetId),
+    });
+
+    if (!teesheet) {
+      return { success: false, error: "Teesheet not found" };
+    }
+
+    // Get the booking date and time
+    const bookingDate = formatDateToYYYYMMDD(teesheet.date);
+    const bookingTime = timeBlock.startTime;
+
+    // Check if the member already has a booking on this date
+    const existingBooking = await db.query.timeBlockMembers.findFirst({
+      where: and(
+        eq(timeBlockMembers.memberId, memberId),
+        eq(timeBlockMembers.bookingDate, bookingDate),
+        eq(timeBlockMembers.clerkOrgId, orgId),
+      ),
+    });
+
+    if (existingBooking) {
+      return {
+        success: false,
+        error: "This member already has a tee time booked on this day",
+      };
+    }
+
     // Add member to time block
     await db.insert(timeBlockMembers).values({
       clerkOrgId: orgId,
       timeBlockId,
       memberId,
+      bookingDate,
+      bookingTime,
     });
 
     revalidatePath(`/admin/timeblock/${timeBlockId}`);

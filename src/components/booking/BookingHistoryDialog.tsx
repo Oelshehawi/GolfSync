@@ -11,10 +11,12 @@ import {
 import { format } from "date-fns";
 import { Card, CardContent } from "~/components/ui/card";
 import { Calendar, Clock, User } from "lucide-react";
+import { formatDateStringToWords, formatTimeStringTo12Hour } from "~/lib/utils";
 
 export interface BookingHistoryItem {
   id: number;
-  date: Date | string;
+  date: string;
+  time?: string;
   timeBlockId: number;
   createdAt: Date | string;
   invitedBy?: string;
@@ -79,7 +81,14 @@ export function BookingHistoryDialog({
           ) : (
             <div className="space-y-3">
               {history.map((item) => {
-                const bookingDate = new Date(item.date);
+                const dateStr = item.date;
+
+                const formattedDate = formatDateStringToWords(dateStr);
+
+                const timeDisplay = item.time
+                  ? formatTimeStringTo12Hour(item.time)
+                  : "";
+
                 const createdDate = new Date(item.createdAt);
 
                 return (
@@ -88,13 +97,11 @@ export function BookingHistoryDialog({
                       <div className="space-y-2">
                         <div className="flex items-center gap-2 text-sm">
                           <Calendar className="h-4 w-4 text-green-600" />
-                          <span className="font-medium">
-                            {format(bookingDate, "PPP")}
-                          </span>
+                          <span className="font-medium">{formattedDate}</span>
                         </div>
                         <div className="flex items-center gap-2 text-sm">
                           <Clock className="h-4 w-4 text-blue-600" />
-                          <span>{format(bookingDate, "h:mm a")}</span>
+                          <span>{timeDisplay}</span>
                         </div>
                         {item.invitedBy && (
                           <div className="flex items-center gap-2 text-sm">
@@ -103,7 +110,8 @@ export function BookingHistoryDialog({
                           </div>
                         )}
                         <div className="text-xs text-gray-500">
-                          Booked on {format(createdDate, "PPP 'at' h:mm a")}
+                          Booked on{" "}
+                          {format(createdDate, "MMMM do, yyyy 'at' h:mm a")}
                         </div>
                       </div>
                     </CardContent>

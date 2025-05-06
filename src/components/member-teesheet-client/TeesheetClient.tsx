@@ -387,6 +387,7 @@ export default function TeesheetClient({
                   onBook={() => checkBookingRestrictions(timeBlock.id)}
                   onCancel={() => setCancelTimeBlockId(timeBlock.id)}
                   disabled={loading}
+                  member={member}
                   id={`time-block-${timeBlock.id}`}
                   isRestricted={timeBlock.restriction?.isRestricted || false}
                   restrictionReason={timeBlock.restriction?.reason || ""}
@@ -427,11 +428,12 @@ export default function TeesheetClient({
               Are you sure you want to book this tee time?
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter>
+          <DialogFooter className="space-y-2 sm:space-x-4">
             <Button
               variant="outline"
               onClick={() => setBookingTimeBlockId(null)}
               disabled={loading}
+              className="w-full sm:w-auto"
             >
               Cancel
             </Button>
@@ -439,7 +441,7 @@ export default function TeesheetClient({
               variant="default"
               onClick={handleBookTeeTime}
               disabled={loading}
-              className="hover:bg-opacity-90 bg-[var(--org-primary)]"
+              className="hover:bg-opacity-90 w-full bg-[var(--org-primary)] sm:w-auto"
             >
               {loading ? (
                 <>
@@ -468,11 +470,12 @@ export default function TeesheetClient({
               Are you sure you want to cancel this tee time booking?
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter>
+          <DialogFooter className="space-y-2 sm:space-x-4">
             <Button
               variant="outline"
               onClick={() => setCancelTimeBlockId(null)}
               disabled={loading}
+              className="w-full sm:w-auto"
             >
               Keep Booking
             </Button>
@@ -480,6 +483,7 @@ export default function TeesheetClient({
               variant="destructive"
               onClick={handleCancelTeeTime}
               disabled={loading}
+              className="w-full sm:w-auto"
             >
               {loading ? (
                 <>

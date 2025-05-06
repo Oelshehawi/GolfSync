@@ -189,6 +189,15 @@ export const timeBlocks = createTable(
   ],
 );
 
+// Define relations for teesheets
+export const teesheetsRelations = relations(teesheets, ({ many, one }) => ({
+  timeBlocks: many(timeBlocks),
+  config: one(teesheetConfigs, {
+    fields: [teesheets.configId],
+    references: [teesheetConfigs.id],
+  }),
+}));
+
 // Time block members (join table)
 export const timeBlockMembers = createTable(
   "time_block_members",
@@ -201,6 +210,8 @@ export const timeBlockMembers = createTable(
     memberId: integer("member_id")
       .references(() => members.id, { onDelete: "cascade" })
       .notNull(),
+    bookingDate: date("booking_date").notNull(),
+    bookingTime: varchar("booking_time", { length: 5 }).notNull(),
     checkedIn: boolean("checked_in").default(false),
     checkedInAt: timestamp("checked_in_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })
@@ -211,6 +222,15 @@ export const timeBlockMembers = createTable(
     index("block_members_org_id_idx").on(table.clerkOrgId),
     index("block_members_time_block_id_idx").on(table.timeBlockId),
     index("block_members_member_id_idx").on(table.memberId),
+    index("block_members_booking_date_idx").on(table.bookingDate),
+    index("block_members_booking_datetime_idx").on(
+      table.bookingDate,
+      table.bookingTime,
+    ),
+    index("block_members_member_date_idx").on(
+      table.memberId,
+      table.bookingDate,
+    ),
     index("block_members_created_at_idx").on(table.createdAt),
     index("block_members_member_created_idx").on(
       table.memberId,
@@ -262,6 +282,8 @@ export const timeBlockGuests = createTable(
     invitedByMemberId: integer("invited_by_member_id")
       .references(() => members.id)
       .notNull(),
+    bookingDate: date("booking_date").notNull(),
+    bookingTime: varchar("booking_time", { length: 5 }).notNull(),
     checkedIn: boolean("checked_in").default(false),
     checkedInAt: timestamp("checked_in_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })
@@ -272,6 +294,11 @@ export const timeBlockGuests = createTable(
     index("block_guests_org_id_idx").on(table.clerkOrgId),
     index("block_guests_time_block_id_idx").on(table.timeBlockId),
     index("block_guests_guest_id_idx").on(table.guestId),
+    index("block_guests_booking_date_idx").on(table.bookingDate),
+    index("block_guests_booking_datetime_idx").on(
+      table.bookingDate,
+      table.bookingTime,
+    ),
     index("block_guests_created_at_idx").on(table.createdAt),
     index("block_guests_guest_created_idx").on(table.guestId, table.createdAt),
     unique("block_guests_time_block_guest_unq").on(
@@ -320,9 +347,13 @@ export const timeBlockGuestsRelations = relations(
 );
 
 // Update timeBlocks relations to include timeBlockMembers and timeBlockGuests
-export const timeBlocksRelations = relations(timeBlocks, ({ many }) => ({
+export const timeBlocksRelations = relations(timeBlocks, ({ many, one }) => ({
   timeBlockMembers: many(timeBlockMembers),
   timeBlockGuests: many(timeBlockGuests),
+  teesheet: one(teesheets, {
+    fields: [timeBlocks.teesheetId],
+    references: [teesheets.id],
+  }),
 }));
 
 // Course Info table
