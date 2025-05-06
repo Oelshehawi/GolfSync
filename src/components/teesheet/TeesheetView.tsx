@@ -17,25 +17,30 @@ import {
 } from "~/components/ui/dropdown-menu";
 import { updateTeesheetConfigForDate } from "~/server/settings/actions";
 import toast from "react-hot-toast";
-import { ThemeConfig } from "~/app/types/UITypes";
+import { RestrictionViolationAlert } from "~/components/settings/timeblock-restrictions/RestrictionViolationAlert";
+import { RestrictionViolation } from "~/app/types/RestrictionTypes";
+
 interface TeesheetViewProps {
   teesheet: TeeSheet;
   timeBlocks: TimeBlockWithMembers[];
   availableConfigs: TeesheetConfig[];
-  theme: ThemeConfig;
 }
 
 export function TeesheetView({
   teesheet,
   timeBlocks,
   availableConfigs,
-  theme,
 }: TeesheetViewProps) {
   const [isUpdating, setIsUpdating] = useState(false);
+  const [violations, setViolations] = useState<RestrictionViolation[]>([]);
+  const [showRestrictionAlert, setShowRestrictionAlert] = useState(false);
+  const [pendingAction, setPendingAction] = useState<
+    (() => Promise<void>) | null
+  >(null);
 
-  // Sort time blocks by start time
-  const sortedTimeBlocks = [...timeBlocks].sort(
-    (a, b) => a.startTime.getTime() - b.startTime.getTime(),
+  // Sort time blocks by start time (string comparison for HH:MM format)
+  const sortedTimeBlocks = [...timeBlocks].sort((a, b) =>
+    a.startTime.localeCompare(b.startTime),
   );
 
   const handleConfigChange = async (configId: number) => {
@@ -57,6 +62,30 @@ export function TeesheetView({
     }
   };
 
+  // Handle restriction alerts for admins
+  const handleRestrictionViolations = (violations: RestrictionViolation[]) => {
+    if (violations.length > 0) {
+      setViolations(violations);
+      setShowRestrictionAlert(true);
+    }
+  };
+
+  // Handle admin override continuation
+  const handleOverrideContinue = async () => {
+    if (pendingAction) {
+      await pendingAction();
+      setPendingAction(null);
+    }
+    setShowRestrictionAlert(false);
+  };
+
+  // Handle cancellation of restriction alert
+  const handleRestrictionCancel = () => {
+    setPendingAction(null);
+    setShowRestrictionAlert(false);
+    setViolations([]);
+  };
+
   return (
     <div className="rounded-lg bg-white p-4 shadow">
       <div className="mb-4 flex items-center justify-end">
@@ -73,7 +102,6 @@ export function TeesheetView({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent
-            theme={theme}
             className="rounded-md border bg-white shadow-lg"
           >
             {availableConfigs.map((config) => (
@@ -82,7 +110,6 @@ export function TeesheetView({
                 onClick={() => handleConfigChange(config.id)}
                 disabled={config.id === teesheet.configId || isUpdating}
                 className="cursor-pointer transition-colors hover:bg-[var(--org-primary)] hover:text-white"
-                theme={theme}
               >
                 {config.name}
                 {config.id === teesheet.configId && " (Current)"}
@@ -97,15 +124,26 @@ export function TeesheetView({
             key={block.id}
             timeBlock={{
               ...block,
-              startTime: new Date(block.startTime),
-              endTime: new Date(block.endTime),
+              startTime: block.startTime,
+              endTime: block.endTime,
+              date: block.date || teesheet.date,
               members: block.members || [],
               guests: block.guests || [],
             }}
-            theme={theme}
+            onRestrictionViolation={handleRestrictionViolations}
+            setPendingAction={setPendingAction}
           />
         ))}
       </div>
+
+      {/* Restriction Violation Alert (Admin only) */}
+      <RestrictionViolationAlert
+        open={showRestrictionAlert}
+        onOpenChange={setShowRestrictionAlert}
+        violations={violations}
+        onCancel={handleRestrictionCancel}
+        onContinue={handleOverrideContinue}
+      />
     </div>
   );
 }

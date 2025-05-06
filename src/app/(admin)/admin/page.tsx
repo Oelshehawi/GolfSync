@@ -5,9 +5,9 @@ import {
 import { TeesheetView } from "~/components/teesheet/TeesheetView";
 import { TeesheetHeader } from "~/components/teesheet/TeesheetHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
-import { getOrganizationTheme } from "~/server/config/data";
 import { getTeesheetConfigs } from "~/server/settings/data";
-import { ThemeConfig } from "~/app/types/UITypes";
+import { formatCalendarDate } from "~/lib/utils";
+import { parse } from "date-fns";
 
 interface PageProps {
   searchParams?: {
@@ -17,18 +17,25 @@ interface PageProps {
 
 export default async function AdminPage({ searchParams }: PageProps) {
   try {
-    // Safely handle the date parameter
+    // Safely handle the date parameter using string representation
     const dateParam = (await searchParams)?.date;
-    let date: Date;
+    let dateString: string;
+
     if (dateParam) {
-      const parsedDate = new Date(dateParam);
-      if (isNaN(parsedDate.getTime())) {
-        throw new Error("Invalid date format");
+      // Validate that the date is in YYYY-MM-DD format
+      if (/^\d{4}-\d{2}-\d{2}$/.test(dateParam)) {
+        dateString = dateParam;
+      } else {
+        // If not in correct format, convert it
+        dateString = formatCalendarDate(new Date(dateParam));
       }
-      date = parsedDate;
     } else {
-      date = new Date();
+      // Default to today in YYYY-MM-DD format
+      dateString = formatCalendarDate(new Date());
     }
+
+    // Parse the date string to a Date object for functions that need it
+    const date = parse(dateString, "yyyy-MM-dd", new Date());
 
     const { teesheet, config } = await getOrCreateTeesheet(date);
 
@@ -48,15 +55,8 @@ export default async function AdminPage({ searchParams }: PageProps) {
     }
 
     const timeBlocks = await getTimeBlocksForTeesheet(teesheet.id);
-    const themeData = await getOrganizationTheme();
     const configsResult = await getTeesheetConfigs();
 
-    // Create a properly typed theme object
-    const theme: ThemeConfig = {
-      primary: themeData?.primary,
-      secondary: themeData?.secondary,
-      tertiary: themeData?.tertiary,
-    };
 
     if (!Array.isArray(configsResult)) {
       throw new Error(configsResult.error || "Failed to load configurations");
@@ -64,14 +64,13 @@ export default async function AdminPage({ searchParams }: PageProps) {
 
     return (
       <div className="container mx-auto space-y-2 p-6">
-        <TeesheetHeader date={date} config={config} theme={theme} />
+        <TeesheetHeader date={date} config={config} />
         <Card>
           <CardContent>
             <TeesheetView
               teesheet={teesheet}
               timeBlocks={timeBlocks}
               availableConfigs={configsResult}
-              theme={theme}
             />
           </CardContent>
         </Card>

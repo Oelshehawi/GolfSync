@@ -1,30 +1,19 @@
 "use client";
 
 import * as React from "react";
-import { cn, getOrganizationColors } from "~/lib/utils";
+import { cn } from "~/lib/utils";
 
-export interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
-  theme?: {
-    primary?: string;
-    secondary?: string;
-    tertiary?: string;
-  };
-}
+export interface CardProps extends React.HTMLAttributes<HTMLDivElement> {}
 
 const Card = React.forwardRef<HTMLDivElement, CardProps>(
-  ({ className, theme, ...props }, ref) => {
-    const colors = getOrganizationColors(theme);
+  ({ className, ...props }, ref) => {
     return (
       <div
         ref={ref}
         className={cn(
-          "rounded-xl border shadow-sm transition-shadow hover:shadow-md bg-[var(--org-background-primary)] border-[var(--org-border-primary)]",
+          "rounded-xl border border-[var(--org-border-primary)] bg-[var(--org-background-primary)] shadow-sm transition-shadow hover:shadow-md",
           className,
         )}
-        style={{
-          borderColor: colors.primary,
-          backgroundColor: colors.background.primary,
-        }}
         {...props}
       />
     );
@@ -46,20 +35,15 @@ CardHeader.displayName = "CardHeader";
 
 const CardTitle = React.forwardRef<
   HTMLParagraphElement,
-  React.HTMLAttributes<HTMLHeadingElement> & {
-    theme?: {
-      primary?: string;
-      secondary?: string;
-      tertiary?: string;
-    };
-  }
->(({ className, theme, ...props }, ref) => {
-  const colors = getOrganizationColors(theme);
+  React.HTMLAttributes<HTMLHeadingElement>
+>(({ className, ...props }, ref) => {
   return (
     <h3
       ref={ref}
-      className={cn("leading-none font-semibold tracking-tight", className)}
-      style={{ color: colors.primary }}
+      className={cn(
+        "leading-none font-semibold tracking-tight text-[var(--org-primary)]",
+        className,
+      )}
       {...props}
     />
   );

@@ -16,15 +16,30 @@ import {
   updateTimeBlockNotes,
 } from "~/server/teesheet/actions";
 import { Textarea } from "~/components/ui/textarea";
-import { ThemeConfig } from "~/app/types/UITypes";
+import { RestrictionViolation } from "~/app/types/RestrictionTypes";
+import { formatDisplayTime } from "~/lib/utils";
+
+// Extended ActionResult type to include violations
+type ExtendedActionResult = {
+  success: boolean;
+  error?: string;
+  violations?: RestrictionViolation[];
+};
 
 interface TimeBlockProps {
   timeBlock: TimeBlockWithMembers;
-  theme?: ThemeConfig;
+  onRestrictionViolation?: (violations: RestrictionViolation[]) => void;
+  setPendingAction?: React.Dispatch<
+    React.SetStateAction<(() => Promise<void>) | null>
+  >;
 }
 
-export function TimeBlock({ timeBlock }: TimeBlockProps) {
-  const formattedTime = format(new Date(timeBlock.startTime), "h:mm a");
+export function TimeBlock({
+  timeBlock,
+  onRestrictionViolation,
+  setPendingAction,
+}: TimeBlockProps) {
+  const formattedTime = formatDisplayTime(timeBlock.startTime);
   const totalPeople = timeBlock.members.length + timeBlock.guests.length;
   const [notes, setNotes] = useState(timeBlock.notes || "");
   const [isEditingNotes, setIsEditingNotes] = useState(false);
@@ -32,10 +47,29 @@ export function TimeBlock({ timeBlock }: TimeBlockProps) {
 
   const handleRemoveMember = async (memberId: number) => {
     try {
-      const result = await removeTimeBlockMember(timeBlock.id, memberId);
+      const result = (await removeTimeBlockMember(
+        timeBlock.id,
+        memberId,
+      )) as ExtendedActionResult;
       if (result.success) {
         toast.success("Member removed successfully");
       } else {
+        // Check if there are restriction violations
+        if (result.violations && onRestrictionViolation) {
+          onRestrictionViolation(result.violations);
+
+          // Set the pending action for override
+          if (setPendingAction) {
+            setPendingAction(() => async () => {
+              // Since the server function doesn't accept an override parameter,
+              // we'll need to handle this in a different way or modify the server function
+              await removeTimeBlockMember(timeBlock.id, memberId);
+              toast.success("Member removed successfully (override)");
+            });
+          }
+          return;
+        }
+
         toast.error(result.error || "Failed to remove member");
       }
     } catch (error) {
@@ -45,10 +79,29 @@ export function TimeBlock({ timeBlock }: TimeBlockProps) {
 
   const handleRemoveGuest = async (guestId: number) => {
     try {
-      const result = await removeTimeBlockGuest(timeBlock.id, guestId);
+      const result = (await removeTimeBlockGuest(
+        timeBlock.id,
+        guestId,
+      )) as ExtendedActionResult;
       if (result.success) {
         toast.success("Guest removed successfully");
       } else {
+        // Check if there are restriction violations
+        if (result.violations && onRestrictionViolation) {
+          onRestrictionViolation(result.violations);
+
+          // Set the pending action for override
+          if (setPendingAction) {
+            setPendingAction(() => async () => {
+              // Since the server function doesn't accept an override parameter,
+              // we'll need to handle this in a different way or modify the server function
+              await removeTimeBlockGuest(timeBlock.id, guestId);
+              toast.success("Guest removed successfully (override)");
+            });
+          }
+          return;
+        }
+
         toast.error(result.error || "Failed to remove guest");
       }
     } catch (error) {
@@ -61,12 +114,34 @@ export function TimeBlock({ timeBlock }: TimeBlockProps) {
     isCheckedIn: boolean,
   ) => {
     try {
-      const result = await checkInMember(timeBlock.id, memberId, !isCheckedIn);
+      const result = (await checkInMember(
+        timeBlock.id,
+        memberId,
+        !isCheckedIn,
+      )) as ExtendedActionResult;
       if (result.success) {
         toast.success(
           `Member ${!isCheckedIn ? "checked in" : "check-in removed"} successfully`,
         );
       } else {
+        // Check if there are restriction violations
+        if (result.violations && onRestrictionViolation) {
+          onRestrictionViolation(result.violations);
+
+          // Set the pending action for override
+          if (setPendingAction) {
+            setPendingAction(() => async () => {
+              // Since the server function doesn't accept an override parameter,
+              // we'll need to handle this in a different way or modify the server function
+              await checkInMember(timeBlock.id, memberId, !isCheckedIn);
+              toast.success(
+                `Member ${!isCheckedIn ? "checked in" : "check-in removed"} successfully (override)`,
+              );
+            });
+          }
+          return;
+        }
+
         toast.error(result.error || "Failed to update check-in status");
       }
     } catch (error) {
@@ -76,12 +151,34 @@ export function TimeBlock({ timeBlock }: TimeBlockProps) {
 
   const handleCheckInGuest = async (guestId: number, isCheckedIn: boolean) => {
     try {
-      const result = await checkInGuest(timeBlock.id, guestId, !isCheckedIn);
+      const result = (await checkInGuest(
+        timeBlock.id,
+        guestId,
+        !isCheckedIn,
+      )) as ExtendedActionResult;
       if (result.success) {
         toast.success(
           `Guest ${!isCheckedIn ? "checked in" : "check-in removed"} successfully`,
         );
       } else {
+        // Check if there are restriction violations
+        if (result.violations && onRestrictionViolation) {
+          onRestrictionViolation(result.violations);
+
+          // Set the pending action for override
+          if (setPendingAction) {
+            setPendingAction(() => async () => {
+              // Since the server function doesn't accept an override parameter,
+              // we'll need to handle this in a different way or modify the server function
+              await checkInGuest(timeBlock.id, guestId, !isCheckedIn);
+              toast.success(
+                `Guest ${!isCheckedIn ? "checked in" : "check-in removed"} successfully (override)`,
+              );
+            });
+          }
+          return;
+        }
+
         toast.error(result.error || "Failed to update check-in status");
       }
     } catch (error) {
@@ -91,10 +188,31 @@ export function TimeBlock({ timeBlock }: TimeBlockProps) {
 
   const handleCheckInAll = async () => {
     try {
-      const result = await checkInAllTimeBlockParticipants(timeBlock.id, true);
+      const result = (await checkInAllTimeBlockParticipants(
+        timeBlock.id,
+        true,
+      )) as ExtendedActionResult;
       if (result.success) {
         toast.success("All participants checked in successfully");
       } else {
+        // Check if there are restriction violations
+        if (result.violations && onRestrictionViolation) {
+          onRestrictionViolation(result.violations);
+
+          // Set the pending action for override
+          if (setPendingAction) {
+            setPendingAction(() => async () => {
+              // Since the server function doesn't accept an override parameter,
+              // we'll need to handle this in a different way or modify the server function
+              await checkInAllTimeBlockParticipants(timeBlock.id, true);
+              toast.success(
+                "All participants checked in successfully (override)",
+              );
+            });
+          }
+          return;
+        }
+
         toast.error(result.error || "Failed to check in all participants");
       }
     } catch (error) {

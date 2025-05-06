@@ -6,34 +6,16 @@ import { Menu, X } from "lucide-react";
 import { usePathname } from "next/navigation";
 
 interface HeaderNavProps {
-  theme?: {
-    primary?: string;
-    secondary?: string;
-    tertiary?: string;
-  };
+
   member?: any;
 }
 
-const defaultTheme = {
-  primary: "#10b981",
-  secondary: "#d1fae5",
-  tertiary: "#f0fdfa",
-};
 
-export const HeaderNav = ({ theme, member }: HeaderNavProps) => {
+export const HeaderNav = ({ member }: HeaderNavProps) => {
   const [isAccountDialogOpen, setIsAccountDialogOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const pathname = usePathname();
 
-  const orgPrimary = theme?.primary || defaultTheme.primary;
-  const orgSecondary = theme?.secondary || defaultTheme.secondary;
-  const orgTertiary = theme?.tertiary || defaultTheme.tertiary;
-
-  const themeStyles = {
-    ["--org-primary" as string]: orgPrimary,
-    ["--org-secondary" as string]: orgSecondary,
-    ["--org-tertiary" as string]: orgTertiary,
-  } as React.CSSProperties;
 
   const navButtonClass = `
     relative z-0 flex items-center justify-center overflow-hidden whitespace-nowrap rounded-lg border-[1.5px]
@@ -59,7 +41,6 @@ export const HeaderNav = ({ theme, member }: HeaderNavProps) => {
   return (
     <header
       className="fixed top-2 left-1/2 z-20 w-full max-w-5xl -translate-x-1/2 px-4"
-      style={themeStyles}
     >
       <nav className="rounded-xl border border-[var(--org-primary)]/20 bg-white shadow-lg backdrop-blur-sm">
         <div className="mx-auto flex h-14 items-center justify-between px-6">

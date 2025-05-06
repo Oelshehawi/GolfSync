@@ -3,7 +3,7 @@ import { TimeBlockGuest } from "./GuestTypes";
 export interface TeeSheet {
   id: number;
   clerkOrgId: string;
-  date: Date;
+  date: string;
   configId: number;
   createdAt: Date;
   updatedAt: Date | null;
@@ -13,8 +13,8 @@ export interface TimeBlock {
   id: number;
   clerkOrgId: string;
   teesheetId: number;
-  startTime: Date;
-  endTime: Date;
+  startTime: string;
+  endTime: string;
   createdAt: Date;
   updatedAt: Date | null;
 }
@@ -32,6 +32,7 @@ export interface TimeBlockWithMembers extends TimeBlock {
   members: TimeBlockMemberView[];
   guests: TimeBlockGuest[];
   notes?: string | null;
+  date?: string;
 }
 
 export interface TeesheetConfigRuleInput {

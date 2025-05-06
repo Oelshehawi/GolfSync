@@ -5,6 +5,8 @@ import { timeBlockMembers, members } from "~/server/db/schema";
 import { and, eq } from "drizzle-orm";
 import { auth } from "@clerk/nextjs/server";
 import { getOrganizationId } from "~/lib/auth";
+import { checkBatchTimeblockRestrictions } from "~/server/timeblock-restrictions/data";
+import { formatCalendarDate } from "~/lib/utils";
 
 /**
  * Get teesheet data for members
@@ -12,7 +14,6 @@ import { getOrganizationId } from "~/lib/auth";
  */
 export async function getMemberTeesheetData(date: Date, id: string) {
   const { userId } = await auth();
-
 
   if (!userId) {
     throw new Error("Not authenticated");
@@ -103,7 +104,6 @@ export async function getMemberData(id?: string) {
   const { userId } = await auth();
   const organizationId = await getOrganizationId();
 
-
   if (!userId) {
     throw new Error("Not authenticated");
   }
@@ -115,4 +115,106 @@ export async function getMemberData(id?: string) {
   });
 
   return user;
+}
+
+/**
+ * Get teesheet data for members with pre-checked restrictions
+ * Should only be called from server components
+ */
+export async function getMemberTeesheetDataWithRestrictions(
+  date: Date,
+  id: string,
+) {
+  const { userId } = await auth();
+
+  if (!userId) {
+    throw new Error("Not authenticated");
+  }
+
+  // Get member data
+  const member = await getMemberData(id);
+
+  if (!member) {
+    throw new Error("Member not found");
+  }
+
+  // Get or create teesheet for the date
+  const { teesheet, config } = await getOrCreateTeesheet(date);
+
+  // Get time blocks with all members
+  const timeBlocks = await getTimeBlocksForTeesheet(teesheet.id);
+
+  // Check restrictions for each time block
+  let timeBlocksWithRestrictions = timeBlocks;
+  try {
+    const timeBlocksForBatch = timeBlocks.map((tb) => ({
+      id: tb.id,
+      startTime: tb.startTime,
+      date: tb.date || formatCalendarDate(date),
+    }));
+
+    const batchResults = await checkBatchTimeblockRestrictions({
+      timeBlocks: timeBlocksForBatch,
+      memberId: member.id,
+      memberClass: member.class,
+    });
+
+    if (Array.isArray(batchResults)) {
+      // Map the results back to the timeBlocks
+      timeBlocksWithRestrictions = timeBlocks.map((timeBlock) => {
+        const restrictionResult = batchResults.find(
+          (r: {
+            timeBlockId: number;
+            hasViolations: boolean;
+            violations: any[];
+            preferredReason?: string;
+          }) => r.timeBlockId === timeBlock.id,
+        );
+
+        // Get the appropriate reason - description if not empty, otherwise message
+        let reason = "";
+        if (
+          restrictionResult &&
+          restrictionResult.hasViolations &&
+          restrictionResult.violations.length > 0
+        ) {
+          const violation = restrictionResult.violations[0];
+          reason =
+            violation.restrictionDescription &&
+            violation.restrictionDescription.trim() !== ""
+              ? violation.restrictionDescription
+              : violation.message;
+        }
+
+        return {
+          ...timeBlock,
+          restriction: {
+            isRestricted: restrictionResult
+              ? restrictionResult.hasViolations
+              : false,
+            reason,
+            violations: restrictionResult ? restrictionResult.violations : [],
+          },
+        };
+      });
+    }
+  } catch (error) {
+    console.error("Error checking batch timeblock restrictions:", error);
+    // Return timeblocks without restriction data in case of error
+    timeBlocksWithRestrictions = timeBlocks.map((timeBlock) => ({
+      ...timeBlock,
+      restriction: {
+        isRestricted: false,
+        reason: "",
+        violations: [],
+      },
+    }));
+  }
+
+  return {
+    teesheet,
+    config,
+    timeBlocks: timeBlocksWithRestrictions,
+    member,
+  };
 }

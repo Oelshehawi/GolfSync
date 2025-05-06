@@ -3,66 +3,31 @@
 import React from "react";
 import { Button } from "~/components/ui/button";
 import { Badge } from "~/components/ui/badge";
-import { UserIcon, Users } from "lucide-react";
+import { UserIcon, Users, Ban, AlertCircle } from "lucide-react";
 import { formatDisplayTime } from "~/lib/utils";
+import { TimeBlockMemberView } from "~/app/types/TeeSheetTypes";
 
-type TimeBlock = {
+// Define ClientTimeBlock for client-side usage to avoid type conflicts
+type ClientTimeBlock = {
   id: number;
-  startTime: string | Date;
-  endTime: string | Date;
-  members: Array<{
-    id: number;
-    firstName: string;
-    lastName: string;
-  }>;
+  startTime: string;
+  endTime: string;
+  members: TimeBlockMemberView[];
   [key: string]: any;
 };
 
-// Format time safely - using a format that's consistent across client/server
-export const formatTimeString = (
-  timeString: string | Date | undefined | null,
-): string => {
-  if (!timeString) return "";
-
-  try {
-    const date =
-      typeof timeString === "string" ? new Date(timeString) : timeString;
-
-    // Return in 24-hour format with leading zeros for hours
-    // This ensures consistent formatting between server and client
-    return date.toLocaleTimeString("en-US", {
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false,
-    });
-  } catch (e) {
-    return String(timeString);
-  }
-};
-
 export interface TimeBlockItemProps {
-  timeBlock: {
-    id: number;
-    startTime: Date;
-    endTime: Date;
-    members: Array<{
-      id: number;
-      firstName: string;
-      lastName: string;
-    }>;
-  };
+  timeBlock: ClientTimeBlock;
   isBooked: boolean;
   isAvailable: boolean;
   isPast?: boolean;
   onBook: () => void;
   onCancel: () => void;
   disabled?: boolean;
-  theme?: {
-    primary?: string;
-    secondary?: string;
-    tertiary?: string;
-  };
+
   id?: string;
+  isRestricted?: boolean;
+  restrictionReason?: string;
 }
 
 export function TimeBlockItem({
@@ -73,27 +38,24 @@ export function TimeBlockItem({
   onBook,
   onCancel,
   disabled = false,
-  theme,
   id,
+  isRestricted = false,
+  restrictionReason = "",
 }: TimeBlockItemProps) {
-  // Format the start time for display using our utility function
+  // Format the start time for display using our proper date utility function
   const startTimeDisplay = formatDisplayTime(timeBlock.startTime).toUpperCase();
 
-  // Custom theme styles
-  const themeStyles = theme
-    ? ({
-        "--org-primary": theme.primary || "#10b981",
-      } as React.CSSProperties)
-    : undefined;
 
-  // Determine if the button should be disabled (either by prop or if in the past)
-  const isButtonDisabled = disabled || isPast;
+  // Determine if the button should be disabled (either by prop, past, or restricted)
+  const isButtonDisabled = disabled || isPast || isRestricted;
+
+  // Get the appropriate CSS class for the timeblock container
+  const timeBlockClass = isRestricted
+    ? "rounded-md border border-red-300 bg-red-50 p-4 shadow-sm"
+    : `rounded-md border border-gray-200 p-4 shadow-sm hover:bg-gray-50 ${isPast ? "bg-gray-100" : ""}`;
 
   return (
-    <div
-      id={id}
-      className={`rounded-md border border-gray-200 p-4 shadow-sm hover:bg-gray-50 ${isPast ? "bg-gray-100" : ""}`}
-    >
+    <div id={id} className={timeBlockClass}>
       <div className="mb-2 flex items-center justify-between">
         <div className="flex flex-col">
           <span className="text-lg font-semibold">{startTimeDisplay}</span>
@@ -107,6 +69,11 @@ export function TimeBlockItem({
               </Badge>
             )}
             {isPast && <Badge className="ml-2 bg-gray-500">Past</Badge>}
+            {isRestricted && (
+              <Badge className="ml-2 bg-red-500 hover:bg-red-600">
+                Restricted
+              </Badge>
+            )}
           </div>
         </div>
 
@@ -121,12 +88,21 @@ export function TimeBlockItem({
             >
               Cancel
             </Button>
+          ) : isRestricted ? (
+            <Button
+              variant="outline"
+              size="sm"
+              disabled
+              className="border-red-300 bg-red-50 text-red-500"
+            >
+              <Ban className="mr-1 h-4 w-4" />
+              Unavailable
+            </Button>
           ) : isAvailable ? (
             <Button
               variant="default"
               size="sm"
               onClick={onBook}
-              style={themeStyles}
               className="bg-[var(--org-primary)]"
               disabled={isButtonDisabled}
             >
@@ -139,6 +115,14 @@ export function TimeBlockItem({
           )}
         </div>
       </div>
+
+      {/* Restriction reason */}
+      {isRestricted && restrictionReason && (
+        <div className="mb-2 flex items-center rounded-md bg-red-100 p-2 text-sm text-red-700">
+          <AlertCircle className="mr-2 h-4 w-4" />
+          {restrictionReason}
+        </div>
+      )}
 
       {/* Player list - now more prominent */}
       {timeBlock.members.length > 0 && (

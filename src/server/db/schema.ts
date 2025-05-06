@@ -147,7 +147,7 @@ export const teesheets = createTable(
   {
     id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
     clerkOrgId: varchar("clerk_org_id", { length: 50 }).notNull(),
-    date: timestamp("date", { withTimezone: true }).notNull(),
+    date: date("date").notNull(),
     configId: integer("config_id").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .default(sql`CURRENT_TIMESTAMP`)
@@ -172,8 +172,8 @@ export const timeBlocks = createTable(
     teesheetId: integer("teesheet_id")
       .references(() => teesheets.id, { onDelete: "cascade" })
       .notNull(),
-    startTime: timestamp("start_time", { withTimezone: true }).notNull(),
-    endTime: timestamp("end_time", { withTimezone: true }).notNull(),
+    startTime: varchar("start_time", { length: 5 }).notNull(),
+    endTime: varchar("end_time", { length: 5 }).notNull(),
     notes: text("notes"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .default(sql`CURRENT_TIMESTAMP`)
@@ -325,83 +325,6 @@ export const timeBlocksRelations = relations(timeBlocks, ({ many }) => ({
   timeBlockGuests: many(timeBlockGuests),
 }));
 
-// Restrictions table for member classes and guests
-export const restrictions = createTable(
-  "restrictions",
-  {
-    id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
-    clerkOrgId: varchar("clerk_org_id", { length: 50 }).notNull(),
-    entityType: varchar("entity_type", { length: 10 }).notNull(), // 'CLASS' or 'GUEST'
-    entityId: varchar("entity_id", { length: 50 }), // class name for 'CLASS', null for 'GUEST'
-    restrictionType: varchar("restriction_type", { length: 10 }).notNull(), // 'TIME' or 'FREQUENCY'
-    name: varchar("name", { length: 100 }).notNull(),
-    description: text("description"),
-    isActive: boolean("is_active").notNull().default(true),
-
-    // Time restriction fields
-    startTime: varchar("start_time", { length: 5 }), // Format: HH:MM (24h)
-    endTime: varchar("end_time", { length: 5 }), // Format: HH:MM (24h)
-    daysOfWeek: integer("days_of_week").array(), // [0,1,2,3,4,5,6] for Sun-Sat
-
-    // Frequency restriction fields
-    maxCount: integer("max_count"), // Maximum number of bookings allowed
-    periodDays: integer("period_days"), // Period in days (30 for monthly)
-    applyCharge: boolean("apply_charge"), // Whether to apply a charge after max count
-    chargeAmount: real("charge_amount"), // Amount to charge
-
-    createdAt: timestamp("created_at", { withTimezone: true })
-      .default(sql`CURRENT_TIMESTAMP`)
-      .notNull(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).$onUpdate(
-      () => new Date(),
-    ),
-  },
-  (table) => [
-    index("restrictions_org_id_idx").on(table.clerkOrgId),
-    index("restrictions_entity_type_idx").on(table.entityType),
-    index("restrictions_entity_id_idx").on(table.entityId),
-    index("restrictions_type_idx").on(table.restrictionType),
-  ],
-);
-
-// Restriction override log for auditing
-export const restrictionOverrides = createTable(
-  "restriction_overrides",
-  {
-    id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
-    clerkOrgId: varchar("clerk_org_id", { length: 50 }).notNull(),
-    restrictionId: integer("restriction_id").references(() => restrictions.id, {
-      onDelete: "set null",
-    }),
-    overriddenBy: varchar("overridden_by", { length: 100 }).notNull(), // Admin user who overrode
-    entityType: varchar("entity_type", { length: 10 }).notNull(), // 'CLASS' or 'GUEST'
-    entityId: varchar("entity_id", { length: 50 }), // Member class or guest ID
-    reason: text("reason"),
-    createdAt: timestamp("created_at", { withTimezone: true })
-      .default(sql`CURRENT_TIMESTAMP`)
-      .notNull(),
-  },
-  (table) => [
-    index("restriction_overrides_org_id_idx").on(table.clerkOrgId),
-    index("restriction_overrides_restriction_id_idx").on(table.restrictionId),
-  ],
-);
-
-// Define relations for restrictions
-export const restrictionsRelations = relations(restrictions, ({ many }) => ({
-  overrides: many(restrictionOverrides),
-}));
-
-export const restrictionOverridesRelations = relations(
-  restrictionOverrides,
-  ({ one }) => ({
-    restriction: one(restrictions, {
-      fields: [restrictionOverrides.restrictionId],
-      references: [restrictions.id],
-    }),
-  }),
-);
-
 // Course Info table
 export const courseInfo = createTable(
   "course_info",
@@ -424,4 +347,116 @@ export const courseInfo = createTable(
     unique("course_info_org_id_unq").on(table.clerkOrgId),
     index("course_info_org_id_idx").on(table.clerkOrgId),
   ],
+);
+
+// Timeblock restrictions table - combines member class, guest restrictions, and course availability
+export const timeblockRestrictions = createTable(
+  "timeblock_restrictions",
+  {
+    id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+    clerkOrgId: varchar("clerk_org_id", { length: 50 }).notNull(),
+    name: varchar("name", { length: 100 }).notNull(),
+    description: text("description"),
+
+    // Restriction Category
+    restrictionCategory: varchar("restriction_category", {
+      length: 20,
+    }).notNull(), // 'MEMBER_CLASS', 'GUEST', 'COURSE_AVAILABILITY'
+
+    // Restriction Type
+    restrictionType: varchar("restriction_type", { length: 15 }).notNull(), // 'TIME', 'FREQUENCY', 'AVAILABILITY'
+
+    // Entity being restricted (for member class restrictions)
+    memberClass: varchar("member_class", { length: 50 }),
+
+    // Time restriction
+    startTime: varchar("start_time", { length: 5 }),
+    endTime: varchar("end_time", { length: 5 }),
+    daysOfWeek: integer("days_of_week").array(),
+
+    // Date range
+    startDate: date("start_date"),
+    endDate: date("end_date"),
+
+    // Frequency restriction
+    maxCount: integer("max_count"),
+    periodDays: integer("period_days"),
+    applyCharge: boolean("apply_charge"),
+    chargeAmount: real("charge_amount"),
+
+    // Status and override
+    isActive: boolean("is_active").notNull().default(true),
+    canOverride: boolean("can_override").notNull().default(true),
+    priority: integer("priority").notNull().default(0),
+
+    // Audit
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).$onUpdate(
+      () => new Date(),
+    ),
+    lastUpdatedBy: varchar("last_updated_by", { length: 100 }),
+  },
+  (table) => [
+    index("timeblock_restrictions_org_id_idx").on(table.clerkOrgId),
+    index("timeblock_restrictions_category_idx").on(table.restrictionCategory),
+    index("timeblock_restrictions_type_idx").on(table.restrictionType),
+    index("timeblock_restrictions_member_class_idx").on(table.memberClass),
+  ],
+);
+
+// Timeblock restriction overrides
+export const timeblockOverrides = createTable(
+  "timeblock_overrides",
+  {
+    id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+    clerkOrgId: varchar("clerk_org_id", { length: 50 }).notNull(),
+    restrictionId: integer("restriction_id").references(
+      () => timeblockRestrictions.id,
+    ),
+    timeBlockId: integer("time_block_id").references(() => timeBlocks.id),
+    memberId: integer("member_id").references(() => members.id),
+    guestId: integer("guest_id").references(() => guests.id),
+    overriddenBy: varchar("overridden_by", { length: 100 }).notNull(),
+    reason: text("reason"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+  },
+  (table) => [
+    index("timeblock_overrides_org_id_idx").on(table.clerkOrgId),
+    index("timeblock_overrides_restriction_id_idx").on(table.restrictionId),
+    index("timeblock_overrides_time_block_id_idx").on(table.timeBlockId),
+  ],
+);
+
+// Define relations for timeblock restrictions
+export const timeblockRestrictionsRelations = relations(
+  timeblockRestrictions,
+  ({ many }) => ({
+    overrides: many(timeblockOverrides),
+  }),
+);
+
+export const timeblockOverridesRelations = relations(
+  timeblockOverrides,
+  ({ one }) => ({
+    restriction: one(timeblockRestrictions, {
+      fields: [timeblockOverrides.restrictionId],
+      references: [timeblockRestrictions.id],
+    }),
+    timeBlock: one(timeBlocks, {
+      fields: [timeblockOverrides.timeBlockId],
+      references: [timeBlocks.id],
+    }),
+    member: one(members, {
+      fields: [timeblockOverrides.memberId],
+      references: [members.id],
+    }),
+    guest: one(guests, {
+      fields: [timeblockOverrides.guestId],
+      references: [guests.id],
+    }),
+  }),
 );

@@ -94,14 +94,10 @@ type CourseInfoProps = {
     rainfall?: string;
     notes?: string;
   };
-  theme?: {
-    primary?: string;
-    secondary?: string;
-    tertiary?: string;
-  };
+
 };
 
-export function CourseInfoSettings({ initialData, theme }: CourseInfoProps) {
+export function CourseInfoSettings({ initialData }: CourseInfoProps) {
   const [isPending, startTransition] = useTransition();
 
   const [weatherStatus, setWeatherStatus] = useState(
@@ -196,7 +192,7 @@ export function CourseInfoSettings({ initialData, theme }: CourseInfoProps) {
           {/* Header Notes */}
           <div className="space-y-2">
             <Label htmlFor="notes">Course Notes</Label>
-            <NotesEditor value={notes} onChange={setNotes} theme={theme} />
+            <NotesEditor value={notes} onChange={setNotes} />
             <p className="text-muted-foreground text-sm">
               Add information such as course conditions, cart rules, hours, etc.
             </p>
@@ -207,10 +203,6 @@ export function CourseInfoSettings({ initialData, theme }: CourseInfoProps) {
             onClick={saveChanges}
             disabled={isPending}
             className="w-full sm:w-auto"
-            style={{
-              backgroundColor: theme?.primary,
-              color: "#fff",
-            }}
           >
             {isPending ? "Saving..." : "Save Changes"}
           </Button>

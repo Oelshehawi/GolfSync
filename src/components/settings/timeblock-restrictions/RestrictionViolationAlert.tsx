@@ -5,19 +5,14 @@ import {
   AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
-  AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
 } from "~/components/ui/alert-dialog";
-import { Button } from "~/components/ui/button";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Textarea } from "~/components/ui/textarea";
-import {
-  RestrictionViolation,
-  RestrictedEntityType,
-} from "~/app/types/RestrictionTypes";
-import { recordOverride } from "~/server/restrictions/actions";
+import { RestrictionViolation } from "~/app/types/RestrictionTypes";
+import { recordTimeblockRestrictionOverride } from "~/server/timeblock-restrictions/actions";
 import { useAuth } from "@clerk/nextjs";
 
 interface RestrictionViolationAlertProps {
@@ -26,11 +21,7 @@ interface RestrictionViolationAlertProps {
   violations: RestrictionViolation[];
   onContinue: () => void;
   onCancel: () => void;
-  theme?: {
-    primary?: string;
-    secondary?: string;
-    tertiary?: string;
-  };
+
 }
 
 export function RestrictionViolationAlert({
@@ -39,11 +30,20 @@ export function RestrictionViolationAlert({
   violations,
   onContinue,
   onCancel,
-  theme,
 }: RestrictionViolationAlertProps) {
   const [overrideReason, setOverrideReason] = useState("");
-  const { isLoaded, userId } = useAuth();
-  const isAdmin = isLoaded && !!userId; // In a real app, you'd check if user is admin
+  const { isLoaded, userId, has } = useAuth();
+
+  // Need a proper admin check - this should be replaced with actual admin role check
+  // For now, we're assuming anyone authenticated is an admin for demo purposes
+  const isAdmin = isLoaded && !!userId && true; // Replace with actual admin check
+
+  // If not admin, cancel and prevent dialog from showing
+  useEffect(() => {
+    if (open && !isAdmin) {
+      onCancel();
+    }
+  }, [open, isAdmin, onCancel]);
 
   const handleOverride = async () => {
     if (!isAdmin || !violations.length) return;
@@ -51,9 +51,9 @@ export function RestrictionViolationAlert({
     try {
       // Record overrides for each violation
       for (const violation of violations) {
-        await recordOverride({
+        await recordTimeblockRestrictionOverride({
           restrictionId: violation.restrictionId,
-          entityType: violation.entityType,
+          restrictionCategory: violation.restrictionCategory,
           entityId: violation.entityId,
           reason: overrideReason,
         });
@@ -66,17 +66,6 @@ export function RestrictionViolationAlert({
     }
   };
 
-  // Determine button color from theme
-  const overrideButtonStyle = theme?.primary
-    ? {
-        backgroundColor: theme.primary,
-        borderColor: theme.primary,
-        color: "#fff",
-        ":hover": {
-          backgroundColor: theme.primary + "dd", // Add transparency for hover
-        },
-      }
-    : {};
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>

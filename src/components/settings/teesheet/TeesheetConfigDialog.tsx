@@ -29,11 +29,6 @@ interface TeesheetConfigDialogProps {
   onClose: () => void;
   onSave: (config: TeesheetConfigInput) => void;
   existingConfig?: TeesheetConfig;
-  theme?: {
-    primary?: string;
-    secondary?: string;
-    tertiary?: string;
-  };
 }
 
 const DAYS_OF_WEEK = [
@@ -51,7 +46,6 @@ export function TeesheetConfigDialog({
   onClose,
   onSave,
   existingConfig,
-  theme,
 }: TeesheetConfigDialogProps) {
   const { register, handleSubmit, reset, setValue, watch } =
     useForm<TeesheetConfigInput>({
@@ -248,22 +242,12 @@ export function TeesheetConfigDialog({
 
         <form onSubmit={onSubmit}>
           <Tabs defaultValue="schedule" className="w-full space-y-6">
-            <TabsList className="grid w-full grid-cols-2" theme={theme}>
-              <TabsTrigger
-                value="schedule"
-                theme={theme}
-              >
-                Schedule
-              </TabsTrigger>
-              <TabsTrigger
-                value="settings"
-                theme={theme}
-              >
-                Settings
-              </TabsTrigger>
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="schedule">Schedule</TabsTrigger>
+              <TabsTrigger value="settings">Settings</TabsTrigger>
             </TabsList>
 
-            <TabsContent value="schedule" className="space-y-6" theme={theme}>
+            <TabsContent value="schedule" className="space-y-6">
               <div className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="name">Configuration Name</Label>
@@ -389,7 +373,7 @@ export function TeesheetConfigDialog({
               </div>
             </TabsContent>
 
-            <TabsContent value="settings" className="space-y-6" theme={theme}>
+            <TabsContent value="settings" className="space-y-6">
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">

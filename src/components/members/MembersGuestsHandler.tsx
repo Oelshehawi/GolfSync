@@ -15,38 +15,32 @@ type Guest = {
 interface MembersGuestsHandlerProps {
   initialMembers: Member[];
   initialGuests: Guest[];
-  theme: {
-    primary?: string;
-    secondary?: string;
-    tertiary?: string;
-  };
 }
 
 export function MembersGuestsHandler({
   initialMembers,
   initialGuests,
-  theme,
 }: MembersGuestsHandlerProps) {
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">Manage Members & Guests</h1>
 
       <Tabs defaultValue="members" className="w-full">
-        <TabsList className="mb-4" theme={theme}>
-          <TabsTrigger value="members" theme={theme}>
+        <TabsList className="mb-4">
+          <TabsTrigger value="members">
             Members
           </TabsTrigger>
-          <TabsTrigger value="guests" theme={theme}>
+          <TabsTrigger value="guests">
             Guests
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="members" theme={theme}>
-          <MembersHandler initialMembers={initialMembers} theme={theme} />
+        <TabsContent value="members">
+          <MembersHandler initialMembers={initialMembers} />
         </TabsContent>
 
-        <TabsContent value="guests" theme={theme}>
-          <GuestsHandler initialGuests={initialGuests} theme={theme} />
+        <TabsContent value="guests">
+          <GuestsHandler initialGuests={initialGuests} />
         </TabsContent>
       </Tabs>
     </div>

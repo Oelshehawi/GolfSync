@@ -17,6 +17,11 @@
   /* Neutral colors */
   --color-neutral: #f5f5f5;
   --color-neutral-dark: #333333;
+
+  /* Organization theme colors with defaults */
+  --color-org-primary: #000000;
+  --color-org-secondary: #f3f4f6;
+  --color-org-tertiary: #9ca3af;
 }
 
 /* Dialog animations */

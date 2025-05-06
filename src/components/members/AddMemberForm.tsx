@@ -20,16 +20,14 @@ import {
 } from "~/components/ui/select";
 import { SearchableSelect } from "~/components/ui/searchable-select";
 import { memberFormSchema } from "./memberFormSchema";
-import { ThemeConfig } from "~/app/types/UITypes";
 type MemberFormValues = z.infer<typeof memberFormSchema>;
 
 interface AddMemberFormProps {
   onSubmit: (values: MemberFormValues) => Promise<void>;
   onCancel: () => void;
-  theme: ThemeConfig;
 }
 
-export function AddMemberForm({ onSubmit, onCancel, theme }: AddMemberFormProps) {
+export function AddMemberForm({ onSubmit, onCancel }: AddMemberFormProps) {
   const form = useForm<MemberFormValues>({
     resolver: zodResolver(memberFormSchema),
     defaultValues: {
@@ -90,7 +88,7 @@ export function AddMemberForm({ onSubmit, onCancel, theme }: AddMemberFormProps)
               <FormItem>
                 <FormLabel>Member Number</FormLabel>
                 <FormControl>
-                  <Input theme={theme} placeholder="Enter member number" {...field} />
+                  <Input placeholder="Enter member number" {...field} />
                 </FormControl>
                 <FormMessage className="text-red-500" />
               </FormItem>
@@ -109,7 +107,6 @@ export function AddMemberForm({ onSubmit, onCancel, theme }: AddMemberFormProps)
                     value={field.value}
                     onValueChange={field.onChange}
                     placeholder="Select or search member class"
-                    theme={theme}
                   />
                 </FormControl>
                 <FormMessage className="text-red-500" />
@@ -126,7 +123,7 @@ export function AddMemberForm({ onSubmit, onCancel, theme }: AddMemberFormProps)
               <FormItem>
                 <FormLabel>First Name</FormLabel>
                 <FormControl>
-                  <Input theme={theme} placeholder="Enter first name" {...field} />
+                  <Input placeholder="Enter first name" {...field} />
                 </FormControl>
                 <FormMessage className="text-red-500" />
               </FormItem>
@@ -140,7 +137,7 @@ export function AddMemberForm({ onSubmit, onCancel, theme }: AddMemberFormProps)
               <FormItem>
                 <FormLabel>Last Name</FormLabel>
                 <FormControl>
-                  <Input theme={theme} placeholder="Enter last name" {...field} />
+                  <Input placeholder="Enter last name" {...field} />
                 </FormControl>
                 <FormMessage className="text-red-500" />
               </FormItem>
@@ -156,7 +153,7 @@ export function AddMemberForm({ onSubmit, onCancel, theme }: AddMemberFormProps)
               <FormItem>
                 <FormLabel>Username</FormLabel>
                 <FormControl>
-                  <Input theme={theme} placeholder="Enter username" {...field} />
+                  <Input placeholder="Enter username" {...field} />
                 </FormControl>
                 <FormMessage className="text-red-500" />
               </FormItem>
@@ -170,7 +167,7 @@ export function AddMemberForm({ onSubmit, onCancel, theme }: AddMemberFormProps)
               <FormItem>
                 <FormLabel>Email</FormLabel>
                 <FormControl>
-                  <Input theme={theme} type="email" placeholder="Enter email" {...field} />
+                  <Input type="email" placeholder="Enter email" {...field} />
                 </FormControl>
                 <FormMessage className="text-red-500" />
               </FormItem>
@@ -190,13 +187,13 @@ export function AddMemberForm({ onSubmit, onCancel, theme }: AddMemberFormProps)
                   defaultValue={field.value}
                 >
                   <FormControl>
-                    <SelectTrigger theme={theme}>
+                    <SelectTrigger>
                       <SelectValue placeholder="Select gender" />
                     </SelectTrigger>
                   </FormControl>
-                  <SelectContent theme={theme}>
-                    <SelectItem theme={theme} value="M">Male</SelectItem>
-                    <SelectItem theme={theme} value="F">Female</SelectItem>
+                  <SelectContent>
+                    <SelectItem value="M">Male</SelectItem>
+                    <SelectItem value="F">Female</SelectItem>
                   </SelectContent>
                 </Select>
                 <FormMessage className="text-red-500" />
@@ -211,7 +208,7 @@ export function AddMemberForm({ onSubmit, onCancel, theme }: AddMemberFormProps)
               <FormItem>
                 <FormLabel>Date of Birth</FormLabel>
                 <FormControl>
-                  <Input theme={theme} type="date" {...field} />
+                  <Input type="date" {...field} />
                 </FormControl>
                 <FormMessage className="text-red-500" />
               </FormItem>
@@ -227,7 +224,7 @@ export function AddMemberForm({ onSubmit, onCancel, theme }: AddMemberFormProps)
               <FormItem>
                 <FormLabel>Handicap</FormLabel>
                 <FormControl>
-                  <Input theme={theme} placeholder="Enter handicap" {...field} />
+                  <Input placeholder="Enter handicap" {...field} />
                 </FormControl>
                 <FormMessage className="text-red-500" />
               </FormItem>
@@ -241,7 +238,7 @@ export function AddMemberForm({ onSubmit, onCancel, theme }: AddMemberFormProps)
               <FormItem>
                 <FormLabel>Bag Number</FormLabel>
                 <FormControl>
-                  <Input theme={theme} placeholder="Enter bag number" {...field} />
+                  <Input placeholder="Enter bag number" {...field} />
                 </FormControl>
                 <FormMessage className="text-red-500" />
               </FormItem>

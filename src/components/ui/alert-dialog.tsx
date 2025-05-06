@@ -3,7 +3,6 @@
 import * as React from "react";
 import * as AlertDialogPrimitive from "@radix-ui/react-alert-dialog";
 import { cn } from "~/lib/utils";
-import { getOrganizationColors } from "~/lib/utils";
 
 const AlertDialog = AlertDialogPrimitive.Root;
 
@@ -29,19 +28,10 @@ AlertDialogOverlay.displayName = AlertDialogPrimitive.Overlay.displayName;
 const AlertDialogContent = React.forwardRef<
   React.ElementRef<typeof AlertDialogPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof AlertDialogPrimitive.Content> & {
-    theme?: {
-      primary?: string;
-      secondary?: string;
-      tertiary?: string;
-    };
+
   }
->(({ className, theme, ...props }, ref) => {
-  const colors = getOrganizationColors(theme);
-  const themeStyles = {
-    ["--org-primary" as string]: colors.primary,
-    ["--org-secondary" as string]: colors.secondary,
-    ["--org-tertiary" as string]: colors.tertiary,
-  } as React.CSSProperties;
+>(({ className,  ...props }, ref) => {
+
 
   return (
     <AlertDialogPortal>
@@ -52,7 +42,6 @@ const AlertDialogContent = React.forwardRef<
           "fixed top-[50%] left-[50%] z-50 grid w-[calc(100%-2rem)] max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-white p-6 shadow-lg duration-200 sm:rounded-lg",
           className,
         )}
-        style={themeStyles}
         {...props}
       />
     </AlertDialogPortal>
@@ -116,19 +105,9 @@ AlertDialogDescription.displayName =
 const AlertDialogAction = React.forwardRef<
   React.ElementRef<typeof AlertDialogPrimitive.Action>,
   React.ComponentPropsWithoutRef<typeof AlertDialogPrimitive.Action> & {
-    theme?: {
-      primary?: string;
-      secondary?: string;
-      tertiary?: string;
-    };
+
   }
->(({ className, theme, ...props }, ref) => {
-  const colors = getOrganizationColors(theme);
-  const themeStyles = {
-    ["--org-primary" as string]: colors.primary,
-    ["--org-secondary" as string]: colors.secondary,
-    ["--org-tertiary" as string]: colors.tertiary,
-  } as React.CSSProperties;
+>(({ className, ...props }, ref) => {
 
   return (
     <AlertDialogPrimitive.Action
@@ -137,7 +116,6 @@ const AlertDialogAction = React.forwardRef<
         "inline-flex h-10 items-center justify-center rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:cursor-pointer hover:bg-red-800 focus-visible:ring-2 focus-visible:ring-[var(--org-primary)] focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50",
         className,
       )}
-      style={themeStyles}
       {...props}
     />
   );
@@ -147,19 +125,10 @@ AlertDialogAction.displayName = AlertDialogPrimitive.Action.displayName;
 const AlertDialogCancel = React.forwardRef<
   React.ElementRef<typeof AlertDialogPrimitive.Cancel>,
   React.ComponentPropsWithoutRef<typeof AlertDialogPrimitive.Cancel> & {
-    theme?: {
-      primary?: string;
-      secondary?: string;
-      tertiary?: string;
-    };
+
   }
->(({ className, theme, ...props }, ref) => {
-  const colors = getOrganizationColors(theme);
-  const themeStyles = {
-    ["--org-primary" as string]: colors.primary,
-    ["--org-secondary" as string]: colors.secondary,
-    ["--org-tertiary" as string]: colors.tertiary,
-  } as React.CSSProperties;
+>(({ className, ...props }, ref) => {
+
 
   return (
     <AlertDialogPrimitive.Cancel
@@ -168,7 +137,6 @@ const AlertDialogCancel = React.forwardRef<
         "mt-2 inline-flex h-10 items-center justify-center rounded-md border px-4 py-2 text-sm font-semibold transition-colors hover:cursor-pointer hover:bg-gray-300 hover:text-[var(--org-primary)] focus-visible:ring-2 focus-visible:ring-[var(--org-primary)] focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 sm:mt-0",
         className,
       )}
-      style={themeStyles}
       {...props}
     />
   );

@@ -9,7 +9,6 @@ import {
   DialogDescription,
 } from "~/components/ui/dialog";
 import { format } from "date-fns";
-import { ThemeConfig } from "~/app/types/UITypes";
 import { Card, CardContent } from "~/components/ui/card";
 import { Calendar, Clock, User } from "lucide-react";
 
@@ -27,7 +26,6 @@ interface BookingHistoryDialogProps {
   onClose: () => void;
   title: string;
   fetchHistory: () => Promise<BookingHistoryItem[]>;
-  theme?: ThemeConfig;
   entityName: string;
 }
 
@@ -36,7 +34,6 @@ export function BookingHistoryDialog({
   onClose,
   title,
   fetchHistory,
-  theme,
   entityName,
 }: BookingHistoryDialogProps) {
   const [history, setHistory] = useState<BookingHistoryItem[]>([]);

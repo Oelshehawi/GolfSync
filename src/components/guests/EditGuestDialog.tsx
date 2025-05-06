@@ -22,14 +22,12 @@ import { Input } from "~/components/ui/input";
 import { guestFormSchema } from "./guestFormSchema";
 import React from "react";
 import { BaseGuest, GuestFormValues } from "~/app/types/GuestTypes";
-import { ThemeConfig } from "~/app/types/UITypes";
 
 interface EditGuestDialogProps {
   guest: BaseGuest | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSave: (guestId: number, data: GuestFormValues) => Promise<void>;
-  theme?: ThemeConfig;
 }
 
 export function EditGuestDialog({
@@ -37,7 +35,6 @@ export function EditGuestDialog({
   open,
   onOpenChange,
   onSave,
-  theme,
 }: EditGuestDialogProps) {
   const form = useForm<GuestFormValues>({
     resolver: zodResolver(guestFormSchema),
@@ -72,7 +69,7 @@ export function EditGuestDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]" theme={theme}>
+      <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Edit Guest</DialogTitle>
         </DialogHeader>
@@ -88,7 +85,7 @@ export function EditGuestDialog({
                 <FormItem>
                   <FormLabel>First Name</FormLabel>
                   <FormControl>
-                    <Input theme={theme} placeholder="Enter first name" {...field} />
+                    <Input placeholder="Enter first name" {...field} />
                   </FormControl>
                   <FormMessage className="text-red-500" />
                 </FormItem>
@@ -102,7 +99,7 @@ export function EditGuestDialog({
                 <FormItem>
                   <FormLabel>Last Name</FormLabel>
                   <FormControl>
-                    <Input theme={theme} placeholder="Enter last name" {...field} />
+                    <Input placeholder="Enter last name" {...field} />
                   </FormControl>
                   <FormMessage className="text-red-500" />
                 </FormItem>
@@ -116,7 +113,7 @@ export function EditGuestDialog({
                 <FormItem>
                   <FormLabel>Email</FormLabel>
                   <FormControl>
-                    <Input theme={theme} type="email" placeholder="Enter email" {...field} />
+                    <Input type="email" placeholder="Enter email" {...field} />
                   </FormControl>
                   <FormMessage className="text-red-500" />
                 </FormItem>
@@ -130,7 +127,7 @@ export function EditGuestDialog({
                 <FormItem>
                   <FormLabel>Phone</FormLabel>
                   <FormControl>
-                    <Input theme={theme} placeholder="Enter phone" {...field} />
+                    <Input placeholder="Enter phone" {...field} />
                   </FormControl>
                   <FormMessage className="text-red-500" />
                 </FormItem>
@@ -144,7 +141,7 @@ export function EditGuestDialog({
                 <FormItem>
                   <FormLabel>Handicap</FormLabel>
                   <FormControl>
-                    <Input theme={theme} placeholder="Enter handicap" {...field} />
+                    <Input placeholder="Enter handicap" {...field} />
                   </FormControl>
                   <FormMessage className="text-red-500" />
                 </FormItem>
@@ -152,7 +149,7 @@ export function EditGuestDialog({
             />
 
             <DialogFooter>
-              <Button type="submit" theme={theme} >Save Changes</Button>
+              <Button type="submit">Save Changes</Button>
             </DialogFooter>
           </form>
         </Form>

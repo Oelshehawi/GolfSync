@@ -4,7 +4,6 @@ import * as React from "react";
 import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu";
 import { Check, ChevronRight, Circle } from "lucide-react";
 import { cn } from "~/lib/utils";
-import { getOrganizationColors } from "~/lib/utils";
 
 const DropdownMenu = DropdownMenuPrimitive.Root;
 
@@ -42,29 +41,15 @@ DropdownMenuSubTrigger.displayName =
 
 const DropdownMenuSubContent = React.forwardRef<
   React.ElementRef<typeof DropdownMenuPrimitive.SubContent>,
-  React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.SubContent> & {
-    theme?: {
-      primary?: string;
-      secondary?: string;
-      tertiary?: string;
-    };
-  }
->(({ className, theme, ...props }, ref) => {
-  const colors = getOrganizationColors(theme);
-  const themeStyles = {
-    ["--org-primary" as string]: colors.primary,
-    ["--org-secondary" as string]: colors.secondary,
-    ["--org-tertiary" as string]: colors.tertiary,
-  } as React.CSSProperties;
-
+  React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.SubContent>
+>(({ className, ...props }, ref) => {
   return (
     <DropdownMenuPrimitive.SubContent
       ref={ref}
       className={cn(
-        "z-50 min-w-[8rem] overflow-hidden rounded-md border bg-[var(--org-primary)] p-1 shadow-lg",
+        "z-50 min-w-[8rem] overflow-hidden rounded-md border border-[var(--org-primary)] bg-white p-1 shadow-lg",
         className,
       )}
-      style={themeStyles}
       {...props}
     />
   );
@@ -74,31 +59,17 @@ DropdownMenuSubContent.displayName =
 
 const DropdownMenuContent = React.forwardRef<
   React.ElementRef<typeof DropdownMenuPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.Content> & {
-    theme?: {
-      primary?: string;
-      secondary?: string;
-      tertiary?: string;
-    };
-  }
->(({ className, sideOffset = 4, theme, ...props }, ref) => {
-  const colors = getOrganizationColors(theme);
-  const themeStyles = {
-    ["--org-primary" as string]: colors.primary,
-    ["--org-secondary" as string]: colors.secondary,
-    ["--org-tertiary" as string]: colors.tertiary,
-  } as React.CSSProperties;
-
+  React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.Content>
+>(({ className, sideOffset = 4, ...props }, ref) => {
   return (
     <DropdownMenuPrimitive.Portal>
       <DropdownMenuPrimitive.Content
         ref={ref}
         sideOffset={sideOffset}
         className={cn(
-          "z-50 min-w-[8rem] overflow-hidden rounded-md border bg-white p-1 text-slate-800 shadow-md",
+          "z-50 min-w-[8rem] overflow-hidden rounded-md border border-[var(--org-primary)] bg-white p-1 text-slate-800 shadow-md",
           className,
         )}
-        style={themeStyles}
         {...props}
       />
     </DropdownMenuPrimitive.Portal>
@@ -110,28 +81,16 @@ const DropdownMenuItem = React.forwardRef<
   React.ElementRef<typeof DropdownMenuPrimitive.Item>,
   React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.Item> & {
     inset?: boolean;
-    theme?: {
-      primary?: string;
-      secondary?: string;
-      tertiary?: string;
-    };
   }
->(({ className, inset, theme, ...props }, ref) => {
-  const colors = getOrganizationColors(theme);
-  const themeStyles = {
-    ["--org-primary" as string]: colors.primary,
-    ["--org-secondary" as string]: colors.secondary,
-    ["--org-tertiary" as string]: colors.tertiary,
-  } as React.CSSProperties;
+>(({ className, inset, ...props }, ref) => {
   return (
     <DropdownMenuPrimitive.Item
-    ref={ref}
-    className={cn(
-      "relative flex cursor-pointer items-center rounded-sm px-2 py-1.5 text-sm transition-colors outline-none select-none hover:bg-[var(--org-primary)] hover:text-white focus:bg-[var(--org-primary)] focus:text-white",
+      ref={ref}
+      className={cn(
+        "relative flex cursor-pointer items-center rounded-sm px-2 py-1.5 text-sm transition-colors outline-none select-none hover:bg-[var(--org-primary)] hover:text-white focus:bg-[var(--org-primary)] focus:text-white",
         inset && "pl-8",
         className,
       )}
-      style={themeStyles}
       {...props}
     />
   );
@@ -145,7 +104,7 @@ const DropdownMenuCheckboxItem = React.forwardRef<
   <DropdownMenuPrimitive.CheckboxItem
     ref={ref}
     className={cn(
-      "relative flex cursor-default items-center rounded-sm py-1.5 pr-2 pl-8 text-sm transition-colors outline-none select-none focus:bg-[var(--org-secondary)] focus:text-[var(--org-primary)] data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+      "relative flex cursor-default items-center rounded-sm py-1.5 pr-2 pl-8 text-sm transition-colors outline-none select-none focus:bg-[var(--org-secondary)] focus:text-[var(--org-primary)] disabled:pointer-events-none disabled:opacity-50",
       className,
     )}
     checked={checked}
@@ -169,7 +128,7 @@ const DropdownMenuRadioItem = React.forwardRef<
   <DropdownMenuPrimitive.RadioItem
     ref={ref}
     className={cn(
-      "relative flex cursor-default items-center rounded-sm py-1.5 pr-2 pl-8 text-sm transition-colors outline-none select-none focus:bg-[var(--org-secondary)] focus:text-[var(--org-primary)] data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+      "relative flex cursor-default items-center rounded-sm py-1.5 pr-2 pl-8 text-sm transition-colors outline-none select-none focus:bg-[var(--org-secondary)] focus:text-[var(--org-primary)] disabled:pointer-events-none disabled:opacity-50",
       className,
     )}
     {...props}
@@ -208,7 +167,7 @@ const DropdownMenuSeparator = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <DropdownMenuPrimitive.Separator
     ref={ref}
-    className={cn("bg-muted -mx-1 my-1 h-px", className)}
+    className={cn("-mx-1 my-1 h-px bg-gray-200", className)}
     {...props}
   />
 ));

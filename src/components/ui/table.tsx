@@ -2,31 +2,16 @@
 
 import * as React from "react";
 import { cn } from "~/lib/utils";
-import { getOrganizationColors } from "~/lib/utils";
 
 const Table = React.forwardRef<
   HTMLTableElement,
-  React.HTMLAttributes<HTMLTableElement> & {
-    theme?: {
-      primary?: string;
-      secondary?: string;
-      tertiary?: string;
-    };
-  }
->(({ className, theme, ...props }, ref) => {
-  const colors = getOrganizationColors(theme);
-  const themeStyles = {
-    ["--org-primary" as string]: colors.primary,
-    ["--org-secondary" as string]: colors.secondary,
-    ["--org-tertiary" as string]: colors.tertiary,
-  } as React.CSSProperties;
-
+  React.HTMLAttributes<HTMLTableElement>
+>(({ className, ...props }, ref) => {
   return (
     <div className="relative w-full overflow-auto">
       <table
         ref={ref}
         className={cn("w-full caption-bottom text-sm", className)}
-        style={themeStyles}
         {...props}
       />
     </div>
@@ -76,7 +61,7 @@ const TableRow = React.forwardRef<
   <tr
     ref={ref}
     className={cn(
-      "border-b transition-colors hover:bg-[var(--org-secondary)]/50 data-[state=selected]:bg-[var(--org-secondary)]",
+      "border-b transition-colors hover:bg-[var(--org-secondary)]/50",
       className,
     )}
     {...props}

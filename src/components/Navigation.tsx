@@ -7,16 +7,11 @@ import Image from "next/image";
 import { useState } from "react";
 
 interface NavigationProps {
-  theme: {
-    primary: string;
-    tertiary: string;
-    secondary: string;
-  };
   logoUrl?: string;
   organizationName: string;
 }
 
-const Navigation = ({ theme, logoUrl, organizationName }: NavigationProps) => {
+const Navigation = ({ logoUrl, organizationName }: NavigationProps) => {
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -28,7 +23,7 @@ const Navigation = ({ theme, logoUrl, organizationName }: NavigationProps) => {
   ];
 
   return (
-    <div style={{ backgroundColor: theme.primary }} className="relative">
+    <div className="relative bg-[var(--org-primary)]">
       <div className="mx-auto max-w-7xl px-4">
         <div className="flex h-16 items-center justify-between gap-8">
           {/* Logo */}
@@ -46,8 +41,7 @@ const Navigation = ({ theme, logoUrl, organizationName }: NavigationProps) => {
               </div>
             ) : (
               <div
-                className="h-10 w-10 rounded"
-                style={{ backgroundColor: theme.tertiary }}
+                className="h-10 w-10 rounded bg-[var(--org-tertiary)]"
               />
             )}
           </Link>
@@ -94,12 +88,11 @@ const Navigation = ({ theme, logoUrl, organizationName }: NavigationProps) => {
 
       {/* Mobile Navigation */}
       <div
-        className={`absolute inset-x-0 top-full md:hidden transform transition-all duration-300 ${
+        className={`absolute inset-x-0 bg-[var(--org-primary)] top-full md:hidden transform transition-all duration-300 ${
           isMobileMenuOpen
             ? "translate-y-0  opacity-100"
             : "pointer-events-none -translate-y-2 opacity-0"
         }`}
-        style={{ backgroundColor: theme.primary }}
       >
         <div className="space-y-1 px-4 py-3">
           {navItems.map((item) => {

@@ -14,14 +14,12 @@ import {
 import { Input } from "~/components/ui/input";
 import { guestFormSchema } from "./guestFormSchema";
 import { GuestFormValues } from "~/app/types/GuestTypes";
-import { ThemeConfig } from "~/app/types/UITypes";
 interface AddGuestFormProps {
   onSubmit: (values: GuestFormValues) => Promise<void>;
   onCancel: () => void;
-  theme: ThemeConfig;
 }
 
-export function AddGuestForm({ onSubmit, onCancel, theme }: AddGuestFormProps) {
+export function AddGuestForm({ onSubmit, onCancel }: AddGuestFormProps) {
   const form = useForm<GuestFormValues>({
     resolver: zodResolver(guestFormSchema),
     defaultValues: {
@@ -48,7 +46,7 @@ export function AddGuestForm({ onSubmit, onCancel, theme }: AddGuestFormProps) {
               <FormItem>
                 <FormLabel>First Name</FormLabel>
                 <FormControl>
-                  <Input theme={theme} placeholder="Enter first name" {...field} />
+                  <Input  placeholder="Enter first name" {...field} />
                 </FormControl>
                 <FormMessage className="text-red-500" />
               </FormItem>
@@ -62,7 +60,7 @@ export function AddGuestForm({ onSubmit, onCancel, theme }: AddGuestFormProps) {
               <FormItem>
                 <FormLabel>Last Name</FormLabel>
                 <FormControl>
-                  <Input theme={theme} placeholder="Enter last name" {...field} />
+                  <Input  placeholder="Enter last name" {...field} />
                 </FormControl>
                 <FormMessage className="text-red-500" />
               </FormItem>
@@ -78,7 +76,7 @@ export function AddGuestForm({ onSubmit, onCancel, theme }: AddGuestFormProps) {
               <FormItem>
                 <FormLabel>Email</FormLabel>
                 <FormControl>
-                  <Input type="email" theme={theme} placeholder="Enter email" {...field} />
+                  <Input type="email"  placeholder="Enter email" {...field} />
                 </FormControl>
                 <FormMessage className="text-red-500" />
               </FormItem>
@@ -92,7 +90,7 @@ export function AddGuestForm({ onSubmit, onCancel, theme }: AddGuestFormProps) {
               <FormItem>
                 <FormLabel>Phone</FormLabel>
                 <FormControl>
-                  <Input theme={theme} placeholder="Enter phone number" {...field} />
+                  <Input  placeholder="Enter phone number" {...field} />
                 </FormControl>
                 <FormMessage className="text-red-500" />
               </FormItem>
@@ -107,7 +105,7 @@ export function AddGuestForm({ onSubmit, onCancel, theme }: AddGuestFormProps) {
             <FormItem>
               <FormLabel>Handicap</FormLabel>
               <FormControl>
-                <Input theme={theme} placeholder="Enter handicap" {...field} />
+                <Input  placeholder="Enter handicap" {...field} />
               </FormControl>
               <FormMessage className="text-red-500" />
             </FormItem>

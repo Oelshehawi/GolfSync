@@ -15,18 +15,32 @@ import type {
   TeesheetConfig,
 } from "~/app/types/TeeSheetTypes";
 import { getConfigForDate } from "~/server/settings/data";
-import { generateTimeBlocks } from "~/lib/utils";
-import { localToUTCMidnight } from "~/lib/utils";
+import { generateTimeBlocks, formatDateToYYYYMMDD } from "~/lib/utils";
 
 export async function createTimeBlocksForTeesheet(
   teesheetId: number,
   config: TeesheetConfig,
-  date: Date,
+  teesheetDate?: string,
 ) {
   const clerkOrgId = await getOrganizationId();
 
-  // Generate time blocks using the utility function
-  const timeSlots = generateTimeBlocks(date, config);
+  // Generate time blocks as string times
+  const timeSlots = generateTimeBlocks(config);
+
+  // If no teesheet date provided, fetch it from the database
+  let dateStr = teesheetDate;
+  if (!dateStr) {
+    const teesheet = await db.query.teesheets.findFirst({
+      where: and(
+        eq(teesheets.id, teesheetId),
+        eq(teesheets.clerkOrgId, clerkOrgId),
+      ),
+    });
+
+    if (teesheet) {
+      dateStr = teesheet.date;
+    }
+  }
 
   // Create time blocks for each consecutive pair of times
   const blocks = timeSlots.slice(0, -1).map((startTime, index) => {
@@ -51,15 +65,14 @@ export async function getOrCreateTeesheet(
 ): Promise<{ teesheet: TeeSheet; config: TeesheetConfig }> {
   const clerkOrgId = await getOrganizationId();
 
-  // Convert input date to UTC midnight
-  const utcDate = localToUTCMidnight(date);
+  // Format date as YYYY-MM-DD string in local time to ensure consistency
+  const formattedDate = formatDateToYYYYMMDD(date);
 
-  // Try to find existing teesheet for the same UTC date
+  // Try to find existing teesheet for the date
   const existingTeesheet = await db.query.teesheets.findFirst({
     where: and(
       eq(teesheets.clerkOrgId, clerkOrgId),
-      // Compare the exact timestamp
-      eq(teesheets.date, utcDate),
+      eq(teesheets.date, formattedDate),
     ),
   });
 
@@ -70,12 +83,12 @@ export async function getOrCreateTeesheet(
     return { teesheet: existingTeesheet, config };
   }
 
-  // Create new teesheet with UTC date
+  // Create new teesheet with the date
   const newTeesheet = await db
     .insert(teesheets)
     .values({
       clerkOrgId,
-      date: utcDate,
+      date: formattedDate, // Always store as YYYY-MM-DD string
       configId: config.id,
     })
     .returning()
@@ -86,7 +99,7 @@ export async function getOrCreateTeesheet(
   }
 
   // Create time blocks for the new teesheet
-  await createTimeBlocksForTeesheet(newTeesheet.id, config, utcDate);
+  await createTimeBlocksForTeesheet(newTeesheet.id, config, formattedDate);
 
   return { teesheet: newTeesheet, config };
 }
@@ -95,6 +108,18 @@ export async function getTimeBlocksForTeesheet(
   teesheetId: number,
 ): Promise<TimeBlockWithMembers[]> {
   const clerkOrgId = await getOrganizationId();
+
+  // First get the teesheet to get its date
+  const teesheet = await db.query.teesheets.findFirst({
+    where: and(
+      eq(teesheets.id, teesheetId),
+      eq(teesheets.clerkOrgId, clerkOrgId),
+    ),
+  });
+
+  if (!teesheet) {
+    throw new Error("Teesheet not found");
+  }
 
   const result = await db
     .select({
@@ -172,6 +197,7 @@ export async function getTimeBlocksForTeesheet(
         id: row.id,
         clerkOrgId: row.clerkOrgId,
         teesheetId: row.teesheetId,
+        date: teesheet.date,
         startTime: row.startTime,
         endTime: row.endTime,
         notes: row.notes,
@@ -227,6 +253,26 @@ export async function getTimeBlockWithMembers(
   timeBlockId: number,
 ): Promise<TimeBlockWithMembers | null> {
   const clerkOrgId = await getOrganizationId();
+
+  // First get the teesheet ID to fetch its date
+  const timeBlockInfo = await db.query.timeBlocks.findFirst({
+    where: and(
+      eq(timeBlocks.id, timeBlockId),
+      eq(timeBlocks.clerkOrgId, clerkOrgId),
+    ),
+  });
+
+  if (!timeBlockInfo) {
+    return null;
+  }
+
+  // Get the teesheet to get the date
+  const teesheet = await db.query.teesheets.findFirst({
+    where: and(
+      eq(teesheets.id, timeBlockInfo.teesheetId),
+      eq(teesheets.clerkOrgId, clerkOrgId),
+    ),
+  });
 
   const result = await db
     .select({
@@ -349,6 +395,7 @@ export async function getTimeBlockWithMembers(
     notes: timeBlock.notes,
     createdAt: timeBlock.createdAt,
     updatedAt: timeBlock.updatedAt,
+    date: teesheet?.date,
     members: blockMembers || [],
     guests: blockGuests || [],
   };

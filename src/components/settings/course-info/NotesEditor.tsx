@@ -19,14 +19,10 @@ import {
 interface NotesEditorProps {
   value: string;
   onChange: (value: string) => void;
-  theme?: {
-    primary?: string;
-    secondary?: string;
-    tertiary?: string;
-  };
+
 }
 
-export function NotesEditor({ value, onChange, theme }: NotesEditorProps) {
+export function NotesEditor({ value, onChange }: NotesEditorProps) {
   const editorRef = useRef<HTMLDivElement>(null);
   const [showLinkInput, setShowLinkInput] = useState(false);
   const [linkUrl, setLinkUrl] = useState("");
@@ -204,7 +200,6 @@ export function NotesEditor({ value, onChange, theme }: NotesEditorProps) {
             size="sm"
             onClick={handleInsertLink}
             className="text-xs"
-            style={{ backgroundColor: theme?.primary, color: "#fff" }}
           >
             Insert
           </Button>

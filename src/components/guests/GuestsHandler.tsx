@@ -24,16 +24,14 @@ import {
 import { Plus } from "lucide-react";
 import { SearchBar } from "~/components/ui/search-bar";
 import { BaseGuest } from "~/app/types/GuestTypes";
-import { ThemeConfig } from "~/app/types/UITypes";
 
 interface GuestsHandlerProps {
   initialGuests: BaseGuest[];
-  theme: ThemeConfig;
 }
 
 const ITEMS_PER_PAGE = 6;
 
-export function GuestsHandler({ initialGuests, theme }: GuestsHandlerProps) {
+export function GuestsHandler({ initialGuests }: GuestsHandlerProps) {
   const [guests, setGuests] = useState<BaseGuest[]>(initialGuests);
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -171,7 +169,7 @@ export function GuestsHandler({ initialGuests, theme }: GuestsHandlerProps) {
             value={searchQuery}
             onChange={setSearchQuery}
             placeholder="Search guests by name or email..."
-            theme={theme}
+            
           />
         </div>
 
@@ -188,7 +186,7 @@ export function GuestsHandler({ initialGuests, theme }: GuestsHandlerProps) {
           currentPage={currentPage}
           totalPages={totalPages}
           onPageChange={setCurrentPage}
-          theme={theme}
+          
         />
       </div>
 
@@ -196,7 +194,7 @@ export function GuestsHandler({ initialGuests, theme }: GuestsHandlerProps) {
         open={isAddDialogOpen}
         onOpenChange={setIsAddDialogOpen}
         onSubmit={handleAddGuest}
-        theme={theme}
+        
       />
 
       <EditGuestDialog
@@ -204,7 +202,7 @@ export function GuestsHandler({ initialGuests, theme }: GuestsHandlerProps) {
         open={isEditDialogOpen}
         onOpenChange={setIsEditDialogOpen}
         onSave={handleEditGuest}
-        theme={theme}
+        
       />
 
       <AlertDialog

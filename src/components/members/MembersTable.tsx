@@ -8,7 +8,6 @@ import {
   type ActionDef,
   type ColumnDef,
 } from "~/components/ui/BaseDataTable";
-import { ThemeConfig } from "~/app/types/UITypes";
 import { getMemberBookingHistoryAction } from "~/server/members/actions";
 import { BookingHistoryDialog } from "~/components/booking/BookingHistoryDialog";
 
@@ -23,7 +22,6 @@ interface MembersTableProps {
   showSearch?: boolean;
   title?: string;
   emptyMessage?: string;
-  theme?: ThemeConfig;
 }
 
 export function MembersTable({
@@ -37,7 +35,6 @@ export function MembersTable({
   showSearch = false,
   title = "Members",
   emptyMessage = "No members found",
-  theme,
 }: MembersTableProps) {
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
   const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
@@ -119,7 +116,6 @@ export function MembersTable({
         totalPages={totalPages}
         onPageChange={onPageChange}
         filterFunction={filterMembers}
-        theme={theme}
       />
 
       {selectedMember && (
@@ -128,7 +124,6 @@ export function MembersTable({
           onClose={() => setHistoryDialogOpen(false)}
           title="Member Booking History"
           fetchHistory={fetchMemberHistory}
-          theme={theme}
           entityName={`${selectedMember.firstName} ${selectedMember.lastName}`}
         />
       )}

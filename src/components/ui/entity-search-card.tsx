@@ -42,11 +42,7 @@ interface EntitySearchCardProps<T extends Entity> {
   searchPlaceholder?: string;
   noResultsMessage?: string;
   limitReachedMessage?: string;
-  theme?: {
-    primary?: string;
-    secondary?: string;
-    tertiary?: string;
-  };
+
 }
 
 export function EntitySearchCard<T extends Entity>({
@@ -65,15 +61,14 @@ export function EntitySearchCard<T extends Entity>({
   searchPlaceholder = "Search...",
   noResultsMessage = "No results found matching your search",
   limitReachedMessage = "The limit has been reached. Remove an item before adding more.",
-  theme,
 }: EntitySearchCardProps<T>) {
   const [localQuery, setLocalQuery] = useState(searchQuery);
 
   return (
-    <Card theme={theme}>
+    <Card>
       <CardHeader>
-        <CardTitle className="flex items-center space-x-2" theme={theme}>
-          <UserPlus className="h-5 w-5" style={{ color: theme?.primary }} />
+        <CardTitle className="flex items-center space-x-2">
+          <UserPlus className="h-5 w-5" />
           <span>{title}</span>
         </CardTitle>
       </CardHeader>
@@ -89,7 +84,6 @@ export function EntitySearchCard<T extends Entity>({
                 onSearch(value);
               }}
               placeholder={searchPlaceholder}
-              theme={theme || {}}
             />
 
             {showSelectFilter && onFilterSelect && (
@@ -119,7 +113,7 @@ export function EntitySearchCard<T extends Entity>({
 
           {isLoading ? (
             <div className="flex justify-center py-4">
-              <LoadingSpinner theme={theme} />
+              <LoadingSpinner />
             </div>
           ) : searchResults.length > 0 ? (
             <div className="space-y-3">

@@ -10,7 +10,6 @@ import {
   type ColumnDef,
 } from "~/components/ui/BaseDataTable";
 import { BaseGuest, TimeBlockGuest } from "~/app/types/GuestTypes";
-import { ThemeConfig, PaginationProps } from "~/app/types/UITypes";
 import { getGuestBookingHistoryAction } from "~/server/guests/actions";
 import { BookingHistoryDialog } from "~/components/booking/BookingHistoryDialog";
 
@@ -27,7 +26,6 @@ interface GuestTableProps {
   currentPage?: number;
   totalPages?: number;
   onPageChange?: (page: number) => void;
-  theme?: ThemeConfig;
 }
 
 export function GuestTable({
@@ -43,7 +41,6 @@ export function GuestTable({
   currentPage = 1,
   totalPages = 1,
   onPageChange,
-  theme,
 }: GuestTableProps) {
   const [selectedGuest, setSelectedGuest] = useState<BaseGuest | null>(null);
   const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
@@ -61,9 +58,9 @@ export function GuestTable({
   if (variant === "timeblock") {
     return (
       <>
-        <Card theme={theme} className="mt-6">
+        <Card className="mt-6">
           <CardHeader>
-            <CardTitle theme={theme}>{title}</CardTitle>
+            <CardTitle>{title}</CardTitle>
           </CardHeader>
           <CardContent>
             {guests.length === 0 ? (
@@ -104,7 +101,6 @@ export function GuestTable({
                           variant="outline"
                           size="sm"
                           onClick={() => handleViewHistory(item)}
-                          theme={theme}
                         >
                           <History className="mr-2 h-4 w-4" />
                           History
@@ -114,7 +110,6 @@ export function GuestTable({
                             variant="destructive"
                             size="sm"
                             onClick={() => onRemove(item.id)}
-                            theme={theme}
                           >
                             <UserMinus className="mr-2 h-4 w-4" />
                             Remove
@@ -135,7 +130,6 @@ export function GuestTable({
             onClose={() => setHistoryDialogOpen(false)}
             title="Guest Booking History"
             fetchHistory={fetchGuestHistory}
-            theme={theme}
             entityName={`${selectedGuest.firstName} ${selectedGuest.lastName}`}
           />
         )}
@@ -211,7 +205,6 @@ export function GuestTable({
         totalPages={totalPages}
         onPageChange={onPageChange}
         filterFunction={filterGuests}
-        theme={theme || {}}
       />
 
       {selectedGuest && (
@@ -220,7 +213,6 @@ export function GuestTable({
           onClose={() => setHistoryDialogOpen(false)}
           title="Guest Booking History"
           fetchHistory={fetchGuestHistory}
-          theme={theme}
           entityName={`${selectedGuest.firstName} ${selectedGuest.lastName}`}
         />
       )}

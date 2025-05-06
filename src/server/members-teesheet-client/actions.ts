@@ -4,9 +4,7 @@ import { db } from "~/server/db";
 import { timeBlockMembers, timeBlocks } from "~/server/db/schema";
 import { eq, and } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
-import { checkRestrictions } from "~/server/restrictions/data";
 import { getOrganizationId } from "~/lib/auth";
-import { getMemberData } from "./data";
 import { auth } from "@clerk/nextjs/server";
 import { Member } from "~/app/types/MemberTypes";
 
@@ -63,28 +61,6 @@ export async function bookTeeTime(
       return {
         success: false,
         error: "You have already booked this time slot",
-      };
-    }
-
-    // Check for restrictions
-    const restrictionsCheck = await checkRestrictions({
-      memberId: member.id,
-      memberClass: member.class,
-      bookingTime: timeBlock.startTime,
-    });
-
-    if ("error" in restrictionsCheck) {
-      return {
-        success: false,
-        error: restrictionsCheck.error,
-      };
-    }
-
-    if (restrictionsCheck.hasViolations) {
-      return {
-        success: false,
-        error: "Booking not allowed due to restrictions",
-        violations: restrictionsCheck.violations,
       };
     }
 

@@ -27,37 +27,17 @@ export default async function AdminLayout({
     organizationId: session.orgId,
   });
 
-  const theme = organization.publicMetadata?.theme as
-    | {
-        primary: string;
-        tertiary: string;
-        secondary: string;
-      }
-    | undefined;
-
-  if (!theme) {
-    return <div>No theme found in organization metadata</div>;
-  }
-
-  const themeStyles = {
-    ["--org-primary" as string]: theme?.primary,
-    ["--org-secondary" as string]: theme?.secondary,
-    ["--org-tertiary" as string]: theme?.tertiary,
-  } as React.CSSProperties;
-
 
   return (
     <div className={GeistSans.variable}>
-      <div
-        className="min-h-screen bg-[var(--org-secondary)]"
-        style={themeStyles}
-      >
+      <div className="min-h-screen bg-[var(--org-secondary)]">
         <Navigation
-          theme={theme}
           logoUrl={organization.imageUrl}
           organizationName={organization.name}
         />
-        <main className="container mx-auto px-4 py-8">{children}</main>
+        <main className="container mx-auto px-4 py-8">
+          {children}
+        </main>
         <Toaster position="top-right" />
       </div>
     </div>

@@ -13,26 +13,17 @@ import {
 } from "lucide-react";
 import { ConfigInfo } from "../settings/teesheet/ConfigInfo";
 import type { TeesheetConfig } from "~/app/types/TeeSheetTypes";
-import {
-  formatLocalDate,
-  formatLocalDisplayDate,
-  formatLocalDisplayMonth,
-} from "~/lib/utils";
+import { formatCalendarDate, formatDisplayDate } from "~/lib/utils";
 
 interface TeesheetHeaderProps {
   date: Date;
   config: TeesheetConfig;
-  theme?: {
-    primary?: string;
-    secondary?: string;
-    tertiary?: string;
-  };
+
 }
 
 export function TeesheetHeader({
   date: initialDate,
   config,
-  theme,
 }: TeesheetHeaderProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -46,7 +37,7 @@ export function TeesheetHeader({
     const newDate = new Date(date);
     newDate.setDate(date.getDate() + days);
     const params = new URLSearchParams(searchParams.toString());
-    params.set("date", formatLocalDate(newDate));
+    params.set("date", formatCalendarDate(newDate));
     router.push(`?${params.toString()}`);
   };
 
@@ -56,14 +47,9 @@ export function TeesheetHeader({
     selected: (day: Date) => isSameDay(day, date),
   };
 
-  const themeStyles = {
-    ["--org-primary" as string]: theme?.primary,
-    ["--org-secondary" as string]: theme?.secondary,
-    ["--org-tertiary" as string]: theme?.tertiary,
-  } as React.CSSProperties;
 
   return (
-    <div className="space-y-4" style={themeStyles}>
+    <div className="space-y-4" >
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <Button
@@ -73,7 +59,7 @@ export function TeesheetHeader({
           >
             <ChevronLeft className="h-4 w-4" />
           </Button>
-          <h1 className="text-2xl font-bold">{formatLocalDisplayDate(date)}</h1>
+          <h1 className="text-2xl font-bold">{formatDisplayDate(date)}</h1>
           <Button
             variant="outline"
             size="icon"
@@ -100,7 +86,7 @@ export function TeesheetHeader({
           ) : (
             <CalendarIcon className="mr-2 h-4 w-4" />
           )}
-          {formatLocalDisplayMonth(date)}
+          {formatCalendarDate(date)}
         </Button>
       </div>
 
@@ -111,11 +97,10 @@ export function TeesheetHeader({
           <Calendar
             selected={date}
             modifiers={modifiers}
-            theme={theme}
             onSelect={(newDate: Date | undefined) => {
               if (newDate) {
                 const params = new URLSearchParams(searchParams.toString());
-                params.set("date", formatLocalDate(newDate));
+                params.set("date", formatCalendarDate(newDate));
                 router.push(`?${params.toString()}`);
               }
             }}

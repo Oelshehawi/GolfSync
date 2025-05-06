@@ -18,7 +18,6 @@ import {
 } from "~/components/ui/dropdown-menu";
 import { MoreHorizontal } from "lucide-react";
 import { SearchBar } from "~/components/ui/search-bar";
-import { ThemeConfig } from "~/app/types/UITypes";
 
 export interface BaseDataItem {
   id: number;
@@ -50,7 +49,6 @@ interface BaseDataTableProps<T extends BaseDataItem> {
   totalPages?: number;
   onPageChange?: (page: number) => void;
   filterFunction?: (item: T, searchTerm: string) => boolean;
-  theme?: ThemeConfig;
 }
 
 export function BaseDataTable<T extends BaseDataItem>({
@@ -65,7 +63,6 @@ export function BaseDataTable<T extends BaseDataItem>({
   totalPages = 1,
   onPageChange,
   filterFunction,
-  theme,
 }: BaseDataTableProps<T>) {
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -124,7 +121,6 @@ export function BaseDataTable<T extends BaseDataItem>({
               value={searchTerm}
               onChange={handleSearchChange}
               placeholder={searchPlaceholder}
-              theme={theme || {}}
             />
           </div>
         </div>
@@ -181,7 +177,6 @@ export function BaseDataTable<T extends BaseDataItem>({
                               key={index}
                               onClick={() => action.onClick(item)}
                               className={`cursor-pointer ${action.className || ""}`}
-                              theme={theme || {}}
                             >
                               {action.icon} {action.label}
                             </DropdownMenuItem>

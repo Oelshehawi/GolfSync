@@ -9,11 +9,7 @@ export interface CalendarProps
   extends Omit<DayPickerProps, "mode" | "selected" | "onSelect"> {
   selected?: Date;
   onSelect?: (date: Date | undefined) => void;
-  theme?: {
-    primary?: string;
-    secondary?: string;
-    tertiary?: string;
-  };
+
 }
 
 function Calendar({
@@ -21,13 +17,9 @@ function Calendar({
   onSelect,
   modifiers,
   modifiersClassNames,
-  theme,
+
 }: CalendarProps) {
-  const themeStyles = {
-    ["--org-primary" as string]: theme?.primary,
-    ["--org-secondary" as string]: theme?.secondary,
-    ["--org-tertiary" as string]: theme?.tertiary,
-  } as React.CSSProperties;
+
 
   const [month, setMonth] = useState<Date>(selected || new Date());
   const [numberOfMonths, setNumberOfMonths] = useState(3);
@@ -66,7 +58,6 @@ function Calendar({
           numberOfMonths={numberOfMonths}
           modifiers={modifiers}
           modifiersClassNames={modifiersClassNames}
-          style={themeStyles}
           hideNavigation
           classNames={{
             months:

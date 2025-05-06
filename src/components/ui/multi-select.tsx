@@ -1,15 +1,9 @@
 "use client";
 
-import {
-  useState,
-  useCallback,
-  useMemo,
-  CSSProperties,
-  useEffect,
-} from "react";
+import { useState, useCallback, useMemo, CSSProperties } from "react";
 import { X, Check } from "lucide-react";
 import { Badge } from "~/components/ui/badge";
-import { Command, CommandGroup, CommandItem } from "~/components/ui/command";
+import { Command, CommandGroup } from "~/components/ui/command";
 import {
   Popover,
   PopoverContent,
@@ -17,7 +11,6 @@ import {
 } from "~/components/ui/popover";
 import { cn } from "~/lib/utils";
 import { Button } from "./button";
-import { getOrganizationColors } from "~/lib/utils";
 
 export type OptionType = {
   value: string | number;
@@ -30,11 +23,6 @@ interface MultiSelectProps {
   onChange: (selectedValues: string[]) => void;
   placeholder?: string;
   className?: string;
-  theme?: {
-    primary?: string;
-    secondary?: string;
-    tertiary?: string;
-  };
 }
 
 export function MultiSelect({
@@ -43,16 +31,8 @@ export function MultiSelect({
   onChange,
   placeholder = "Select options",
   className,
-  theme,
 }: MultiSelectProps) {
   const [open, setOpen] = useState(false);
-  const colors = getOrganizationColors(theme);
-
-  const themeStyles = {
-    ["--org-primary"]: colors.primary,
-    ["--org-secondary"]: colors.secondary,
-    ["--org-tertiary"]: colors.tertiary,
-  } as CSSProperties;
 
   // Convert string array to set for faster lookups
   const selectedSet = useMemo(() => new Set(selected), [selected]);
@@ -94,37 +74,19 @@ export function MultiSelect({
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className={cn("h-auto  min-h-10 w-full justify-between", className)}
-          style={themeStyles}
-          theme={theme}
+          className={cn("h-auto min-h-10 w-full justify-between", className)}
         >
           <div className="flex flex-wrap gap-1 px-2 py-1">
-            {selected.length === 0 && (
-              <span
-              >
-                {placeholder}
-              </span>
-            )}
+            {selected.length === 0 && <span>{placeholder}</span>}
             {selectedLabels.map((label, i) => (
               <Badge
                 variant="secondary"
                 key={selected[i] || i}
                 className="mr-1 mb-1 px-2 py-1"
-                style={{
-                  backgroundColor: colors.secondary || "var(--color-sand)",
-                  color: colors.primary || "var(--color-primary)",
-                  fontWeight: "normal",
-                }}
               >
                 {label}
                 <div
-                  className="ml-1 cursor-pointer rounded-full outline-none focus-visible:ring-2"
-                  style={
-                    {
-                      "--ring-color": colors.primary || "var(--color-primary)",
-                      "--ring-offset-width": "2px",
-                    } as CSSProperties
-                  }
+                  className="ml-1 cursor-pointer rounded-full outline-none focus-visible:ring-2 focus-visible:ring-[var(--org-primary)] focus-visible:ring-offset-2"
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
@@ -144,34 +106,20 @@ export function MultiSelect({
                     }
                   }}
                 >
-                  <X
-                    className="h-3 w-3"
-                    style={{ color: colors.primary || "var(--color-primary)" }}
-                  />
+                  <X className="h-3 w-3" />
                 </div>
               </Badge>
             ))}
           </div>
-          <div
-            className="shrink-0 opacity-70"
-            style={{ color: colors.primary || "var(--color-primary)" }}
-          >
-            ▼
-          </div>
+          <div className="shrink-0 opacity-70">▼</div>
         </Button>
       </PopoverTrigger>
       <PopoverContent
         className="w-[var(--radix-popover-trigger-width)] p-0"
         align="start"
-        style={{
-          borderColor: colors.primary,
-          boxShadow: colors.primary
-            ? `0 0 0 1px ${colors.primary}20`
-            : undefined,
-        }}
         sideOffset={4}
       >
-        <Command theme={theme}>
+        <Command>
           <CommandGroup className="max-h-64 overflow-auto">
             {options.map((option) => {
               const value = String(option.value);
@@ -180,15 +128,11 @@ export function MultiSelect({
               return (
                 <div
                   key={value}
-                  className="flex cursor-pointer items-center gap-2 px-2 py-1.5 hover:bg-[var(--org-secondary)]"
-                  style={{
-                    backgroundColor: isSelected
-                      ? colors.secondary || "var(--color-sand)"
-                      : "transparent",
-                    color: isSelected
-                      ? colors.primary || "var(--color-primary)"
-                      : "inherit",
-                  }}
+                  className={cn(
+                    "flex cursor-pointer items-center gap-2 px-2 py-1.5",
+                    isSelected &&
+                      "bg-[var(--org-secondary)] text-[var(--org-primary)]",
+                  )}
                   onClick={() => handleSelect(value)}
                 >
                   <div
@@ -198,14 +142,6 @@ export function MultiSelect({
                         ? "border-[var(--org-primary)] bg-[var(--org-primary)]"
                         : "border-opacity-50 border-[var(--org-primary)]",
                     )}
-                    style={{
-                      borderColor: isSelected
-                        ? colors.primary || "var(--color-primary)"
-                        : `${colors.primary || "var(--color-primary)"}88`,
-                      backgroundColor: isSelected
-                        ? colors.primary || "var(--color-primary)"
-                        : "transparent",
-                    }}
                   >
                     {isSelected && <Check className="h-3 w-3 text-white" />}
                   </div>

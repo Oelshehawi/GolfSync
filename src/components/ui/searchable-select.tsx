@@ -4,7 +4,6 @@ import * as React from "react";
 import { Check, ChevronsUpDown } from "lucide-react";
 
 import { cn } from "~/lib/utils";
-import { getOrganizationColors } from "~/lib/utils";
 import { Button } from "~/components/ui/button";
 import {
   Command,
@@ -33,11 +32,6 @@ interface SearchableSelectProps {
   emptyMessage?: string;
   disabled?: boolean;
   className?: string;
-  theme?: {
-    primary?: string;
-    secondary?: string;
-    tertiary?: string;
-  };
 }
 
 export function SearchableSelect({
@@ -48,15 +42,12 @@ export function SearchableSelect({
   emptyMessage = "No options found.",
   disabled = false,
   className,
-  theme,
 }: SearchableSelectProps) {
   const [open, setOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedValue, setSelectedValue] = useState<string | undefined>(value);
   const inputRef = useRef<HTMLInputElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
-
-  const colors = getOrganizationColors(theme);
 
   // Update internal state when value prop changes
   useEffect(() => {
@@ -94,19 +85,9 @@ export function SearchableSelect({
     setSearchQuery("");
     setOpen(false);
   };
-  console.log(colors);
 
-  console.log(theme);
   return (
-    <div
-      style={
-        {
-          "--org-primary": colors.primary,
-          "--org-secondary": colors.secondary,
-          "--org-tertiary": colors.tertiary,
-        } as React.CSSProperties
-      }
-    >
+    <div>
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
@@ -115,7 +96,6 @@ export function SearchableSelect({
             aria-expanded={open}
             className={cn("w-full justify-between", className)}
             disabled={disabled}
-            theme={theme}
             ref={triggerRef}
           >
             <span className="truncate">
@@ -126,7 +106,6 @@ export function SearchableSelect({
         </PopoverTrigger>
         <PopoverContent
           className="p-0"
-          theme={theme}
           style={{
             width: triggerRef.current?.offsetWidth
               ? `${triggerRef.current.offsetWidth}px`
@@ -134,7 +113,7 @@ export function SearchableSelect({
           }}
           align="start"
         >
-          <Command theme={theme}>
+          <Command>
             <CommandInput
               placeholder="Search..."
               value={searchQuery}
@@ -159,7 +138,6 @@ export function SearchableSelect({
                       option.value === selectedValue &&
                         "bg-[var(--org-primary)] text-white",
                     )}
-                    theme={theme}
                     onClick={() => handleSelect(option.value)}
                   >
                     <Check

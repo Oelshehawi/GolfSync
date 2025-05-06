@@ -35,16 +35,11 @@ import { EditMemberForm } from "./EditMemberForm";
 
 interface MembersHandlerProps {
   initialMembers: Member[];
-  theme: {
-    primary?: string;
-    secondary?: string;
-    tertiary?: string;
-  };
 }
 
 const ITEMS_PER_PAGE = 6;
 
-export function MembersHandler({ initialMembers, theme }: MembersHandlerProps) {
+export function MembersHandler({ initialMembers }: MembersHandlerProps) {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const [members, setMembers] = useState<Member[]>(initialMembers);
@@ -138,7 +133,7 @@ export function MembersHandler({ initialMembers, theme }: MembersHandlerProps) {
           value={searchQuery}
           onChange={setSearchQuery}
           placeholder="Search members by name or number..."
-          theme={theme}
+          
         />
 
         <MembersTable
@@ -154,7 +149,6 @@ export function MembersHandler({ initialMembers, theme }: MembersHandlerProps) {
           currentPage={currentPage}
           totalPages={totalPages}
           onPageChange={setCurrentPage}
-          theme={theme}
         />
       </div>
 
@@ -176,10 +170,10 @@ export function MembersHandler({ initialMembers, theme }: MembersHandlerProps) {
               member={selectedMember}
               onSubmit={handleUpdateMember}
               onCancel={resetForm}
-              theme={theme}
+              
             />
           ) : (
-            <AddMemberForm onSubmit={handleCreateMember} onCancel={resetForm} theme={theme} />
+            <AddMemberForm onSubmit={handleCreateMember} onCancel={resetForm}  />
           )}
         </DialogContent>
       </Dialog>

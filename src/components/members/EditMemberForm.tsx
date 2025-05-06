@@ -34,7 +34,6 @@ import {
 } from "~/components/ui/popover";
 import { memberFormSchema } from "./memberFormSchema";
 import type { Member } from "~/app/types/MemberTypes";
-import { ThemeConfig } from "~/app/types/UITypes";
 
 type MemberFormValues = z.infer<typeof memberFormSchema>;
 
@@ -42,7 +41,6 @@ interface EditMemberFormProps {
   member: Member;
   onSubmit: (values: MemberFormValues) => Promise<void>;
   onCancel: () => void;
-  theme: ThemeConfig;
 }
 
 // Member class options
@@ -78,7 +76,6 @@ export function EditMemberForm({
   member,
   onSubmit,
   onCancel,
-  theme,
 }: EditMemberFormProps) {
   const form = useForm<MemberFormValues>({
     resolver: zodResolver(memberFormSchema),
@@ -114,7 +111,7 @@ export function EditMemberForm({
                 <FormLabel>Member Number</FormLabel>
                 <FormControl>
                   <Input
-                    theme={theme}
+                    
                     placeholder="Enter member number"
                     {...field}
                   />
@@ -140,7 +137,7 @@ export function EditMemberForm({
                           "w-full justify-between",
                           !field.value && "text-muted-foreground",
                         )}
-                        theme={theme}
+                        
                       >
                         {field.value
                           ? memberClasses.find(
@@ -152,8 +149,8 @@ export function EditMemberForm({
                       </Button>
                     </FormControl>
                   </PopoverTrigger>
-                  <PopoverContent className="p-0" theme={theme}>
-                    <Command theme={theme}>
+                  <PopoverContent className="p-0" >
+                    <Command >
                       <CommandInput placeholder="Search for class..." />
                       <CommandEmpty>No class found.</CommandEmpty>
                       <CommandGroup className="max-h-64 overflow-y-auto">
@@ -170,7 +167,7 @@ export function EditMemberForm({
                                 )?.value,
                               );
                             }}
-                            theme={theme}
+                            
                           >
                             <Check
                               className={cn(
@@ -202,7 +199,7 @@ export function EditMemberForm({
                 <FormLabel>First Name</FormLabel>
                 <FormControl>
                   <Input
-                    theme={theme}
+                    
                     placeholder="Enter first name"
                     {...field}
                   />
@@ -220,7 +217,7 @@ export function EditMemberForm({
                 <FormLabel>Last Name</FormLabel>
                 <FormControl>
                   <Input
-                    theme={theme}
+                    
                     placeholder="Enter last name"
                     {...field}
                   />
@@ -240,7 +237,7 @@ export function EditMemberForm({
                 <FormLabel>Username</FormLabel>
                 <FormControl>
                   <Input
-                    theme={theme}
+                    
                     placeholder="Enter username"
                     {...field}
                   />
@@ -258,7 +255,7 @@ export function EditMemberForm({
                 <FormLabel>Email</FormLabel>
                 <FormControl>
                   <Input
-                    theme={theme}
+                    
                     type="email"
                     placeholder="Enter email"
                     {...field}
@@ -282,15 +279,15 @@ export function EditMemberForm({
                   defaultValue={field.value}
                 >
                   <FormControl>
-                    <SelectTrigger theme={theme}>
+                    <SelectTrigger >
                       <SelectValue placeholder="Select gender" />
                     </SelectTrigger>
                   </FormControl>
-                  <SelectContent theme={theme}>
-                    <SelectItem value="M" theme={theme}>
+                  <SelectContent >
+                    <SelectItem value="M" >
                       Male
                     </SelectItem>
-                    <SelectItem value="F" theme={theme}>
+                    <SelectItem value="F" >
                       Female
                     </SelectItem>
                   </SelectContent>
@@ -311,7 +308,7 @@ export function EditMemberForm({
                     type="date"
                     {...field}
                     className="cursor-pointer focus:border-[var(--org-primary)] focus:ring-2 focus:ring-[var(--org-primary)]"
-                    theme={theme}
+                    
                   />
                 </FormControl>
                 <FormMessage className="text-red-500" />
@@ -329,7 +326,7 @@ export function EditMemberForm({
                 <FormLabel>Handicap</FormLabel>
                 <FormControl>
                   <Input
-                    theme={theme}
+                    
                     placeholder="Enter handicap"
                     {...field}
                   />
@@ -347,7 +344,7 @@ export function EditMemberForm({
                 <FormLabel>Bag Number</FormLabel>
                 <FormControl>
                   <Input
-                    theme={theme}
+                    
                     placeholder="Enter bag number"
                     {...field}
                   />

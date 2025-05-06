@@ -72,6 +72,7 @@ export interface RestrictionViolation {
   restrictionId: number;
   restrictionName: string;
   restrictionDescription: string;
+  restrictionCategory: "MEMBER_CLASS" | "GUEST" | "COURSE_AVAILABILITY";
   entityType: RestrictedEntityType;
   entityId: string | null;
   violationType: RestrictionType;

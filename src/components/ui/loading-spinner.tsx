@@ -1,24 +1,17 @@
 "use client";
 
 import * as React from "react";
-import { cn, getOrganizationColors } from "~/lib/utils";
+import { cn } from "~/lib/utils";
 
 interface LoadingSpinnerProps {
   size?: "sm" | "md" | "lg";
-  theme?: {
-    primary?: string;
-    secondary?: string;
-    tertiary?: string;
-  };
   className?: string;
 }
 
 export function LoadingSpinner({
   size = "md",
-  theme,
   className,
 }: LoadingSpinnerProps) {
-  const colors = getOrganizationColors(theme);
   const sizeClasses = {
     sm: "h-4 w-4",
     md: "h-6 w-6",
@@ -28,14 +21,10 @@ export function LoadingSpinner({
   return (
     <div
       className={cn(
-        "animate-spin rounded-full border-2 border-current border-t-transparent",
+        "animate-spin rounded-full border-2 border-[var(--org-primary)] border-t-transparent",
         sizeClasses[size],
         className,
       )}
-      style={{
-        borderColor: colors.primary,
-        borderTopColor: "transparent",
-      }}
       role="status"
       aria-label="Loading"
     >

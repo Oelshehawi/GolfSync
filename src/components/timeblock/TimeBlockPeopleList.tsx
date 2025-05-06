@@ -34,18 +34,13 @@ interface TimeBlockPersonItemProps {
   type: PersonType;
   person: TimeBlockMemberView | TimeBlockGuest;
   onRemove: (id: number, type: PersonType) => Promise<void>;
-  theme?: {
-    primary?: string;
-    secondary?: string;
-    tertiary?: string;
-  };
+
 }
 
 export const TimeBlockPersonItem = ({
   type,
   person,
   onRemove,
-  theme,
 }: TimeBlockPersonItemProps) => {
   const handleRemove = () => {
     if (type === "member") {
@@ -97,12 +92,7 @@ export const TimeBlockPersonItem = ({
         </div>
         {memberInfo}
       </div>
-      <Button
-        variant="destructive"
-        size="sm"
-        onClick={handleRemove}
-        theme={theme}
-      >
+      <Button variant="destructive" size="sm" onClick={handleRemove}>
         <UserMinus className="mr-2 h-4 w-4" />
         Remove
       </Button>
@@ -118,11 +108,7 @@ interface TimeBlockPeopleListProps {
   onRemoveGuest: (guestId: number) => Promise<void>;
   title?: string;
   maxPeople?: number;
-  theme?: {
-    primary?: string;
-    secondary?: string;
-    tertiary?: string;
-  };
+ 
 }
 
 export function TimeBlockPeopleList({
@@ -132,7 +118,6 @@ export function TimeBlockPeopleList({
   onRemoveGuest,
   title = "People",
   maxPeople = 4,
-  theme,
 }: TimeBlockPeopleListProps) {
   const totalPeople = members.length + guests.length;
 
@@ -146,9 +131,9 @@ export function TimeBlockPeopleList({
 
   if (totalPeople === 0) {
     return (
-      <Card theme={theme} className="mt-6">
+      <Card className="mt-6">
         <CardHeader>
-          <CardTitle theme={theme}>{title}</CardTitle>
+          <CardTitle>{title}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="rounded-lg border border-dashed p-4 text-center text-gray-500">
@@ -169,15 +154,12 @@ export function TimeBlockPeopleList({
   ];
 
   return (
-    <Card theme={theme} className="mt-6">
+    <Card className="mt-6">
       <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle theme={theme}>
+        <CardTitle>
           {title} ({totalPeople}/{maxPeople})
         </CardTitle>
-        <Badge
-          variant={totalPeople >= maxPeople ? "destructive" : "default"}
-          theme={theme}
-        >
+        <Badge variant={totalPeople >= maxPeople ? "destructive" : "default"}>
           {totalPeople >= maxPeople ? "Full" : "Available"}
         </Badge>
       </CardHeader>
@@ -193,7 +175,6 @@ export function TimeBlockPeopleList({
               type={person.type}
               person={person.data}
               onRemove={handleRemove}
-              theme={theme}
             />
           ))}
         </div>
@@ -215,11 +196,7 @@ interface TimeBlockMemberSearchProps {
   isLoading: boolean;
   onAddMember: (memberId: number) => Promise<void>;
   isTimeBlockFull: boolean;
-  theme?: {
-    primary?: string;
-    secondary?: string;
-    tertiary?: string;
-  };
+
 }
 
 export function TimeBlockMemberSearch({
@@ -229,7 +206,6 @@ export function TimeBlockMemberSearch({
   isLoading,
   onAddMember,
   isTimeBlockFull,
-  theme,
 }: TimeBlockMemberSearchProps) {
   return (
     <EntitySearchCard
@@ -243,7 +219,6 @@ export function TimeBlockMemberSearch({
       searchPlaceholder="Search members by name or number..."
       limitReachedMessage="This time block is full. Remove a member or guest before adding more."
       noResultsMessage="No members found matching your search"
-      theme={theme || {}}
       renderEntityCard={(member) => (
         <div
           key={member.id}
@@ -261,11 +236,7 @@ export function TimeBlockMemberSearch({
             size="sm"
             onClick={() => onAddMember(member.id)}
             disabled={isTimeBlockFull}
-            theme={theme}
-            style={{
-              backgroundColor: theme?.primary,
-              color: "#ffffff",
-            }}
+       
           >
             <UserPlus className="mr-2 h-4 w-4" />
             Add
@@ -303,11 +274,7 @@ interface TimeBlockGuestSearchProps {
   members: Member[];
   onMemberSelect: (memberId: number) => void;
   selectedMemberId: number | null;
-  theme?: {
-    primary?: string;
-    secondary?: string;
-    tertiary?: string;
-  };
+
 }
 
 export function TimeBlockGuestSearch({
@@ -320,7 +287,6 @@ export function TimeBlockGuestSearch({
   members,
   onMemberSelect,
   selectedMemberId,
-  theme,
 }: TimeBlockGuestSearchProps) {
   // Convert members to select options format
   const memberOptions = members.map((member) => ({
@@ -345,7 +311,6 @@ export function TimeBlockGuestSearch({
       searchPlaceholder="Search guests by name or email..."
       limitReachedMessage="This time block is full. Remove a member or guest before adding more."
       noResultsMessage="No guests found matching your search"
-      theme={theme || {}}
       renderEntityCard={(guest) => (
         <div
           key={guest.id}
@@ -365,11 +330,7 @@ export function TimeBlockGuestSearch({
             size="sm"
             onClick={() => onAddGuest(guest.id)}
             disabled={isTimeBlockFull || !selectedMemberId}
-            theme={theme}
-            style={{
-              backgroundColor: theme?.primary,
-              color: "#ffffff",
-            }}
+       
           >
             <UserPlus className="mr-2 h-4 w-4" />
             Add

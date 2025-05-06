@@ -9,29 +9,12 @@ import { Command as CommandPrimitive } from "cmdk";
 import { Search } from "lucide-react";
 
 import { cn } from "~/lib/utils";
-import { getOrganizationColors } from "~/lib/utils";
 import { Dialog, DialogContent } from "~/components/ui/dialog";
-
-interface CommandProps
-  extends React.ComponentPropsWithoutRef<typeof CommandPrimitive> {
-  theme?: {
-    primary?: string;
-    secondary?: string;
-    tertiary?: string;
-  };
-}
 
 const Command = React.forwardRef<
   React.ElementRef<typeof CommandPrimitive>,
-  CommandProps
->(({ className, theme, ...props }, ref) => {
-  const colors = getOrganizationColors(theme);
-  const themeStyles = {
-    ["--org-primary" as string]: colors.primary,
-    ["--org-secondary" as string]: colors.secondary,
-    ["--org-tertiary" as string]: colors.tertiary,
-  } as React.CSSProperties;
-
+  React.ComponentPropsWithoutRef<typeof CommandPrimitive>
+>(({ className, ...props }, ref) => {
   return (
     <CommandPrimitive
       ref={ref}
@@ -39,7 +22,6 @@ const Command = React.forwardRef<
         "flex h-full w-full flex-col overflow-hidden rounded-md bg-white",
         className,
       )}
-      style={themeStyles}
       {...props}
     />
   );
@@ -132,20 +114,8 @@ const CommandItem = React.forwardRef<
   React.ElementRef<typeof CommandPrimitive.Item>,
   React.ComponentPropsWithoutRef<typeof CommandPrimitive.Item> & {
     onClick?: () => void;
-    theme?: {
-      primary?: string;
-      secondary?: string;
-      tertiary?: string;
-    };
   }
->(({ className, onClick, theme, ...props }, ref) => {
-  const colors = getOrganizationColors(theme);
-  const themeStyles = {
-    ["--org-primary" as string]: colors.primary,
-    ["--org-secondary" as string]: colors.secondary,
-    ["--org-tertiary" as string]: colors.tertiary,
-  } as React.CSSProperties;
-
+>(({ className, onClick, ...props }, ref) => {
   const handleClick = (event: React.MouseEvent) => {
     event.preventDefault();
     if (onClick) {
@@ -165,7 +135,6 @@ const CommandItem = React.forwardRef<
         "aria-selected:bg-[var(--org-primary)] aria-selected:text-white",
         className,
       )}
-      style={themeStyles}
       onClick={handleClick}
       {...props}
     />

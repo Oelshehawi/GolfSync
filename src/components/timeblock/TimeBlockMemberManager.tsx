@@ -14,6 +14,7 @@ import {
   addGuestToTimeBlock,
   removeGuestFromTimeBlock,
 } from "~/server/guests/actions";
+import { checkTimeblockRestrictionsAction } from "~/server/timeblock-restrictions/actions";
 import type { Member } from "~/app/types/MemberTypes";
 import type { TimeBlockWithMembers } from "~/app/types/TeeSheetTypes";
 import {
@@ -23,9 +24,9 @@ import {
 } from "./TimeBlockPeopleList";
 import toast from "react-hot-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
-import { checkRestrictionsAction } from "~/server/restrictions/actions";
 import { RestrictionViolation } from "~/app/types/RestrictionTypes";
-import { RestrictionViolationAlert } from "~/components/settings/restrictions/RestrictionViolationAlert";
+import { RestrictionViolationAlert } from "~/components/settings/timeblock-restrictions/RestrictionViolationAlert";
+import { formatDateToYYYYMMDD } from "~/lib/utils";
 
 type TimeBlockGuest = {
   id: number;
@@ -60,17 +61,12 @@ type Guest = {
 interface TimeBlockMemberManagerProps {
   timeBlock: TimeBlockWithMembers;
   timeBlockGuests?: TimeBlockGuest[];
-  theme?: {
-    primary?: string;
-    secondary?: string;
-    tertiary?: string;
-  };
+
 }
 
 export function TimeBlockMemberManager({
   timeBlock,
   timeBlockGuests = [],
-  theme,
 }: TimeBlockMemberManagerProps) {
   // Member state
   const [memberSearchQuery, setMemberSearchQuery] = useState("");
@@ -147,19 +143,25 @@ export function TimeBlockMemberManager({
     memberClass: string,
   ) => {
     try {
-      const result = await checkRestrictionsAction({
+      // Use the timeblock's date rather than today's date
+      const bookingDateString =
+        timeBlock.date || formatDateToYYYYMMDD(new Date());
+
+      // Check for restrictions first
+      const checkResult = await checkTimeblockRestrictionsAction({
         memberId,
         memberClass,
+        bookingDateString,
         bookingTime: timeBlock.startTime,
       });
 
-      if ("success" in result && !result.success) {
-        toast.error(result.error || "Failed to check restrictions");
+      if ("success" in checkResult && !checkResult.success) {
+        toast.error(checkResult.error || "Failed to check restrictions");
         return false;
       }
 
-      if ("hasViolations" in result && result.hasViolations) {
-        setRestrictionViolations(result.violations);
+      if ("hasViolations" in checkResult && checkResult.hasViolations) {
+        setRestrictionViolations(checkResult.violations);
         setShowViolationAlert(true);
         return true;
       }
@@ -167,7 +169,7 @@ export function TimeBlockMemberManager({
       return false;
     } catch (error) {
       console.error("Error checking restrictions:", error);
-      toast.error("Failed to check restrictions");
+      toast.error("Error checking restrictions");
       return false;
     }
   };
@@ -175,18 +177,24 @@ export function TimeBlockMemberManager({
   // Check for restrictions before adding a guest
   const checkGuestRestrictions = async (guestId: number) => {
     try {
-      const result = await checkRestrictionsAction({
+      // Use the timeblock's date rather than today's date
+      const bookingDateString =
+        timeBlock.date || formatDateToYYYYMMDD(new Date());
+
+      // Check for restrictions
+      const checkResult = await checkTimeblockRestrictionsAction({
         guestId,
+        bookingDateString,
         bookingTime: timeBlock.startTime,
       });
 
-      if ("success" in result && !result.success) {
-        toast.error(result.error || "Failed to check restrictions");
+      if ("success" in checkResult && !checkResult.success) {
+        toast.error(checkResult.error || "Failed to check restrictions");
         return false;
       }
 
-      if ("hasViolations" in result && result.hasViolations) {
-        setRestrictionViolations(result.violations);
+      if ("hasViolations" in checkResult && checkResult.hasViolations) {
+        setRestrictionViolations(checkResult.violations);
         setShowViolationAlert(true);
         return true;
       }
@@ -200,47 +208,53 @@ export function TimeBlockMemberManager({
   };
 
   const handleAddMember = async (memberId: number) => {
-    // Find the member to get their class
-    const member = memberSearchResults.find((m) => m.id === memberId);
-    if (!member) {
-      toast.error("Member not found");
-      return;
-    }
-
-    // Check for restrictions
-    const hasViolations = await checkMemberRestrictions(memberId, member.class);
-
-    if (hasViolations) {
-      // Save the action for later if admin overrides
-      setPendingAction(() => {
-        return async () => {
-          try {
-            const result = await addMemberToTimeBlock(timeBlock.id, memberId);
-            if (result.success) {
-              toast.success("Member added successfully");
-            } else {
-              toast.error(result.error || "Failed to add member");
-            }
-          } catch (error) {
-            toast.error("An error occurred while adding the member");
-            console.error(error);
-          }
-        };
-      });
-      return;
-    }
-
-    // No violations, proceed as normal
     try {
-      const result = await addMemberToTimeBlock(timeBlock.id, memberId);
-      if (result.success) {
-        toast.success("Member added successfully");
-      } else {
-        toast.error(result.error || "Failed to add member");
+      const memberToAdd = memberSearchResults.find((m) => m.id === memberId);
+      if (!memberToAdd) {
+        return;
+      }
+
+      // Check for restrictions
+      const hasViolations = await checkMemberRestrictions(
+        memberId,
+        memberToAdd.class,
+      );
+
+      if (hasViolations) {
+        // Save the action for later if admin overrides
+        setPendingAction(() => {
+          return async () => {
+            try {
+              const result = await addMemberToTimeBlock(timeBlock.id, memberId);
+              if (result.success) {
+                toast.success("Member added successfully");
+              } else {
+                toast.error(result.error || "Failed to add member");
+              }
+            } catch (error) {
+              toast.error("An error occurred while adding the member");
+              console.error(error);
+            }
+          };
+        });
+        return;
+      }
+
+      // No violations, proceed as normal
+      try {
+        const result = await addMemberToTimeBlock(timeBlock.id, memberId);
+        if (result.success) {
+          toast.success("Member added successfully");
+        } else {
+          toast.error(result.error || "Failed to add member");
+        }
+      } catch (error) {
+        toast.error("An error occurred while adding the member");
+        console.error(error);
       }
     } catch (error) {
+      console.error("Error handling member addition:", error);
       toast.error("An error occurred while adding the member");
-      console.error(error);
     }
   };
 
@@ -339,25 +353,20 @@ export function TimeBlockMemberManager({
 
   return (
     <div className="space-y-6">
-      <TimeBlockPageHeader timeBlock={timeBlock} theme={theme} />
+      <TimeBlockPageHeader timeBlock={timeBlock} />
       <TimeBlockHeader
         timeBlock={timeBlock}
         guestsCount={timeBlockGuests.length}
         maxPeople={MAX_PEOPLE}
-        theme={theme}
       />
 
       <Tabs defaultValue="members" className="mt-8 w-full">
-        <TabsList className="mb-4" theme={theme}>
-          <TabsTrigger value="members" theme={theme}>
-            Add Members
-          </TabsTrigger>
-          <TabsTrigger value="guests" theme={theme}>
-            Add Guests
-          </TabsTrigger>
+        <TabsList className="mb-4">
+          <TabsTrigger value="members">Add Members</TabsTrigger>
+          <TabsTrigger value="guests">Add Guests</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="members" className="space-y-6" theme={theme}>
+        <TabsContent value="members" className="space-y-6">
           <TimeBlockMemberSearch
             searchQuery={memberSearchQuery}
             onSearch={(query: string) => {
@@ -368,11 +377,10 @@ export function TimeBlockMemberManager({
             isLoading={isMemberSearching}
             onAddMember={handleAddMember}
             isTimeBlockFull={isTimeBlockFull}
-            theme={theme}
           />
         </TabsContent>
 
-        <TabsContent value="guests" theme={theme}>
+        <TabsContent value="guests">
           <TimeBlockGuestSearch
             searchQuery={guestSearchQuery}
             onSearch={(query: string) => {
@@ -386,7 +394,6 @@ export function TimeBlockMemberManager({
             members={timeBlock.members}
             onMemberSelect={handleMemberSelect}
             selectedMemberId={selectedMemberId}
-            theme={theme}
           />
         </TabsContent>
       </Tabs>
@@ -398,7 +405,6 @@ export function TimeBlockMemberManager({
         onRemoveMember={handleRemoveMember}
         onRemoveGuest={handleRemoveGuest}
         maxPeople={MAX_PEOPLE}
-        theme={theme}
       />
 
       {/* Restriction Violation Alert */}
@@ -411,7 +417,6 @@ export function TimeBlockMemberManager({
           setShowViolationAlert(false);
           setPendingAction(null);
         }}
-        theme={theme}
       />
     </div>
   );

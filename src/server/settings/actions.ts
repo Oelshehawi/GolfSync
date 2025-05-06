@@ -374,9 +374,10 @@ export async function updateTeesheetConfigForDate(
 
     // Revalidate paths
     revalidatePath(`/teesheet`);
-    revalidatePath(
-      `/admin/teesheet/${teesheet.date.toISOString().split("T")[0]}`,
-    );
+
+    // Use the date as is, since we know it's a string from our schema changes
+    const dateParam = teesheet.date || "";
+    revalidatePath(`/admin/teesheet/${dateParam}`);
 
     return { success: true, data: updatedTeesheet };
   } catch (error) {

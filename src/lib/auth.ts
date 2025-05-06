@@ -1,5 +1,5 @@
 "use server";
-import { auth} from "@clerk/nextjs/server";
+import { auth } from "@clerk/nextjs/server";
 import { getPrivateMetadata } from "~/server/config/data";
 
 /**
@@ -12,7 +12,6 @@ export async function getOrganizationId() {
   if (session.orgId) {
     return session.orgId;
   }
-
 
   // If not in session, try to get from user's private metadata
   if (session.userId) {

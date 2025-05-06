@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useMemo, useCallback } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { Button } from "~/components/ui/button";
 import { addDays } from "date-fns";
@@ -16,59 +16,49 @@ import {
   bookTeeTime,
   cancelTeeTime,
 } from "~/server/members-teesheet-client/actions";
-import { checkRestrictionsAction } from "~/server/restrictions/actions";
 import { ChevronLeft, ChevronRight, CalendarIcon, Loader2 } from "lucide-react";
-import { TimeBlockItem } from "./TimeBlockItem";
+import { TimeBlockItem, type TimeBlockItemProps } from "./TimeBlockItem";
 import { DatePicker } from "./DatePicker";
 import toast from "react-hot-toast";
 import { Toaster } from "react-hot-toast";
 import {
-  formatLocalDate,
-  formatLocalDisplayDate,
   checkTimeBlockInPast,
-  formatDisplayTime,
-  isSameLocalDay,
-  debugDateComparison,
-  areDatesEqual,
+  formatCalendarDate,
+  formatDisplayDate,
 } from "~/lib/utils";
 import { parse } from "date-fns";
 import { Member } from "~/app/types/MemberTypes";
-import { RestrictionViolationAlert } from "./RestrictionViolationAlert";
-import { RestrictionViolation } from "~/app/types/RestrictionTypes";
+import type { TimeBlockMemberView } from "~/app/types/TeeSheetTypes";
 
-// Define proper types
-type TimeBlock = {
+// Define proper types that match TimeBlockItem requirements
+type ClientTimeBlock = {
   id: number;
-  startTime: Date;
-  endTime: Date;
-  members: Array<{
-    id: number;
-    firstName: string;
-    lastName: string;
-  }>;
+  startTime: string;
+  endTime: string;
+  members: TimeBlockMemberView[];
+  restriction?: {
+    isRestricted: boolean;
+    reason: string;
+    violations: any[];
+  };
   [key: string]: any;
 };
-
-type RestrictionCheckResult =
-  | { success: false; error: string }
-  | { hasViolations: boolean; violations: RestrictionViolation[] };
 
 // Simple utility to scroll to a time block on today's date
 function scrollToClosestTime(
   now: Date,
   selectedDate: Date | string,
-  timeBlocks: TimeBlock[],
+  timeBlocks: ClientTimeBlock[],
 ) {
   // Parse the date properly
   let parsedSelectedDate: Date;
   if (typeof selectedDate === "string") {
     const parts = selectedDate.split("-");
     if (parts.length === 3) {
-      parsedSelectedDate = new Date(
-        parseInt(parts[0] as string),
-        parseInt(parts[1] as string) - 1,
-        parseInt(parts[2] as string),
-      );
+      const year = parseInt(parts[0] || "0");
+      const month = parseInt(parts[1] || "0") - 1;
+      const day = parseInt(parts[2] || "0");
+      parsedSelectedDate = new Date(year, month, day);
     } else {
       parsedSelectedDate = new Date(selectedDate);
     }
@@ -82,7 +72,6 @@ function scrollToClosestTime(
     now.getMonth() !== parsedSelectedDate.getMonth() ||
     now.getFullYear() !== parsedSelectedDate.getFullYear()
   ) {
-    console.log("Not today's date - skipping auto-scroll");
     return;
   }
 
@@ -101,8 +90,15 @@ function scrollToClosestTime(
 
   for (let i = 0; i < timeBlocks.length; i++) {
     const block = timeBlocks[i];
-    const blockTime = new Date(block?.startTime as Date);
-    const blockMinutes = blockTime.getHours() * 60 + blockTime.getMinutes();
+    if (!block || !block.startTime) continue;
+
+    // Parse time from HH:MM format
+    const timeParts = block.startTime.split(":");
+    if (timeParts.length !== 2) continue;
+
+    const blockHour = parseInt(timeParts[0] || "0", 10);
+    const blockMinute = parseInt(timeParts[1] || "0", 10);
+    const blockMinutes = blockHour * 60 + blockMinute;
     const diff = Math.abs(blockMinutes - currentTimeMinutes);
 
     if (diff < bestDiff) {
@@ -129,74 +125,60 @@ export default function TeesheetClient({
 }: {
   teesheet: any;
   config: any;
-  timeBlocks: TimeBlock[];
+  timeBlocks: ClientTimeBlock[];
   selectedDate: string | Date;
   member: Member;
 }) {
   const [loading, setLoading] = useState<boolean>(false);
-  const [timeBlocks, setTimeBlocks] = useState<TimeBlock[]>(
-    // Sort timeBlocks by startTime to ensure proper order
-    [...initialTimeBlocks].sort((a, b) => {
-      const dateA = new Date(a.startTime);
-      const dateB = new Date(b.startTime);
-      return dateA.getTime() - dateB.getTime();
-    }),
-  );
-
-  // Create a ref for the time blocks container to enable scrolling
-  const timeBlocksContainerRef = useRef<HTMLDivElement>(null);
-
-  // Update timeBlocks when initialTimeBlocks prop changes
-  useEffect(() => {
-    setTimeBlocks(
-      [...initialTimeBlocks].sort((a, b) => {
-        const dateA = new Date(a.startTime);
-        const dateB = new Date(b.startTime);
-        return dateA.getTime() - dateB.getTime();
-      }),
-    );
-  }, [initialTimeBlocks]);
-
-  // Auto-scroll to current time when time blocks load
-  useEffect(() => {
-    // Small delay to ensure DOM is ready
-    if (timeBlocks.length > 0) {
-      scrollToClosestTime(new Date(), selectedDate, timeBlocks);
-    }
-  }, [timeBlocks, selectedDate]);
-
-  const [showDatePicker, setShowDatePicker] = useState<boolean>(false);
   const [bookingTimeBlockId, setBookingTimeBlockId] = useState<number | null>(
     null,
   );
   const [cancelTimeBlockId, setCancelTimeBlockId] = useState<number | null>(
     null,
   );
-  const [violations, setViolations] = useState<RestrictionViolation[]>([]);
-  const [showRestrictionAlert, setShowRestrictionAlert] =
-    useState<boolean>(false);
-  const [restrictionCheckedTimeBlockId, setRestrictionCheckedTimeBlockId] =
-    useState<number | null>(null);
+  const [showDatePicker, setShowDatePicker] = useState<boolean>(false);
 
-  // Parse selected date if it's a string, otherwise use as-is
-  const date =
-    typeof selectedDate === "string"
+  // Use a sorted version of the timeBlocks without extra state management
+  const sortedTimeBlocks = useMemo(() => {
+    return [...initialTimeBlocks].sort((a, b) => {
+      // Simple string comparison for HH:MM format
+      return a.startTime.localeCompare(b.startTime);
+    });
+  }, [initialTimeBlocks]);
+
+  // Create a ref for the time blocks container to enable scrolling
+  const timeBlocksContainerRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll to current time when time blocks load
+  useEffect(() => {
+    // Small delay to ensure DOM is ready
+    if (sortedTimeBlocks.length > 0) {
+      scrollToClosestTime(new Date(), selectedDate, sortedTimeBlocks);
+    }
+  }, [sortedTimeBlocks, selectedDate]);
+
+  // Memoize date parsing to prevent unnecessary recalculations
+  const date = useMemo(() => {
+    return typeof selectedDate === "string"
       ? parse(selectedDate, "yyyy-MM-dd", new Date())
       : selectedDate;
+  }, [selectedDate]);
 
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { replace } = useRouter();
 
-  // Navigate to a new date using URL params
-  const navigateToDate = (newDate: Date) => {
-    const params = new URLSearchParams(searchParams.toString());
-    params.set("date", formatLocalDate(newDate));
-    replace(`${pathname}?${params.toString()}`);
-  };
+  // Navigation functions wrapped in useCallback
+  const navigateToDate = useCallback(
+    (newDate: Date) => {
+      const params = new URLSearchParams(searchParams.toString());
+      params.set("date", formatCalendarDate(newDate));
+      replace(`${pathname}?${params.toString()}`);
+    },
+    [pathname, searchParams, replace],
+  );
 
-  // Date navigation functions
-  const goToPreviousDay = () => {
+  const goToPreviousDay = useCallback(() => {
     const newDate = addDays(date, -1);
     // Set to start of day to avoid timezone issues
     const adjustedDate = new Date(
@@ -209,9 +191,9 @@ export default function TeesheetClient({
       0,
     );
     navigateToDate(adjustedDate);
-  };
+  }, [date, navigateToDate]);
 
-  const goToNextDay = () => {
+  const goToNextDay = useCallback(() => {
     const newDate = addDays(date, 1);
     // Set to start of day to avoid timezone issues
     const adjustedDate = new Date(
@@ -224,65 +206,48 @@ export default function TeesheetClient({
       0,
     );
     navigateToDate(adjustedDate);
-  };
+  }, [date, navigateToDate]);
 
-  const handleDateChange = (newDate: Date) => {
-    // Set to start of day to avoid timezone issues
-    const adjustedDate = new Date(
-      newDate.getFullYear(),
-      newDate.getMonth(),
-      newDate.getDate(),
-      0,
-      0,
-      0,
-      0,
-    );
-    navigateToDate(adjustedDate);
-    setShowDatePicker(false);
-  };
+  const handleDateChange = useCallback(
+    (newDate: Date) => {
+      // Set to start of day to avoid timezone issues
+      const adjustedDate = new Date(
+        newDate.getFullYear(),
+        newDate.getMonth(),
+        newDate.getDate(),
+        0,
+        0,
+        0,
+        0,
+      );
+      navigateToDate(adjustedDate);
+      setShowDatePicker(false);
+    },
+    [navigateToDate],
+  );
 
   // Check for booking restrictions
-  const checkBookingRestrictions = async (timeBlockId: number) => {
-    if (!timeBlockId) return;
+  const checkBookingRestrictions = useCallback(
+    async (timeBlockId: number) => {
+      if (!timeBlockId) return;
 
-    const timeBlock = timeBlocks.find((tb) => tb.id === timeBlockId);
-    if (!timeBlock) return;
+      const timeBlock = sortedTimeBlocks.find((tb) => tb.id === timeBlockId);
+      if (!timeBlock) return;
 
-    setLoading(true);
-    try {
-      const result = (await checkRestrictionsAction({
-        memberId: member.id,
-        memberClass: member.class,
-        bookingTime: new Date(timeBlock.startTime),
-      })) as RestrictionCheckResult;
-
-      // Check if result is an error
-      if ("success" in result && result.success === false) {
-        toast.error(result.error || "Failed to check booking restrictions");
+      // Check if the timeblock is restricted (pre-checked from server)
+      if (timeBlock.restriction && timeBlock.restriction.isRestricted) {
+        toast.error(
+          timeBlock.restriction.reason ||
+            "This timeblock is not available for booking",
+        );
         return;
       }
 
-      // Now result is the success case
-      if (
-        "hasViolations" in result &&
-        result.hasViolations &&
-        result.violations.length > 0
-      ) {
-        setViolations(result.violations);
-        setShowRestrictionAlert(true);
-        setRestrictionCheckedTimeBlockId(timeBlockId);
-        setBookingTimeBlockId(null);
-      } else {
-        // No violations, proceed with booking
-        setBookingTimeBlockId(timeBlockId);
-      }
-    } catch (error) {
-      console.error("Error checking restrictions:", error);
-      toast.error("Failed to check booking restrictions");
-    } finally {
-      setLoading(false);
-    }
-  };
+      // No restrictions, proceed with booking
+      setBookingTimeBlockId(timeBlockId);
+    },
+    [sortedTimeBlocks],
+  );
 
   // Booking functions
   const handleBookTeeTime = async () => {
@@ -296,8 +261,7 @@ export default function TeesheetClient({
         toast.success("Tee time booked successfully");
       } else {
         if (result.violations && result.violations.length > 0) {
-          setViolations(result.violations);
-          setShowRestrictionAlert(true);
+          toast.error(result.error || "Failed to book tee time");
         } else {
           toast.error(result.error || "Failed to book tee time");
         }
@@ -332,32 +296,32 @@ export default function TeesheetClient({
     }
   };
 
-  // Handle restriction cancel
-  const handleRestrictionCancel = () => {
-    setShowRestrictionAlert(false);
-    setRestrictionCheckedTimeBlockId(null);
-    setViolations([]);
-  };
+  // Memoized utility functions
+  const isTimeBlockBooked = useCallback(
+    (timeBlock: ClientTimeBlock) => {
+      if (!member || !timeBlock?.members) return false;
+      return timeBlock.members.some((m) => m.id === member.id);
+    },
+    [member],
+  );
 
-  // Check if a time block is already booked by this member
-  const isTimeBlockBooked = (timeBlock: TimeBlock) => {
-    if (!member || !timeBlock?.members) return false;
-    return timeBlock.members.some((m) => m.id === member.id);
-  };
+  const isTimeBlockAvailable = useCallback(
+    (timeBlock: ClientTimeBlock) => {
+      if (!timeBlock?.members) return true;
+      const maxMembers = config?.maxMembersPerBlock || 4;
+      return timeBlock.members.length < maxMembers;
+    },
+    [config],
+  );
 
-  // Check if a time block is available (has space)
-  const isTimeBlockAvailable = (timeBlock: TimeBlock) => {
-    if (!timeBlock?.members) return true;
-    const maxMembers = config?.maxMembersPerBlock || 4;
-    return timeBlock.members.length < maxMembers;
-  };
-
-  // Check if a time block is in the past
-  const isTimeBlockInPast = (timeBlock: TimeBlock) => {
-    // Make sure we pass a Date to the utility function
-    if (!timeBlock || !timeBlock.startTime) return false;
-    return checkTimeBlockInPast(timeBlock.startTime);
-  };
+  const isTimeBlockInPast = useCallback(
+    (timeBlock: ClientTimeBlock) => {
+      if (!timeBlock || !timeBlock.startTime) return false;
+      // Use both date and time parameters for accurate past checking
+      return checkTimeBlockInPast(selectedDate, timeBlock.startTime);
+    },
+    [selectedDate],
+  );
 
   return (
     <div className="space-y-6 pt-20">
@@ -376,9 +340,7 @@ export default function TeesheetClient({
         </Button>
 
         <div className="flex items-center gap-2">
-          <h2 className="text-lg font-semibold">
-            {formatLocalDisplayDate(date)}
-          </h2>
+          <h2 className="text-lg font-semibold">{formatDisplayDate(date)}</h2>
           <Button
             variant="outline"
             size="icon"
@@ -411,20 +373,26 @@ export default function TeesheetClient({
           ref={timeBlocksContainerRef}
           className="max-h-[60vh] space-y-3 overflow-y-auto scroll-smooth p-1"
         >
-          {timeBlocks.length > 0 ? (
-            timeBlocks.map((timeBlock) => (
-              <TimeBlockItem
-                key={timeBlock.id}
-                timeBlock={timeBlock}
-                isBooked={isTimeBlockBooked(timeBlock)}
-                isAvailable={isTimeBlockAvailable(timeBlock)}
-                isPast={isTimeBlockInPast(timeBlock)}
-                onBook={() => checkBookingRestrictions(timeBlock.id)}
-                onCancel={() => setCancelTimeBlockId(timeBlock.id)}
-                disabled={loading}
-                id={`time-block-${timeBlock.id}`}
-              />
-            ))
+          {sortedTimeBlocks.length > 0 ? (
+            sortedTimeBlocks.map((timeBlock) => {
+              return (
+                <TimeBlockItem
+                  key={timeBlock.id}
+                  timeBlock={
+                    timeBlock as unknown as TimeBlockItemProps["timeBlock"]
+                  }
+                  isBooked={isTimeBlockBooked(timeBlock)}
+                  isAvailable={isTimeBlockAvailable(timeBlock)}
+                  isPast={isTimeBlockInPast(timeBlock)}
+                  onBook={() => checkBookingRestrictions(timeBlock.id)}
+                  onCancel={() => setCancelTimeBlockId(timeBlock.id)}
+                  disabled={loading}
+                  id={`time-block-${timeBlock.id}`}
+                  isRestricted={timeBlock.restriction?.isRestricted || false}
+                  restrictionReason={timeBlock.restriction?.reason || ""}
+                />
+              );
+            })
           ) : (
             <p className="text-gray-500">
               No tee times available for this date.
@@ -485,15 +453,6 @@ export default function TeesheetClient({
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {/* Restriction Violation Alert */}
-      <RestrictionViolationAlert
-        open={showRestrictionAlert}
-        onOpenChange={setShowRestrictionAlert}
-        violations={violations}
-        onCancel={handleRestrictionCancel}
-        memberClass={member.class}
-      />
 
       {/* Cancel Confirmation Dialog */}
       <Dialog
