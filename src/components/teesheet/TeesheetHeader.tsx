@@ -12,18 +12,24 @@ import {
   X,
 } from "lucide-react";
 import { ConfigInfo } from "../settings/teesheet/ConfigInfo";
-import type { TeesheetConfig } from "~/app/types/TeeSheetTypes";
+import type {
+  TeesheetConfig,
+  TimeBlockWithMembers,
+} from "~/app/types/TeeSheetTypes";
 import { formatCalendarDate, formatDisplayDate } from "~/lib/utils";
 
 interface TeesheetHeaderProps {
   date: Date;
   config: TeesheetConfig;
-
+  teesheetId: number;
+  timeBlocks: TimeBlockWithMembers[];
 }
 
 export function TeesheetHeader({
   date: initialDate,
   config,
+  teesheetId,
+  timeBlocks,
 }: TeesheetHeaderProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -47,9 +53,8 @@ export function TeesheetHeader({
     selected: (day: Date) => isSameDay(day, date),
   };
 
-
   return (
-    <div className="space-y-4" >
+    <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <Button
@@ -90,7 +95,11 @@ export function TeesheetHeader({
         </Button>
       </div>
 
-      <ConfigInfo config={config} />
+      <ConfigInfo
+        config={config}
+        teesheetId={teesheetId}
+        timeBlocks={timeBlocks}
+      />
 
       {searchParams.get("showCalendar") === "true" && (
         <Card className="mt-4 p-4">

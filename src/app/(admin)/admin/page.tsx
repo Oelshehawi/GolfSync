@@ -57,14 +57,18 @@ export default async function AdminPage({ searchParams }: PageProps) {
     const timeBlocks = await getTimeBlocksForTeesheet(teesheet.id);
     const configsResult = await getTeesheetConfigs();
 
-
     if (!Array.isArray(configsResult)) {
       throw new Error(configsResult.error || "Failed to load configurations");
     }
 
     return (
       <div className="container mx-auto space-y-2 p-6">
-        <TeesheetHeader date={date} config={config} />
+        <TeesheetHeader
+          date={date}
+          config={config}
+          teesheetId={teesheet.id}
+          timeBlocks={timeBlocks}
+        />
         <Card>
           <CardContent>
             <TeesheetView

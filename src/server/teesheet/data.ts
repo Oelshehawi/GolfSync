@@ -7,7 +7,7 @@ import {
   timeBlockGuests,
   guests,
 } from "~/server/db/schema";
-import { eq, and, inArray } from "drizzle-orm";
+import { eq, and, inArray, sql } from "drizzle-orm";
 import { getOrganizationId } from "~/lib/auth";
 import type {
   TeeSheet,
@@ -136,6 +136,7 @@ export async function getTimeBlocksForTeesheet(
         firstName: members.firstName,
         lastName: members.lastName,
         memberNumber: members.memberNumber,
+        bagNumber: members.bagNumber,
         checkedIn: timeBlockMembers.checkedIn,
         checkedInAt: timeBlockMembers.checkedInAt,
       },
@@ -147,40 +148,6 @@ export async function getTimeBlocksForTeesheet(
       and(
         eq(timeBlocks.clerkOrgId, clerkOrgId),
         eq(timeBlocks.teesheetId, teesheetId),
-      ),
-    );
-
-  // Fetch guests data separately
-  const guestsResult = await db
-    .select({
-      timeBlockId: timeBlockGuests.timeBlockId,
-      guest: {
-        id: guests.id,
-        firstName: guests.firstName,
-        lastName: guests.lastName,
-        email: guests.email,
-        phone: guests.phone,
-        handicap: guests.handicap,
-      },
-      checkedIn: timeBlockGuests.checkedIn,
-      checkedInAt: timeBlockGuests.checkedInAt,
-      invitedByMember: {
-        id: members.id,
-        firstName: members.firstName,
-        lastName: members.lastName,
-        memberNumber: members.memberNumber,
-      },
-    })
-    .from(timeBlockGuests)
-    .innerJoin(guests, eq(timeBlockGuests.guestId, guests.id))
-    .innerJoin(members, eq(timeBlockGuests.invitedByMemberId, members.id))
-    .where(
-      and(
-        eq(timeBlockGuests.clerkOrgId, clerkOrgId),
-        inArray(
-          timeBlockGuests.timeBlockId,
-          result.map((r) => r.id),
-        ),
       ),
     );
 
@@ -215,11 +182,43 @@ export async function getTimeBlocksForTeesheet(
         firstName: row.members.firstName!,
         lastName: row.members.lastName!,
         memberNumber: row.members.memberNumber!,
+        bagNumber: row.members.bagNumber,
         checkedIn: row.members.checkedIn || false,
         checkedInAt: row.members.checkedInAt,
       });
     }
   });
+
+  // Fetch guests in a separate query including timeBlockId
+  const guestsResult = await db
+    .select({
+      timeBlockId: timeBlockGuests.timeBlockId,
+      guest: {
+        id: guests.id,
+        firstName: guests.firstName,
+        lastName: guests.lastName,
+        email: guests.email,
+        phone: guests.phone,
+        handicap: guests.handicap,
+      },
+      checkedIn: timeBlockGuests.checkedIn,
+      checkedInAt: timeBlockGuests.checkedInAt,
+      invitedByMember: {
+        id: members.id,
+        firstName: members.firstName,
+        lastName: members.lastName,
+        memberNumber: members.memberNumber,
+      },
+    })
+    .from(timeBlockGuests)
+    .innerJoin(guests, eq(timeBlockGuests.guestId, guests.id))
+    .innerJoin(members, eq(timeBlockGuests.invitedByMemberId, members.id))
+    .where(
+      and(
+        eq(timeBlockGuests.clerkOrgId, clerkOrgId),
+        inArray(timeBlockGuests.timeBlockId, Array.from(timeBlocksMap.keys())),
+      ),
+    );
 
   // Add guests to the corresponding time blocks
   guestsResult.forEach((row) => {
@@ -289,6 +288,7 @@ export async function getTimeBlockWithMembers(
         firstName: members.firstName,
         lastName: members.lastName,
         memberNumber: members.memberNumber,
+        bagNumber: members.bagNumber,
         checkedIn: timeBlockMembers.checkedIn,
         checkedInAt: timeBlockMembers.checkedInAt,
       },
@@ -362,6 +362,7 @@ export async function getTimeBlockWithMembers(
       firstName: row.members!.firstName!,
       lastName: row.members!.lastName!,
       memberNumber: row.members!.memberNumber!,
+      bagNumber: row.members!.bagNumber,
       checkedIn: row.members!.checkedIn || false,
       checkedInAt: row.members!.checkedInAt,
     }));

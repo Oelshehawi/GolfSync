@@ -55,6 +55,14 @@ export async function addMemberToTimeBlock(
       return { success: false, error: "Teesheet not found" };
     }
 
+    // Get the member to get their bag number
+    const member = await db.query.members.findFirst({
+      where: eq(members.id, memberId),
+      columns: {
+        bagNumber: true,
+      },
+    });
+
     // Get the booking date and time
     const bookingDate = formatDateToYYYYMMDD(teesheet.date);
     const bookingTime = timeBlock.startTime;
@@ -82,6 +90,7 @@ export async function addMemberToTimeBlock(
       memberId,
       bookingDate,
       bookingTime,
+      bagNumber: member?.bagNumber,
     });
 
     revalidatePath(`/admin/timeblock/${timeBlockId}`);

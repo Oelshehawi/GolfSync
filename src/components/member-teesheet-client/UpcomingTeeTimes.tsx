@@ -1,5 +1,9 @@
 import Link from "next/link";
-import { formatDateStringToWords, formatTimeStringTo12Hour } from "~/lib/utils";
+import {
+  formatDateStringToWords,
+  formatTimeStringTo12Hour,
+  formatCalendarDate,
+} from "~/lib/utils";
 
 type UpcomingTeeTime = {
   id: number;
@@ -38,15 +42,16 @@ export function UpcomingTeeTimes({ teeTimes }: UpcomingTeeTimesProps) {
         // Use the date string directly from the database - avoid creating Date objects
         const bookingDateStr = teeTime.date;
 
-        // Get today and tomorrow's date strings
+        // Get today and tomorrow's date strings in YYYY-MM-DD format
+        // Using formatCalendarDate to ensure consistent formatting
         const today = new Date();
-        const todayStr = today.toISOString().split("T")[0];
+        const todayStr = formatCalendarDate(today);
 
         const tomorrow = new Date(today);
         tomorrow.setDate(tomorrow.getDate() + 1);
-        const tomorrowStr = tomorrow.toISOString().split("T")[0];
+        const tomorrowStr = formatCalendarDate(tomorrow);
 
-        // Compare date strings directly
+        // Compare date strings directly to avoid timezone issues
         let dateDisplay;
         if (bookingDateStr === todayStr) {
           dateDisplay = "Today";
