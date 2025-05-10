@@ -113,7 +113,6 @@ export async function deleteTimeblockRestriction(id: number) {
         ),
       );
 
-
     // Now delete the restriction
     const result = await db
       .delete(timeblockRestrictions)
@@ -227,9 +226,20 @@ export async function checkTimeblockRestrictionsAction(params: {
       // For time-based restrictions, we need the time component
       bookingTimeLocal = bookingTime || "00:00";
 
-      // Get day of week from client date string
-      const localDate = new Date(bookingDateString);
-      dayOfWeek = localDate.getDay();
+      // Parse date to get day of week - ensure correct UTC handling
+      // Use the same date parsing approach as in checkBatchTimeblockRestrictions
+      const dateParts = bookingDateStr.split("-");
+      if (dateParts.length !== 3) {
+        return { success: false, error: "Invalid date format" };
+      }
+
+      const year = parseInt(dateParts[0] || "0", 10);
+      const month = parseInt(dateParts[1] || "0", 10) - 1; // JS months are 0-indexed
+      const day = parseInt(dateParts[2] || "0", 10);
+
+      // Create date with explicit year/month/day to avoid timezone issues
+      const localDate = new Date(year, month, day);
+      dayOfWeek = localDate.getDay(); // 0=Sunday, 1=Monday, etc.
     } else {
       return { success: false, error: "No booking date provided" };
     }

@@ -38,15 +38,13 @@ import {
   TooltipTrigger,
 } from "~/components/ui/tooltip";
 import { Badge } from "~/components/ui/badge";
+import { formatTimeStringTo12Hour } from "~/lib/utils";
 
 interface TeesheetSettingsProps {
   initialConfigs: TeesheetConfig[];
-
 }
 
-export function TeesheetSettings({
-  initialConfigs,
-}: TeesheetSettingsProps) {
+export function TeesheetSettings({ initialConfigs }: TeesheetSettingsProps) {
   const [configs, setConfigs] = useState<TeesheetConfig[]>(initialConfigs);
   const [selectedConfig, setSelectedConfig] = useState<
     TeesheetConfig | undefined
@@ -223,7 +221,8 @@ export function TeesheetSettings({
                 </div>
                 <div className="text-sm text-gray-500">
                   <p>
-                    Hours: {config.startTime} - {config.endTime}
+                    Hours: {formatTimeStringTo12Hour(config.startTime)} -{" "}
+                    {formatTimeStringTo12Hour(config.endTime)}
                   </p>
                   <p>Interval: {config.interval} minutes</p>
                   <p>Max Players: {config.maxMembersPerBlock}</p>

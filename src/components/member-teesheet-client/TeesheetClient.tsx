@@ -16,7 +16,16 @@ import {
   bookTeeTime,
   cancelTeeTime,
 } from "~/server/members-teesheet-client/actions";
-import { ChevronLeft, ChevronRight, CalendarIcon, Loader2 } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  CalendarIcon,
+  Loader2,
+  ClockIcon,
+  AlertCircle,
+  CheckCircle,
+  X,
+} from "lucide-react";
 import { TimeBlockItem, type TimeBlockItemProps } from "./TimeBlockItem";
 import { DatePicker } from "./DatePicker";
 import toast from "react-hot-toast";
@@ -29,6 +38,7 @@ import {
 import { parse } from "date-fns";
 import { Member } from "~/app/types/MemberTypes";
 import type { TimeBlockMemberView } from "~/app/types/TeeSheetTypes";
+import { Skeleton } from "~/components/ui/skeleton";
 
 // Define proper types that match TimeBlockItem requirements
 type ClientTimeBlock = {
@@ -107,14 +117,27 @@ function scrollToClosestTime(
     }
   }
 
-  // Scroll to element
-  setTimeout(() => {
-    const element = document.getElementById(`time-block-${bestBlock?.id}`);
-    if (element) {
-      element.scrollIntoView({ behavior: "auto", block: "center" });
-    }
-  }, 100);
+  // Scroll to element without delay
+  const element = document.getElementById(`time-block-${bestBlock?.id}`);
+  if (element) {
+    element.scrollIntoView({ behavior: "auto", block: "center" });
+  }
 }
+
+// Loading skeleton component for time blocks
+const TimeBlockSkeleton = () => (
+  <div className="animate-pulse rounded-lg border border-gray-200 p-4 transition-all">
+    <div className="flex items-center justify-between">
+      <div className="flex items-center gap-2">
+        <Skeleton className="h-6 w-20" />
+      </div>
+      <Skeleton className="h-8 w-20" />
+    </div>
+    <div className="mt-2">
+      <Skeleton className="h-4 w-3/4" />
+    </div>
+  </div>
+);
 
 // Client component to handle interactive elements
 export default function TeesheetClient({
@@ -149,9 +172,8 @@ export default function TeesheetClient({
   // Create a ref for the time blocks container to enable scrolling
   const timeBlocksContainerRef = useRef<HTMLDivElement>(null);
 
-  // Auto-scroll to current time when time blocks load
+  // Auto-scroll to current time once when time blocks load
   useEffect(() => {
-    // Small delay to ensure DOM is ready
     if (sortedTimeBlocks.length > 0) {
       scrollToClosestTime(new Date(), selectedDate, sortedTimeBlocks);
     }
@@ -239,6 +261,9 @@ export default function TeesheetClient({
         toast.error(
           timeBlock.restriction.reason ||
             "This timeblock is not available for booking",
+          {
+            icon: <AlertCircle className="h-5 w-5 text-red-500" />,
+          },
         );
         return;
       }
@@ -258,17 +283,25 @@ export default function TeesheetClient({
       const result = await bookTeeTime(bookingTimeBlockId, member);
 
       if (result.success) {
-        toast.success("Tee time booked successfully");
+        toast.success("Tee time booked successfully", {
+          icon: <CheckCircle className="h-5 w-5 text-green-500" />,
+        });
       } else {
         if (result.violations && result.violations.length > 0) {
-          toast.error(result.error || "Failed to book tee time");
+          toast.error(result.error || "Failed to book tee time", {
+            icon: <X className="h-5 w-5 text-red-500" />,
+          });
         } else {
-          toast.error(result.error || "Failed to book tee time");
+          toast.error(result.error || "Failed to book tee time", {
+            icon: <X className="h-5 w-5 text-red-500" />,
+          });
         }
       }
     } catch (error) {
       console.error("Error booking tee time", error);
-      toast.error("An unexpected error occurred");
+      toast.error("An unexpected error occurred", {
+        icon: <AlertCircle className="h-5 w-5 text-red-500" />,
+      });
     } finally {
       setLoading(false);
       setBookingTimeBlockId(null);
@@ -283,13 +316,19 @@ export default function TeesheetClient({
       const result = await cancelTeeTime(cancelTimeBlockId, member);
 
       if (result.success) {
-        toast.success("Tee time cancelled successfully");
+        toast.success("Tee time cancelled successfully", {
+          icon: <CheckCircle className="h-5 w-5 text-green-500" />,
+        });
       } else {
-        toast.error(result.error || "Failed to cancel tee time");
+        toast.error(result.error || "Failed to cancel tee time", {
+          icon: <X className="h-5 w-5 text-red-500" />,
+        });
       }
     } catch (error) {
       console.error("Error cancelling tee time", error);
-      toast.error("An unexpected error occurred");
+      toast.error("An unexpected error occurred", {
+        icon: <AlertCircle className="h-5 w-5 text-red-500" />,
+      });
     } finally {
       setLoading(false);
       setCancelTimeBlockId(null);
@@ -323,6 +362,8 @@ export default function TeesheetClient({
     [selectedDate],
   );
 
+  const hasTimeBlocks = sortedTimeBlocks.length > 0;
+
   return (
     <div className="space-y-6 pt-20">
       <Toaster position="top-right" />
@@ -335,6 +376,7 @@ export default function TeesheetClient({
           onClick={goToPreviousDay}
           disabled={loading}
           className="hover:bg-[var(--org-primary)] hover:text-white"
+          aria-label="Previous day"
         >
           <ChevronLeft className="h-4 w-4" />
         </Button>
@@ -347,6 +389,7 @@ export default function TeesheetClient({
             onClick={() => setShowDatePicker(true)}
             disabled={loading}
             className="hover:bg-[var(--org-primary)] hover:text-white"
+            aria-label="Open date picker"
           >
             <CalendarIcon className="h-4 w-4" />
           </Button>
@@ -358,6 +401,7 @@ export default function TeesheetClient({
           onClick={goToNextDay}
           disabled={loading}
           className="hover:bg-[var(--org-primary)] hover:text-white"
+          aria-label="Next day"
         >
           <ChevronRight className="h-4 w-4" />
         </Button>
@@ -366,38 +410,46 @@ export default function TeesheetClient({
       {/* Time blocks */}
       <div className="rounded-lg bg-white p-6 shadow-sm">
         <div className="mb-4">
-          <h3 className="text-lg font-semibold">Available Tee Times</h3>
+          <h3 className="flex items-center gap-2 text-lg font-semibold">
+            <ClockIcon className="h-5 w-5 text-[var(--org-primary)]" />
+            Available Tee Times
+          </h3>
         </div>
 
         <div
           ref={timeBlocksContainerRef}
           className="max-h-[60vh] space-y-3 overflow-y-auto scroll-smooth p-1"
+          aria-live="polite"
         >
-          {sortedTimeBlocks.length > 0 ? (
-            sortedTimeBlocks.map((timeBlock) => {
-              return (
-                <TimeBlockItem
-                  key={timeBlock.id}
-                  timeBlock={
-                    timeBlock as unknown as TimeBlockItemProps["timeBlock"]
-                  }
-                  isBooked={isTimeBlockBooked(timeBlock)}
-                  isAvailable={isTimeBlockAvailable(timeBlock)}
-                  isPast={isTimeBlockInPast(timeBlock)}
-                  onBook={() => checkBookingRestrictions(timeBlock.id)}
-                  onCancel={() => setCancelTimeBlockId(timeBlock.id)}
-                  disabled={loading}
-                  member={member}
-                  id={`time-block-${timeBlock.id}`}
-                  isRestricted={timeBlock.restriction?.isRestricted || false}
-                  restrictionReason={timeBlock.restriction?.reason || ""}
-                />
-              );
-            })
+          {hasTimeBlocks ? (
+            sortedTimeBlocks.map((timeBlock) => (
+              <TimeBlockItem
+                key={timeBlock.id}
+                timeBlock={
+                  timeBlock as unknown as TimeBlockItemProps["timeBlock"]
+                }
+                isBooked={isTimeBlockBooked(timeBlock)}
+                isAvailable={isTimeBlockAvailable(timeBlock)}
+                isPast={isTimeBlockInPast(timeBlock)}
+                onBook={() => checkBookingRestrictions(timeBlock.id)}
+                onCancel={() => setCancelTimeBlockId(timeBlock.id)}
+                disabled={loading}
+                member={member}
+                id={`time-block-${timeBlock.id}`}
+                isRestricted={timeBlock.restriction?.isRestricted || false}
+                restrictionReason={timeBlock.restriction?.reason || ""}
+              />
+            ))
           ) : (
-            <p className="text-gray-500">
-              No tee times available for this date.
-            </p>
+            <div className="flex flex-col items-center justify-center py-8 text-center">
+              <CalendarIcon className="mb-2 h-10 w-10 text-gray-300" />
+              <p className="text-gray-500">
+                No tee times available for this date.
+              </p>
+              <p className="mt-2 text-sm text-gray-400">
+                Try selecting a different date.
+              </p>
+            </div>
           )}
         </div>
       </div>
@@ -405,7 +457,7 @@ export default function TeesheetClient({
       {/* Date Picker Dialog */}
       {showDatePicker && (
         <Dialog open={showDatePicker} onOpenChange={setShowDatePicker}>
-          <DialogContent>
+          <DialogContent className="sm:max-w-md">
             <DialogHeader>
               <DialogTitle>Select Date</DialogTitle>
             </DialogHeader>
@@ -421,7 +473,7 @@ export default function TeesheetClient({
           if (!isOpen) setBookingTimeBlockId(null);
         }}
       >
-        <DialogContent>
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Confirm Tee Time Booking</DialogTitle>
             <DialogDescription>
@@ -463,7 +515,7 @@ export default function TeesheetClient({
           if (!isOpen) setCancelTimeBlockId(null);
         }}
       >
-        <DialogContent>
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Cancel Tee Time Booking</DialogTitle>
             <DialogDescription>

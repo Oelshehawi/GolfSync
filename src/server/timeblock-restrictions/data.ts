@@ -189,9 +189,26 @@ export async function checkBatchTimeblockRestrictions(params: {
       const bookingTime = timeBlock.startTime; // HH:MM format
       const bookingDateStr = timeBlock.date; // Use the provided date string
 
-      // Parse date to get day of week
-      const bookingDate = new Date(bookingDateStr);
-      const dayOfWeek = bookingDate.getDay();
+      // Parse date to get day of week - ensure correct UTC handling
+      // Use the same date parsing approach as in getConfigForDate
+      if (!bookingDateStr) {
+        console.error("Missing booking date string");
+        continue; // Skip this timeblock
+      }
+
+      const dateParts = bookingDateStr.split("-");
+      if (dateParts.length !== 3) {
+        console.error("Invalid date format:", bookingDateStr);
+        continue; // Skip this timeblock
+      }
+
+      const year = parseInt(dateParts[0] || "0", 10);
+      const month = parseInt(dateParts[1] || "0", 10) - 1; // JS months are 0-indexed
+      const day = parseInt(dateParts[2] || "0", 10);
+
+      // Create date with explicit year/month/day to avoid timezone issues
+      const bookingDate = new Date(year, month, day);
+      const dayOfWeek = bookingDate.getDay(); // 0=Sunday, 1=Monday, etc.
 
       // Check course availability restrictions
       for (const restriction of courseRestrictions) {

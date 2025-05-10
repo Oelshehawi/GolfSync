@@ -162,6 +162,7 @@ export async function getMemberTeesheetDataWithRestrictions(
 
     if (Array.isArray(batchResults)) {
       // Map the results back to the timeBlocks
+
       timeBlocksWithRestrictions = timeBlocks.map((timeBlock) => {
         const restrictionResult = batchResults.find(
           (r: {

@@ -42,22 +42,27 @@ export async function createTimeBlocksForTeesheet(
     }
   }
 
-  // Create time blocks for each consecutive pair of times
-  const blocks = timeSlots.slice(0, -1).map((startTime, index) => {
-    const endTime = timeSlots[index + 1];
-    if (!endTime) {
-      throw new Error("Invalid time block: missing end time");
+  // Create time blocks for each time slot
+  const blocks = [];
+  for (let i = 0; i < timeSlots.length - 1; i++) {
+    const startTime = timeSlots[i];
+    const endTime = timeSlots[i + 1];
+
+    // Ensure both times are valid before adding to blocks
+    if (startTime && endTime) {
+      blocks.push({
+        clerkOrgId,
+        teesheetId,
+        startTime,
+        endTime,
+      });
     }
-    return {
-      clerkOrgId,
-      teesheetId,
-      startTime,
-      endTime,
-    };
-  });
+  }
 
   // Insert all blocks in a single query
-  await db.insert(timeBlocks).values(blocks);
+  if (blocks.length > 0) {
+    await db.insert(timeBlocks).values(blocks);
+  }
 }
 
 export async function getOrCreateTeesheet(

@@ -8,10 +8,8 @@ import {
 } from "~/server/db/schema";
 import type {
   TeesheetConfig,
-  TeesheetConfigRule,
 } from "~/app/types/TeeSheetTypes";
 import { format } from "date-fns";
-import { auth } from "@clerk/nextjs/server";
 
 function convertToTeesheetConfig(dbConfig: any): TeesheetConfig {
   return {

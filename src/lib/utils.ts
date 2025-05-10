@@ -30,12 +30,16 @@ export function generateTimeBlocks(config: TeesheetConfig): string[] {
   }
 
   // Generate all time slots
-  for (
-    let time = startTime;
-    time <= endTime;
-    time = addMinutes(time, interval)
-  ) {
+  let time = startTime;
+  while (time < endTime) {
     times.push(format(time, "HH:mm"));
+    time = addMinutes(time, interval);
+  }
+
+  // Ensure the end time is included if it's not already
+  const lastTime = times.length > 0 ? times[times.length - 1] : "";
+  if (lastTime !== config.endTime) {
+    times.push(config.endTime);
   }
 
   return times;
