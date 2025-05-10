@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import type {
   TeeSheet,
   TimeBlockWithMembers,
@@ -26,11 +27,15 @@ import { populateTimeBlocksWithRandomMembers } from "~/server/teesheet/actions";
 // Check if we're in development mode
 const isDev = process.env.NODE_ENV === "development";
 
+// Poll interval in milliseconds
+const POLL_INTERVAL = 5000;
+
 interface TeesheetViewProps {
   teesheet: TeeSheet;
   timeBlocks: TimeBlockWithMembers[];
   availableConfigs: TeesheetConfig[];
   paceOfPlayData?: TimeBlockWithPaceOfPlay[];
+  isAdmin?: boolean;
 }
 
 export function TeesheetView({
@@ -38,7 +43,9 @@ export function TeesheetView({
   timeBlocks,
   availableConfigs,
   paceOfPlayData = [],
+  isAdmin = true, // Default to true for backward compatibility
 }: TeesheetViewProps) {
+  const router = useRouter();
   const [isUpdating, setIsUpdating] = useState(false);
   const [violations, setViolations] = useState<RestrictionViolation[]>([]);
   const [showRestrictionAlert, setShowRestrictionAlert] = useState(false);
@@ -46,6 +53,20 @@ export function TeesheetView({
     (() => Promise<void>) | null
   >(null);
   const [isPopulating, setIsPopulating] = useState(false);
+
+  // Add polling for admin view only
+  useEffect(() => {
+    // Only poll if this is the admin view
+    if (!isAdmin) return;
+
+    // Set up polling interval
+    const interval = setInterval(() => {
+      router.refresh();
+    }, POLL_INTERVAL);
+
+    // Clean up interval on component unmount
+    return () => clearInterval(interval);
+  }, [router, isAdmin]);
 
   // Sort time blocks by start time (string comparison for HH:MM format)
   const sortedTimeBlocks = [...timeBlocks].sort((a, b) =>
@@ -210,6 +231,7 @@ export function TeesheetView({
             onRestrictionViolation={handleRestrictionViolations}
             setPendingAction={setPendingAction}
             paceOfPlay={paceOfPlayMap.get(block.id) || null}
+            showMemberClass={true}
           />
         ))}
       </div>

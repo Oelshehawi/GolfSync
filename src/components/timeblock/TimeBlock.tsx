@@ -47,6 +47,7 @@ interface TimeBlockProps {
     React.SetStateAction<(() => Promise<void>) | null>
   >;
   paceOfPlay?: PaceOfPlayRecord | null;
+  showMemberClass?: boolean;
 }
 
 export function TimeBlock({
@@ -54,6 +55,7 @@ export function TimeBlock({
   onRestrictionViolation,
   setPendingAction,
   paceOfPlay = null,
+  showMemberClass = false,
 }: TimeBlockProps) {
   const formattedTime = formatDisplayTime(timeBlock.startTime);
   const totalPeople = timeBlock.members.length + timeBlock.guests.length;
@@ -364,8 +366,16 @@ export function TimeBlock({
                       : "bg-blue-50"
                   }`}
                 >
-                  <div className="truncate text-xs text-gray-700">
+                  <div
+                    className="truncate text-xs text-gray-700"
+                    title={`${member.firstName} ${member.lastName} (${member.memberNumber})${member.class ? ` [${member.class}]` : ""}`}
+                  >
                     {member.firstName} {member.lastName} ({member.memberNumber})
+                    {showMemberClass && member.class && (
+                      <span className="ml-1 text-xs font-medium text-blue-600">
+                        [{member.class}]
+                      </span>
+                    )}
                     {member.checkedIn && (
                       <span className="ml-1 text-xs text-green-600">✓</span>
                     )}

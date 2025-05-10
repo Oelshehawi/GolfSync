@@ -34,7 +34,6 @@ interface TimeBlockPersonItemProps {
   type: PersonType;
   person: TimeBlockMemberView | TimeBlockGuest;
   onRemove: (id: number, type: PersonType) => Promise<void>;
-
 }
 
 export const TimeBlockPersonItem = ({
@@ -54,12 +53,22 @@ export const TimeBlockPersonItem = ({
   let lastName = "";
   let subtitle = "";
   let memberInfo = null;
+  let memberClass = null;
 
   if (type === "member") {
     const member = person as TimeBlockMemberView;
     firstName = member.firstName;
     lastName = member.lastName;
     subtitle = `#${member.memberNumber}`;
+
+    // Add member class badge if available
+    if (member.class) {
+      memberClass = (
+        <Badge variant="secondary" className="ml-2 text-xs">
+          {member.class}
+        </Badge>
+      );
+    }
   } else {
     const guest = person as TimeBlockGuest;
     firstName = guest.guest.firstName;
@@ -87,6 +96,7 @@ export const TimeBlockPersonItem = ({
             <Badge variant="outline" className="text-xs">
               {type === "member" ? "Member" : "Guest"}
             </Badge>
+            {memberClass}
           </div>
           <p className="text-sm text-gray-500">{subtitle}</p>
         </div>
@@ -108,7 +118,6 @@ interface TimeBlockPeopleListProps {
   onRemoveGuest: (guestId: number) => Promise<void>;
   title?: string;
   maxPeople?: number;
- 
 }
 
 export function TimeBlockPeopleList({
@@ -196,7 +205,6 @@ interface TimeBlockMemberSearchProps {
   isLoading: boolean;
   onAddMember: (memberId: number) => Promise<void>;
   isTimeBlockFull: boolean;
-
 }
 
 export function TimeBlockMemberSearch({
@@ -236,7 +244,6 @@ export function TimeBlockMemberSearch({
             size="sm"
             onClick={() => onAddMember(member.id)}
             disabled={isTimeBlockFull}
-       
           >
             <UserPlus className="mr-2 h-4 w-4" />
             Add
@@ -274,7 +281,6 @@ interface TimeBlockGuestSearchProps {
   members: Member[];
   onMemberSelect: (memberId: number) => void;
   selectedMemberId: number | null;
-
 }
 
 export function TimeBlockGuestSearch({
@@ -330,7 +336,6 @@ export function TimeBlockGuestSearch({
             size="sm"
             onClick={() => onAddGuest(guest.id)}
             disabled={isTimeBlockFull || !selectedMemberId}
-       
           >
             <UserPlus className="mr-2 h-4 w-4" />
             Add
