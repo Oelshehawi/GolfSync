@@ -145,8 +145,15 @@ export async function createMember(data: {
   bagNumber?: string;
 }) {
   const orgId = await getOrganizationId();
-  await db.insert(members).values({
+
+  // Handle empty date string by converting it to null
+  const processedData = {
     ...data,
+    dateOfBirth: data.dateOfBirth === "" ? null : data.dateOfBirth,
+  };
+
+  await db.insert(members).values({
+    ...processedData,
     clerkOrgId: orgId,
   });
 
@@ -169,9 +176,16 @@ export async function updateMember(
   },
 ) {
   const orgId = await getOrganizationId();
+
+  // Handle empty date string by converting it to null
+  const processedData = {
+    ...data,
+    dateOfBirth: data.dateOfBirth === "" ? null : data.dateOfBirth,
+  };
+
   await db
     .update(members)
-    .set(data)
+    .set(processedData)
     .where(and(eq(members.id, id), eq(members.clerkOrgId, orgId)));
 
   revalidatePath("/admin/members");

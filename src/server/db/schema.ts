@@ -189,6 +189,53 @@ export const timeBlocks = createTable(
   ],
 );
 
+// Pace of Play table
+export const paceOfPlay = createTable(
+  "pace_of_play",
+  {
+    id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+    clerkOrgId: varchar("clerk_org_id", { length: 50 }).notNull(),
+    timeBlockId: integer("time_block_id")
+      .references(() => timeBlocks.id, { onDelete: "cascade" })
+      .notNull(),
+    startTime: timestamp("start_time", { withTimezone: true }),
+    turn9Time: timestamp("turn9_time", { withTimezone: true }),
+    finishTime: timestamp("finish_time", { withTimezone: true }),
+    expectedStartTime: timestamp("expected_start_time", {
+      withTimezone: true,
+    }).notNull(),
+    expectedTurn9Time: timestamp("expected_turn9_time", {
+      withTimezone: true,
+    }).notNull(),
+    expectedFinishTime: timestamp("expected_finish_time", {
+      withTimezone: true,
+    }).notNull(),
+    status: varchar("status", { length: 20 }).default("pending").notNull(), // pending, on_time, behind, ahead, completed
+    lastUpdatedBy: varchar("last_updated_by", { length: 100 }),
+    notes: text("notes"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).$onUpdate(
+      () => new Date(),
+    ),
+  },
+  (table) => [
+    index("pace_of_play_org_id_idx").on(table.clerkOrgId),
+    index("pace_of_play_time_block_id_idx").on(table.timeBlockId),
+    index("pace_of_play_status_idx").on(table.status),
+    unique("pace_of_play_time_block_id_unq").on(table.timeBlockId),
+  ],
+);
+
+// Define relations for paceOfPlay
+export const paceOfPlayRelations = relations(paceOfPlay, ({ one }) => ({
+  timeBlock: one(timeBlocks, {
+    fields: [paceOfPlay.timeBlockId],
+    references: [timeBlocks.id],
+  }),
+}));
+
 // Define relations for teesheets
 export const teesheetsRelations = relations(teesheets, ({ many, one }) => ({
   timeBlocks: many(timeBlocks),
@@ -347,10 +394,14 @@ export const timeBlockGuestsRelations = relations(
   }),
 );
 
-// Update timeBlocks relations to include timeBlockMembers and timeBlockGuests
+// Update timeBlocks relations to include timeBlockMembers, timeBlockGuests, and paceOfPlay
 export const timeBlocksRelations = relations(timeBlocks, ({ many, one }) => ({
   timeBlockMembers: many(timeBlockMembers),
   timeBlockGuests: many(timeBlockGuests),
+  paceOfPlay: one(paceOfPlay, {
+    fields: [timeBlocks.id],
+    references: [paceOfPlay.timeBlockId],
+  }),
   teesheet: one(teesheets, {
     fields: [timeBlocks.teesheetId],
     references: [teesheets.id],

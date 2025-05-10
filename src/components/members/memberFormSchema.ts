@@ -8,7 +8,10 @@ export const memberFormSchema = z.object({
   email: z.string().email("Invalid email address"),
   class: z.string().min(1, "Class is required"),
   gender: z.string().optional(),
-  dateOfBirth: z.string().optional(),
+  dateOfBirth: z
+    .string()
+    .optional()
+    .transform((val) => (val === "" ? null : val)),
   handicap: z.string().optional(),
   bagNumber: z.string().optional(),
 });

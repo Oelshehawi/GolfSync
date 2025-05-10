@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { getTeesheetConfigs } from "~/server/settings/data";
 import { formatCalendarDate } from "~/lib/utils";
 import { parse } from "date-fns";
+import { getAllPaceOfPlayForDate } from "~/server/pace-of-play/actions";
 
 interface PageProps {
   searchParams?: {
@@ -57,6 +58,9 @@ export default async function AdminPage({ searchParams }: PageProps) {
     const timeBlocks = await getTimeBlocksForTeesheet(teesheet.id);
     const configsResult = await getTeesheetConfigs();
 
+    // Fetch pace of play data for all time blocks
+    const paceOfPlayData = await getAllPaceOfPlayForDate(date);
+
     if (!Array.isArray(configsResult)) {
       throw new Error(configsResult.error || "Failed to load configurations");
     }
@@ -75,6 +79,7 @@ export default async function AdminPage({ searchParams }: PageProps) {
               teesheet={teesheet}
               timeBlocks={timeBlocks}
               availableConfigs={configsResult}
+              paceOfPlayData={paceOfPlayData}
             />
           </CardContent>
         </Card>

@@ -427,3 +427,31 @@ export function formatTimeStringTo12Hour(
 
   return `${hour12}:${minuteStr} ${ampm}`;
 }
+
+/**
+ * Safely formats a database timestamp for pace of play display
+ * Handles null values and ensures proper local time display
+ * @param timestamp Database timestamp that might be null
+ * @param includeDate Whether to include the date in the output
+ * @returns Formatted time string or placeholder if timestamp is null
+ */
+export function formatPaceOfPlayTimestamp(
+  timestamp: Date | string | null | undefined,
+  includeDate = false,
+): string {
+  if (!timestamp) return "—";
+
+  try {
+    const date =
+      typeof timestamp === "string" ? new Date(timestamp) : timestamp;
+
+    // Validate the date is not invalid
+    if (isNaN(date.getTime())) return "Invalid Date";
+
+    // Format with or without date
+    return includeDate ? format(date, "MMM d, h:mm a") : format(date, "h:mm a");
+  } catch (error) {
+    console.error("Error formatting timestamp:", error);
+    return "Invalid Date";
+  }
+}

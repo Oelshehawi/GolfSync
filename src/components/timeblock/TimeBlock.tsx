@@ -2,10 +2,18 @@
 
 import { format } from "date-fns";
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { TimeBlockWithMembers } from "~/app/types/TeeSheetTypes";
 import { Button } from "~/components/ui/button";
-import { X, UserCheck, UserX, Users, Edit, Check } from "lucide-react";
+import {
+  X,
+  UserCheck,
+  UserX,
+  Users,
+  Edit,
+  Check,
+  Activity,
+} from "lucide-react";
 import { toast } from "react-hot-toast";
 import {
   removeTimeBlockMember,
@@ -18,6 +26,12 @@ import {
 import { Textarea } from "~/components/ui/textarea";
 import { RestrictionViolation } from "~/app/types/RestrictionTypes";
 import { formatDisplayTime } from "~/lib/utils";
+import { PaceOfPlayStatus } from "~/components/pace-of-play/PaceOfPlayStatus";
+import { getPaceOfPlayByTimeBlockId } from "~/server/pace-of-play/data";
+import type {
+  PaceOfPlayRecord,
+  PaceOfPlayStatus as PaceOfPlayStatusType,
+} from "~/server/pace-of-play/data";
 
 // Extended ActionResult type to include violations
 type ExtendedActionResult = {
@@ -32,12 +46,14 @@ interface TimeBlockProps {
   setPendingAction?: React.Dispatch<
     React.SetStateAction<(() => Promise<void>) | null>
   >;
+  paceOfPlay?: PaceOfPlayRecord | null;
 }
 
 export function TimeBlock({
   timeBlock,
   onRestrictionViolation,
   setPendingAction,
+  paceOfPlay = null,
 }: TimeBlockProps) {
   const formattedTime = formatDisplayTime(timeBlock.startTime);
   const totalPeople = timeBlock.members.length + timeBlock.guests.length;
@@ -248,6 +264,14 @@ export function TimeBlock({
         </Link>
         <div className="flex items-center gap-2">
           <span className="text-xs text-gray-500">{totalPeople}/4 spots</span>
+          {paceOfPlay?.status && (
+            <div className="ml-2 flex items-center gap-1">
+              <Activity className="h-4 w-4" />
+              <PaceOfPlayStatus
+                status={paceOfPlay.status as PaceOfPlayStatusType}
+              />
+            </div>
+          )}
           {totalPeople > 0 && (
             <Button
               variant="outline"

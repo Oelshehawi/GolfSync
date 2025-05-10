@@ -40,9 +40,7 @@ const Navigation = ({ logoUrl, organizationName }: NavigationProps) => {
                 />
               </div>
             ) : (
-              <div
-                className="h-10 w-10 rounded bg-[var(--org-tertiary)]"
-              />
+              <div className="h-10 w-10 rounded bg-[var(--org-tertiary)]" />
             )}
           </Link>
 
@@ -88,9 +86,9 @@ const Navigation = ({ logoUrl, organizationName }: NavigationProps) => {
 
       {/* Mobile Navigation */}
       <div
-        className={`absolute inset-x-0 bg-[var(--org-primary)] top-full md:hidden transform transition-all duration-300 ${
+        className={`absolute inset-x-0 top-full transform bg-[var(--org-primary)] transition-all duration-300 md:hidden ${
           isMobileMenuOpen
-            ? "translate-y-0  opacity-100"
+            ? "translate-y-0 opacity-100"
             : "pointer-events-none -translate-y-2 opacity-0"
         }`}
       >
