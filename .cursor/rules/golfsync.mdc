@@ -7,7 +7,7 @@ alwaysApply: true
 # Your rule content
 
 - COME UP WITH IMPLEMENATION FOR ANY PROMPT I SEND, AND EXPLAIN HOW YOU WILL IMPLEMENT, WHAT FILES WILL BE EDITED AND GET AGREEMENT FROM ME BEFORE ACTUALY EDITING OR CHANGING FILES
-- I'm using NEXTJS as a framework
+- refer to other similar sections of app to ensure consistency
 - use ui components in components folder whenever possible for styling
 - all server side functions or functions that interact with server should check for organization id
 - refer to [schema.ts](mdc:src/server/db/schema.ts) when doing anything with database to gain proper understanding of what needs to be updated

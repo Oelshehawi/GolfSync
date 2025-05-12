@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Ban, Plus } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import {
@@ -24,7 +24,8 @@ interface CourseAvailabilityProps {
   onUpdate: (restriction: TimeblockRestriction) => void;
   onAdd: (restriction: TimeblockRestriction) => void;
   onDelete: (restrictionId: number) => void;
-
+  highlightId?: number | null;
+  onDialogClose?: () => void;
 }
 
 export function CourseAvailability({
@@ -32,6 +33,8 @@ export function CourseAvailability({
   onUpdate,
   onAdd,
   onDelete,
+  highlightId,
+  onDialogClose,
 }: CourseAvailabilityProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedRestriction, setSelectedRestriction] = useState<
@@ -42,6 +45,15 @@ export function CourseAvailability({
     TimeblockRestriction | undefined
   >();
 
+  useEffect(() => {
+    if (highlightId) {
+      const restriction = restrictions.find((r) => r.id === highlightId);
+      if (restriction) {
+        handleOpenDialog(restriction);
+      }
+    }
+  }, [highlightId, restrictions]);
+
   const handleOpenDialog = (restriction?: TimeblockRestriction) => {
     setSelectedRestriction(restriction);
     setIsDialogOpen(true);
@@ -50,6 +62,9 @@ export function CourseAvailability({
   const handleCloseDialog = () => {
     setIsDialogOpen(false);
     setSelectedRestriction(undefined);
+    if (onDialogClose) {
+      onDialogClose();
+    }
   };
 
   const handleDeleteClick = (restriction: TimeblockRestriction) => {
@@ -107,16 +122,11 @@ export function CourseAvailability({
 
       {restrictions.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-8 text-center">
-          <Ban
-            className="mb-2 h-10 w-10"
- 
-          />
+          <Ban className="mb-2 h-10 w-10" />
           <h3 className="text-lg font-medium">
             No course availability restrictions
           </h3>
-          <p
-
-          >
+          <p>
             Add restrictions for weather conditions, maintenance, or special
             events
           </p>
@@ -129,6 +139,7 @@ export function CourseAvailability({
               restriction={restriction}
               onEdit={() => handleOpenDialog(restriction)}
               onDelete={() => handleDeleteClick(restriction)}
+              isHighlighted={restriction.id === highlightId}
             />
           ))}
         </div>

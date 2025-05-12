@@ -12,7 +12,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "~/components/ui/alert-dialog";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { RestrictionCard } from "./RestrictionCard";
 import { TimeblockRestrictionDialog } from "./TimeblockRestrictionDialog";
 import { TimeblockRestriction } from "./TimeblockRestrictionsSettings";
@@ -24,7 +24,8 @@ interface GuestRestrictionsProps {
   onUpdate: (restriction: TimeblockRestriction) => void;
   onAdd: (restriction: TimeblockRestriction) => void;
   onDelete: (restrictionId: number) => void;
-
+  highlightId?: number | null;
+  onDialogClose?: () => void;
 }
 
 export function GuestRestrictions({
@@ -32,6 +33,8 @@ export function GuestRestrictions({
   onUpdate,
   onAdd,
   onDelete,
+  highlightId,
+  onDialogClose,
 }: GuestRestrictionsProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedRestriction, setSelectedRestriction] = useState<
@@ -42,6 +45,15 @@ export function GuestRestrictions({
     TimeblockRestriction | undefined
   >();
 
+  useEffect(() => {
+    if (highlightId) {
+      const restriction = restrictions.find((r) => r.id === highlightId);
+      if (restriction) {
+        handleOpenDialog(restriction);
+      }
+    }
+  }, [highlightId, restrictions]);
+
   const handleOpenDialog = (restriction?: TimeblockRestriction) => {
     setSelectedRestriction(restriction);
     setIsDialogOpen(true);
@@ -50,6 +62,9 @@ export function GuestRestrictions({
   const handleCloseDialog = () => {
     setIsDialogOpen(false);
     setSelectedRestriction(undefined);
+    if (onDialogClose) {
+      onDialogClose();
+    }
   };
 
   const handleDeleteClick = (restriction: TimeblockRestriction) => {
@@ -103,16 +118,9 @@ export function GuestRestrictions({
 
       {restrictions.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-8 text-center">
-          <Ban
-            className="mb-2 h-10 w-10"
-     
-          />
+          <Ban className="mb-2 h-10 w-10" />
           <h3 className="text-lg font-medium">No guest restrictions</h3>
-          <p
-        
-          >
-            Add restrictions to limit when guests can book or how often
-          </p>
+          <p>Add restrictions to limit when guests can book or how often</p>
         </div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -122,6 +130,7 @@ export function GuestRestrictions({
               restriction={restriction}
               onEdit={() => handleOpenDialog(restriction)}
               onDelete={() => handleDeleteClick(restriction)}
+              isHighlighted={restriction.id === highlightId}
             />
           ))}
         </div>

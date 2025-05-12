@@ -18,12 +18,14 @@ interface RestrictionCardProps {
   restriction: TimeblockRestriction;
   onEdit: () => void;
   onDelete: () => void;
+  isHighlighted?: boolean;
 }
 
 export function RestrictionCard({
   restriction,
   onEdit,
   onDelete,
+  isHighlighted = false,
 }: RestrictionCardProps) {
   const getEntityIcon = () => {
     switch (restriction.restrictionCategory) {
@@ -146,7 +148,9 @@ export function RestrictionCard({
   const badgeClass = getBadgeColor();
 
   return (
-    <Card className="overflow-hidden">
+    <Card
+      className={`overflow-hidden transition-all duration-200 ${isHighlighted ? "ring-primary ring-2" : ""}`}
+    >
       <div
         className="h-2"
         style={{

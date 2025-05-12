@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Card,
   CardDescription,
@@ -12,6 +12,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { MemberClassRestrictions } from "./MemberClassRestrictions";
 import { GuestRestrictions } from "./GuestRestrictions";
 import { CourseAvailability } from "./CourseAvailability";
+import { Button } from "~/components/ui/button";
+import { Search } from "lucide-react";
+import { TimeblockRestrictionsSearch } from "./TimeblockRestrictionsDialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "~/components/ui/dialog";
 
 export type TimeblockRestriction = {
   id: number;
@@ -44,7 +54,6 @@ export type TimeblockRestriction = {
 interface TimeblockRestrictionsSettingsProps {
   initialRestrictions: TimeblockRestriction[];
   memberClasses: string[];
-
 }
 
 export function TimeblockRestrictionsSettings({
@@ -53,6 +62,24 @@ export function TimeblockRestrictionsSettings({
 }: TimeblockRestrictionsSettingsProps) {
   const [restrictions, setRestrictions] =
     useState<TimeblockRestriction[]>(initialRestrictions);
+  const [searchDialogOpen, setSearchDialogOpen] = useState(false);
+  const [selectedTab, setSelectedTab] = useState("memberClass");
+  const [selectedRestrictionId, setSelectedRestrictionId] = useState<
+    number | null
+  >(null);
+
+  // Reset selectedRestrictionId when tabs change
+  const handleTabChange = (value: string) => {
+    setSelectedTab(value);
+    // Clear any selected restriction to prevent dialog from opening
+    setSelectedRestrictionId(null);
+  };
+
+  // Handle when a dialog is closed in any of the child components
+  const handleDialogClosed = () => {
+    // Clear the selected restriction ID when any dialog is closed
+    setSelectedRestrictionId(null);
+  };
 
   // Filter restrictions by category
   const memberClassRestrictions = restrictions.filter(
@@ -85,20 +112,63 @@ export function TimeblockRestrictionsSettings({
     setRestrictions((prev) => prev.filter((r) => r.id !== restrictionId));
   };
 
+  const handleRestrictionsSearch = (restrictionId: number) => {
+    const foundRestriction = restrictions.find((r) => r.id === restrictionId);
+    if (foundRestriction) {
+      // Set the tab based on the restriction category
+      const tabMapping = {
+        MEMBER_CLASS: "memberClass",
+        GUEST: "guest",
+        COURSE_AVAILABILITY: "courseAvailability",
+      };
+
+      const tab =
+        tabMapping[foundRestriction.restrictionCategory] || "memberClass";
+      setSelectedTab(tab);
+      setSelectedRestrictionId(restrictionId);
+      setSearchDialogOpen(false);
+    }
+  };
+
   return (
     <Card className="rounded-lg">
       <CardHeader>
-        <CardTitle className="text-2xl font-bold">
-          Timeblock Restrictions
-        </CardTitle>
-        <CardDescription>
-          Manage time, frequency, and availability restrictions for members,
-          guests, and course
-        </CardDescription>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle className="text-2xl font-bold">
+              Timeblock Restrictions
+            </CardTitle>
+            <CardDescription>
+              Manage time, frequency, and availability restrictions for members,
+              guests, and course
+            </CardDescription>
+          </div>
+          <Dialog open={searchDialogOpen} onOpenChange={setSearchDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" className="gap-2">
+                <Search className="h-4 w-4" />
+                Search Restrictions
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-3xl">
+              <DialogHeader>
+                <DialogTitle>Search Restrictions</DialogTitle>
+              </DialogHeader>
+              <TimeblockRestrictionsSearch
+                restrictions={restrictions}
+                onSelect={handleRestrictionsSearch}
+              />
+            </DialogContent>
+          </Dialog>
+        </div>
       </CardHeader>
 
       <CardContent className="pb-6">
-        <Tabs defaultValue="memberClass" className="w-full">
+        <Tabs
+          value={selectedTab}
+          onValueChange={handleTabChange}
+          className="w-full"
+        >
           <TabsList className="mx-auto mb-4 w-full max-w-[600px]">
             <TabsTrigger value="memberClass" className="flex-1">
               Member Classes
@@ -118,6 +188,10 @@ export function TimeblockRestrictionsSettings({
               onUpdate={handleRestrictionUpdate}
               onAdd={handleRestrictionAdd}
               onDelete={handleRestrictionDelete}
+              highlightId={
+                selectedTab === "memberClass" ? selectedRestrictionId : null
+              }
+              onDialogClose={handleDialogClosed}
             />
           </TabsContent>
 
@@ -127,6 +201,10 @@ export function TimeblockRestrictionsSettings({
               onUpdate={handleRestrictionUpdate}
               onAdd={handleRestrictionAdd}
               onDelete={handleRestrictionDelete}
+              highlightId={
+                selectedTab === "guest" ? selectedRestrictionId : null
+              }
+              onDialogClose={handleDialogClosed}
             />
           </TabsContent>
 
@@ -136,6 +214,12 @@ export function TimeblockRestrictionsSettings({
               onUpdate={handleRestrictionUpdate}
               onAdd={handleRestrictionAdd}
               onDelete={handleRestrictionDelete}
+              highlightId={
+                selectedTab === "courseAvailability"
+                  ? selectedRestrictionId
+                  : null
+              }
+              onDialogClose={handleDialogClosed}
             />
           </TabsContent>
         </Tabs>

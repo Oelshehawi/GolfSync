@@ -1,9 +1,13 @@
 "use server";
 
 import { db } from "~/server/db";
-import { eq, and, or, isNull } from "drizzle-orm";
+import { eq, and, or, isNull, gte, lte, ilike, desc } from "drizzle-orm";
 import { getOrganizationId } from "~/lib/auth";
-import { timeblockRestrictions, members } from "~/server/db/schema";
+import {
+  timeblockRestrictions,
+  members,
+  timeblockOverrides,
+} from "~/server/db/schema";
 import {
   formatCalendarDate,
   formatDateToYYYYMMDD,
@@ -348,5 +352,80 @@ export async function checkBatchTimeblockRestrictions(params: {
   } catch (error) {
     console.error("Error checking batch timeblock restrictions:", error);
     return { success: false, error: "Failed to check restrictions" };
+  }
+}
+
+// Get timeblock restriction overrides with optional filtering
+export async function getTimeblockOverrides(params?: {
+  restrictionId?: number;
+  timeBlockId?: number;
+  memberId?: number;
+  guestId?: number;
+  startDate?: Date;
+  endDate?: Date;
+  searchTerm?: string;
+}): Promise<ResultType<any[]>> {
+  try {
+    const orgId = await getOrganizationId();
+    if (!orgId) {
+      return { success: false, error: "No organization selected" };
+    }
+
+    // Start with the base query conditions
+    let conditions = [eq(timeblockOverrides.clerkOrgId, orgId)];
+
+    // Add optional filters
+    if (params?.restrictionId) {
+      conditions.push(
+        eq(timeblockOverrides.restrictionId, params.restrictionId),
+      );
+    }
+
+    if (params?.timeBlockId) {
+      conditions.push(eq(timeblockOverrides.timeBlockId, params.timeBlockId));
+    }
+
+    if (params?.memberId) {
+      conditions.push(eq(timeblockOverrides.memberId, params.memberId));
+    }
+
+    if (params?.guestId) {
+      conditions.push(eq(timeblockOverrides.guestId, params.guestId));
+    }
+
+    // Date range filter
+    if (params?.startDate) {
+      conditions.push(gte(timeblockOverrides.createdAt, params.startDate));
+    }
+
+    if (params?.endDate) {
+      const endOfDay = new Date(params.endDate);
+      endOfDay.setHours(23, 59, 59, 999);
+      conditions.push(lte(timeblockOverrides.createdAt, endOfDay));
+    }
+
+    // Text search for reason field
+    if (params?.searchTerm) {
+      conditions.push(
+        ilike(timeblockOverrides.reason, `%${params.searchTerm}%`),
+      );
+    }
+
+    // Execute the query with relations
+    const overrides = await db.query.timeblockOverrides.findMany({
+      where: and(...conditions),
+      with: {
+        restriction: true,
+        timeBlock: true,
+        member: true,
+        guest: true,
+      },
+      orderBy: [desc(timeblockOverrides.createdAt)],
+    });
+
+    return overrides;
+  } catch (error) {
+    console.error("Error getting timeblock overrides:", error);
+    return { success: false, error: "Failed to get overrides" };
   }
 }

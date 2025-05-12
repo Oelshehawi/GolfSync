@@ -12,7 +12,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "~/components/ui/alert-dialog";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { RestrictionCard } from "./RestrictionCard";
 import { TimeblockRestrictionDialog } from "./TimeblockRestrictionDialog";
 import { TimeblockRestriction } from "./TimeblockRestrictionsSettings";
@@ -25,6 +25,8 @@ interface MemberClassRestrictionsProps {
   onUpdate: (restriction: TimeblockRestriction) => void;
   onAdd: (restriction: TimeblockRestriction) => void;
   onDelete: (restrictionId: number) => void;
+  highlightId?: number | null;
+  onDialogClose?: () => void;
 }
 
 export function MemberClassRestrictions({
@@ -33,6 +35,8 @@ export function MemberClassRestrictions({
   onUpdate,
   onAdd,
   onDelete,
+  highlightId,
+  onDialogClose,
 }: MemberClassRestrictionsProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedRestriction, setSelectedRestriction] = useState<
@@ -43,6 +47,15 @@ export function MemberClassRestrictions({
     TimeblockRestriction | undefined
   >();
 
+  useEffect(() => {
+    if (highlightId) {
+      const restriction = restrictions.find((r) => r.id === highlightId);
+      if (restriction) {
+        handleOpenDialog(restriction);
+      }
+    }
+  }, [highlightId, restrictions]);
+
   const handleOpenDialog = (restriction?: TimeblockRestriction) => {
     setSelectedRestriction(restriction);
     setIsDialogOpen(true);
@@ -51,6 +64,9 @@ export function MemberClassRestrictions({
   const handleCloseDialog = () => {
     setIsDialogOpen(false);
     setSelectedRestriction(undefined);
+    if (onDialogClose) {
+      onDialogClose();
+    }
   };
 
   const handleDeleteClick = (restriction: TimeblockRestriction) => {
@@ -116,6 +132,7 @@ export function MemberClassRestrictions({
               restriction={restriction}
               onEdit={() => handleOpenDialog(restriction)}
               onDelete={() => handleDeleteClick(restriction)}
+              isHighlighted={restriction.id === highlightId}
             />
           ))}
         </div>
