@@ -108,7 +108,7 @@ export function DatePickerCalendarRange({
           onClick={previousMonth}
           className={cn(
             buttonVariants({ variant: "outline" }),
-            "absolute left-1 h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100",
+            "hover:bg-opacity-20 absolute left-1 h-7 w-7 cursor-pointer bg-transparent p-0 !text-black opacity-50 hover:border-[var(--org-primary)] hover:bg-[var(--org-secondary)] hover:opacity-100",
           )}
         >
           <ChevronLeft className="h-4 w-4" />
@@ -120,7 +120,7 @@ export function DatePickerCalendarRange({
           onClick={nextMonth}
           className={cn(
             buttonVariants({ variant: "outline" }),
-            "absolute right-1 h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100",
+            "hover:bg-opacity-20 absolute right-1 h-7 w-7 cursor-pointer bg-transparent p-0 !text-black opacity-50 hover:border-[var(--org-primary)] hover:bg-[var(--org-secondary)] hover:opacity-100",
           )}
         >
           <ChevronRight className="h-4 w-4" />
@@ -154,25 +154,25 @@ export function DatePickerCalendarRange({
               type="button"
               onClick={() => handleSelect(day)}
               className={cn(
-                "relative h-9 w-9 p-0 text-center text-sm font-normal",
+                "relative h-9 w-9 cursor-pointer p-0 text-center text-sm font-normal",
                 isCurrentMonth
                   ? "text-foreground"
                   : "text-muted-foreground opacity-50",
-                isStart && "bg-primary text-primary-foreground rounded-l-md",
-                isEnd && "bg-primary text-primary-foreground rounded-r-md",
+                isStart && "rounded-l-md bg-[var(--org-primary)] text-white",
+                isEnd && "rounded-r-md bg-[var(--org-primary)] text-white",
                 isWithinSelectedRange &&
                   !isStart &&
                   !isEnd &&
-                  "bg-accent text-accent-foreground",
+                  "text-foreground bg-opacity-30 bg-[var(--org-secondary)]",
                 isCurrentDay &&
                   !isWithinSelectedRange &&
                   !isStart &&
                   !isEnd &&
-                  "border-accent border",
+                  "border border-[var(--org-secondary)]",
                 !isWithinSelectedRange &&
                   !isStart &&
                   !isEnd &&
-                  "hover:bg-accent hover:text-accent-foreground",
+                  "hover:text-foreground hover:bg-opacity-20 hover:bg-[var(--org-secondary)]",
                 // Add extra styling to create connected range appearance
                 isWithinSelectedRange && "rounded-none",
               )}

@@ -3,7 +3,7 @@ import "~/styles/globals.css";
 import { HeaderNav } from "../../components/member-teesheet-client/HeaderNav";
 import { Footer } from "~/components/member-teesheet-client/Footer";
 import { ClerkProvider } from "@clerk/nextjs";
-
+import { Toaster } from "react-hot-toast";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata = {
@@ -23,6 +23,7 @@ export default function MembersLayout({
         <main className="container mx-auto flex-1 p-4">{children}</main>
         <Footer />
       </div>
+      <Toaster position="top-right" />
     </ClerkProvider>
   );
 }

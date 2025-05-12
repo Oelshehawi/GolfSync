@@ -33,7 +33,6 @@ export function DatePicker({
   setDateRange,
   isRangePicker = false,
 }: DatePickerProps) {
-
   // State to track if the popover is open
   const [isOpen, setIsOpen] = React.useState(false);
 
@@ -60,8 +59,9 @@ export function DatePicker({
         <Button
           variant={"outline"}
           className={cn(
-            "w-full justify-start text-left font-normal",
+            "w-full cursor-pointer justify-start text-left font-normal",
             !date && !dateRange?.from && "text-muted-foreground",
+            "hover:bg-opacity-20 hover:border-[var(--org-primary)] hover:bg-[var(--org-secondary)]",
             className,
           )}
         >

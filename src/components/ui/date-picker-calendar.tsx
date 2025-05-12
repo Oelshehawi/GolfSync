@@ -64,7 +64,7 @@ export function DatePickerCalendar({
           onClick={previousMonth}
           className={cn(
             buttonVariants({ variant: "outline" }),
-            "absolute left-1 h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100",
+            "hover:bg-opacity-20 absolute left-1 h-7 w-7 cursor-pointer bg-transparent p-0 !text-black opacity-50 hover:border-[var(--org-primary)] hover:bg-[var(--org-secondary)] hover:opacity-100",
           )}
         >
           <ChevronLeft className="h-4 w-4" />
@@ -76,7 +76,7 @@ export function DatePickerCalendar({
           onClick={nextMonth}
           className={cn(
             buttonVariants({ variant: "outline" }),
-            "absolute right-1 h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100",
+            "hover:bg-opacity-20 absolute right-1 h-7 w-7 cursor-pointer bg-transparent p-0 !text-black opacity-50 hover:border-[var(--org-primary)] hover:bg-[var(--org-secondary)] hover:opacity-100",
           )}
         >
           <ChevronRight className="h-4 w-4" />
@@ -108,17 +108,17 @@ export function DatePickerCalendar({
               type="button"
               onClick={() => onSelect(day)}
               className={cn(
-                "h-9 w-9 rounded-md p-0 text-center text-sm font-normal",
+                "h-9 w-9 cursor-pointer rounded-md p-0 text-center text-sm font-normal",
                 isCurrentMonth
                   ? "text-foreground"
                   : "text-muted-foreground opacity-50",
-                isSelectedDay && "bg-primary text-primary-foreground",
+                isSelectedDay && "bg-[var(--org-primary)] text-white",
                 isCurrentDay &&
                   !isSelectedDay &&
-                  "bg-accent text-accent-foreground",
+                  "text-foreground bg-[var(--org-secondary)]",
                 !isSelectedDay &&
                   !isCurrentDay &&
-                  "hover:bg-accent hover:text-accent-foreground",
+                  "hover:text-foreground hover:bg-opacity-20 hover:bg-[var(--org-secondary)]",
               )}
             >
               {format(day, "d")}

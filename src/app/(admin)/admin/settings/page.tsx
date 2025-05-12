@@ -14,9 +14,7 @@ import {
 import { TimeblockRestrictionsSettings } from "~/components/settings/timeblock-restrictions/TimeblockRestrictionsSettings";
 import { CourseInfoSettings } from "~/components/settings/course-info/CourseInfoSettings";
 import { getCourseInfo } from "~/server/settings/data";
-import Link from "next/link";
-import { ChevronLeft } from "lucide-react";
-import { Button } from "~/components/ui/button";
+import { PageHeader } from "~/components/ui/page-header";
 
 type CourseInfoType = {
   id?: number;
@@ -57,32 +55,16 @@ export default async function SettingsPage() {
 
   return (
     <div className="mx-auto max-w-[1200px] space-y-6">
-      {/* Back Link */}
-      <div className="pb-4">
-        <Button variant="outline" size="sm" asChild>
-          <Link href="/admin" className="flex items-center">
-            <ChevronLeft className="mr-2 h-4 w-4" />
-            Back
-          </Link>
-        </Button>
-      </div>
-
       {/* Header */}
-      <Card className="rounded-lg">
-        <CardHeader>
-          <CardTitle className="text-3xl font-bold tracking-tight">
-            Settings
-          </CardTitle>
-          <CardDescription>
-            Manage your teesheet settings and configurations
-          </CardDescription>
-        </CardHeader>
-      </Card>
+      <PageHeader
+        title="Settings"
+        description="Manage your teesheet settings and configurations"
+      />
 
       {/* Tabbed Interface */}
       <Tabs defaultValue="teesheet" className="w-full">
         <div className="mb-6 flex justify-center">
-          <TabsList className=" flex w-[600px]">
+          <TabsList className="flex w-[600px]">
             <TabsTrigger value="teesheet" className="flex-1">
               Teesheet Settings
             </TabsTrigger>

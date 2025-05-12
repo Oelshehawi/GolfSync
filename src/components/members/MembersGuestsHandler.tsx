@@ -23,7 +23,6 @@ export function MembersGuestsHandler({
 }: MembersGuestsHandlerProps) {
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Manage Members & Guests</h1>
 
       <Tabs defaultValue="members" className="w-full">
         <TabsList className="mb-4">

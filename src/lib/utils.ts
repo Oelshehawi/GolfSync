@@ -470,6 +470,20 @@ export function preserveDate(
 ): Date | undefined {
   if (!date) return undefined;
 
+  // If it's already a Date object, use it directly
+  if (date instanceof Date) {
+    // Create a new date at noon of the same day to avoid timezone issues
+    return new Date(
+      date.getFullYear(),
+      date.getMonth(),
+      date.getDate(),
+      12,
+      0,
+      0,
+      0,
+    );
+  }
+
   // If date is a string like "2025-05-05", parse it directly
   if (typeof date === "string" && date.match(/^\d{4}-\d{2}-\d{2}$/)) {
     // Split the date string into year, month, day
@@ -483,7 +497,7 @@ export function preserveDate(
   }
 
   try {
-    // Otherwise, use the existing date object or parse the string
+    // Otherwise, parse the string
     const d = new Date(date);
 
     // Check if the date is valid

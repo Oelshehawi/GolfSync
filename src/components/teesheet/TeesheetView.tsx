@@ -28,7 +28,7 @@ import { populateTimeBlocksWithRandomMembers } from "~/server/teesheet/actions";
 const isDev = process.env.NODE_ENV === "development";
 
 // Poll interval in milliseconds
-const POLL_INTERVAL = 5000;
+const POLL_INTERVAL = 30000;
 
 interface TeesheetViewProps {
   teesheet: TeeSheet;

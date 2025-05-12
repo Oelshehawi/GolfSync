@@ -67,6 +67,7 @@ export const members = createTable(
 // Define relations for members
 export const membersRelations = relations(members, ({ many }) => ({
   timeBlockMembers: many(timeBlockMembers),
+  eventRegistrations: many(eventRegistrations),
 }));
 
 // Teesheet configurations
@@ -543,3 +544,122 @@ export const timeblockOverridesRelations = relations(
     }),
   }),
 );
+
+// Events table
+export const events = createTable(
+  "events",
+  {
+    id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+    clerkOrgId: varchar("clerk_org_id", { length: 50 }).notNull(),
+    name: varchar("name", { length: 100 }).notNull(),
+    description: text("description").notNull(),
+    eventType: varchar("event_type", { length: 20 }).notNull(), // DINNER, TOURNAMENT, SOCIAL, etc.
+    startDate: varchar("start_date").notNull(),
+    endDate: varchar("end_date").notNull(),
+    startTime: varchar("start_time", { length: 5 }),
+    endTime: varchar("end_time", { length: 5 }),
+    location: varchar("location", { length: 100 }),
+    capacity: integer("capacity"),
+    requiresApproval: boolean("requires_approval").default(false),
+    registrationDeadline: varchar("registration_deadline"),
+    isActive: boolean("is_active").default(true),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).$onUpdate(
+      () => new Date(),
+    ),
+  },
+  (table) => [
+    index("events_org_id_idx").on(table.clerkOrgId),
+    index("events_type_idx").on(table.eventType),
+    index("events_date_idx").on(table.startDate),
+  ],
+);
+
+// Event registrations table
+export const eventRegistrations = createTable(
+  "event_registrations",
+  {
+    id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+    clerkOrgId: varchar("clerk_org_id", { length: 50 }).notNull(),
+    eventId: integer("event_id")
+      .references(() => events.id, { onDelete: "cascade" })
+      .notNull(),
+    memberId: integer("member_id")
+      .references(() => members.id, { onDelete: "cascade" })
+      .notNull(),
+    status: varchar("status", { length: 20 }).default("PENDING").notNull(), // PENDING, APPROVED, REJECTED
+    notes: text("notes"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).$onUpdate(
+      () => new Date(),
+    ),
+  },
+  (table) => [
+    index("event_registrations_org_id_idx").on(table.clerkOrgId),
+    index("event_registrations_event_id_idx").on(table.eventId),
+    index("event_registrations_member_id_idx").on(table.memberId),
+    unique("event_registrations_event_member_unq").on(
+      table.eventId,
+      table.memberId,
+    ),
+  ],
+);
+
+// Event Details for tournaments or special events
+export const eventDetails = createTable(
+  "event_details",
+  {
+    id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+    clerkOrgId: varchar("clerk_org_id", { length: 50 }).notNull(),
+    eventId: integer("event_id")
+      .references(() => events.id, { onDelete: "cascade" })
+      .notNull(),
+    format: varchar("format", { length: 50 }), // For tournaments: Scramble, Stroke Play, etc.
+    rules: text("rules"),
+    prizes: text("prizes"),
+    entryFee: real("entry_fee"),
+    additionalInfo: text("additional_info"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).$onUpdate(
+      () => new Date(),
+    ),
+  },
+  (table) => [
+    index("event_details_org_id_idx").on(table.clerkOrgId),
+    index("event_details_event_id_idx").on(table.eventId),
+    unique("event_details_event_id_unq").on(table.eventId),
+  ],
+);
+
+// Define relations
+export const eventsRelations = relations(events, ({ many, one }) => ({
+  registrations: many(eventRegistrations),
+  details: one(eventDetails),
+}));
+
+export const eventRegistrationsRelations = relations(
+  eventRegistrations,
+  ({ one }) => ({
+    event: one(events, {
+      fields: [eventRegistrations.eventId],
+      references: [events.id],
+    }),
+    member: one(members, {
+      fields: [eventRegistrations.memberId],
+      references: [members.id],
+    }),
+  }),
+);
+
+export const eventDetailsRelations = relations(eventDetails, ({ one }) => ({
+  event: one(events, {
+    fields: [eventDetails.eventId],
+    references: [events.id],
+  }),
+}));
