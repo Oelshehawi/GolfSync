@@ -39,6 +39,7 @@ import {
   updateTimeblockRestriction,
 } from "~/server/timeblock-restrictions/actions";
 import toast from "react-hot-toast";
+import { preserveDate } from "~/lib/utils";
 
 // Define the form schema based on the TimeblockRestriction type
 const formSchema = z.object({
@@ -48,7 +49,7 @@ const formSchema = z.object({
   restrictionType: z.enum(["TIME", "FREQUENCY", "AVAILABILITY"]),
   memberClass: z.string().optional(),
   isActive: z.boolean().default(true),
-  priority: z.number().default(0),
+  priority: z.coerce.number().default(0),
   canOverride: z.boolean().default(true),
 
   // Time restriction fields
@@ -57,14 +58,20 @@ const formSchema = z.object({
   daysOfWeek: z.array(z.number()).default([]),
 
   // Date range fields
-  startDate: z.date().nullable().optional(),
-  endDate: z.date().nullable().optional(),
+  startDate: z
+    .union([z.date(), z.null(), z.string(), z.undefined()])
+    .optional()
+    .nullable(),
+  endDate: z
+    .union([z.date(), z.null(), z.string(), z.undefined()])
+    .optional()
+    .nullable(),
 
   // Frequency restriction fields
-  maxCount: z.number().optional(),
-  periodDays: z.number().optional(),
+  maxCount: z.coerce.number().optional().nullable(),
+  periodDays: z.coerce.number().optional().nullable(),
   applyCharge: z.boolean().default(false),
-  chargeAmount: z.number().optional(),
+  chargeAmount: z.coerce.number().optional().nullable(),
 
   // Course availability fields
   isFullDay: z.boolean().default(false),
@@ -79,7 +86,6 @@ interface TimeblockRestrictionDialogProps {
   memberClasses?: string[];
   restrictionCategory: "MEMBER_CLASS" | "GUEST" | "COURSE_AVAILABILITY";
   onSuccess: (restriction: TimeblockRestriction) => void;
-
 }
 
 export function TimeblockRestrictionDialog({
@@ -93,6 +99,8 @@ export function TimeblockRestrictionDialog({
   const [isSubmitting, setIsSubmitting] = useState(false);
   // Track if the dialog was previously open to prevent reset loops
   const [wasOpen, setWasOpen] = useState(false);
+  // Add state to track submission attempts for debugging
+  const [submitAttempts, setSubmitAttempts] = useState(0);
 
   // Determine default restriction type based on category
   const getDefaultRestrictionType = () => {
@@ -108,9 +116,10 @@ export function TimeblockRestrictionDialog({
         existingRestriction.isFullDay ??
         (!existingRestriction.startTime && !existingRestriction.endTime);
 
-      return {
-        name: existingRestriction.name,
-        description: existingRestriction.description,
+      // Ensure values are properly formatted
+      const defaultValues = {
+        name: existingRestriction.name || "",
+        description: existingRestriction.description || "",
         restrictionCategory: existingRestriction.restrictionCategory as
           | "MEMBER_CLASS"
           | "GUEST"
@@ -119,23 +128,25 @@ export function TimeblockRestrictionDialog({
           | "TIME"
           | "FREQUENCY"
           | "AVAILABILITY",
-        memberClass: existingRestriction.memberClass,
+        memberClass: existingRestriction.memberClass || "",
         isActive: existingRestriction.isActive ?? true,
         priority: existingRestriction.priority ?? 0,
         canOverride: existingRestriction.canOverride ?? true,
-        startTime: existingRestriction.startTime,
-        endTime: existingRestriction.endTime,
+        startTime: existingRestriction.startTime || "",
+        endTime: existingRestriction.endTime || "",
         daysOfWeek: existingRestriction.daysOfWeek || [],
-        startDate: existingRestriction.startDate,
-        endDate: existingRestriction.endDate,
-        maxCount: existingRestriction.maxCount,
-        periodDays: existingRestriction.periodDays,
+        startDate: existingRestriction.startDate || null,
+        endDate: existingRestriction.endDate || null,
+        maxCount: existingRestriction.maxCount ?? null,
+        periodDays: existingRestriction.periodDays ?? null,
         applyCharge: existingRestriction.applyCharge ?? false,
-        chargeAmount: existingRestriction.chargeAmount,
+        chargeAmount: existingRestriction.chargeAmount ?? null,
         isFullDay: isFullDay,
       };
+
+      return defaultValues;
     } else {
-      return {
+      const defaultValues = {
         name: "",
         description: "",
         restrictionCategory,
@@ -144,16 +155,23 @@ export function TimeblockRestrictionDialog({
           | "FREQUENCY"
           | "AVAILABILITY",
         memberClass:
-          restrictionCategory === "MEMBER_CLASS"
-            ? memberClasses[0] || ""
-            : undefined,
+          restrictionCategory === "MEMBER_CLASS" ? memberClasses[0] || "" : "",
         isActive: true,
         priority: 0,
         canOverride: true,
         daysOfWeek: [],
         applyCharge: false,
         isFullDay: false,
+        startTime: "",
+        endTime: "",
+        startDate: null,
+        endDate: null,
+        maxCount: null,
+        periodDays: null,
+        chargeAmount: null,
       };
+
+      return defaultValues;
     }
   };
 
@@ -170,7 +188,8 @@ export function TimeblockRestrictionDialog({
   useEffect(() => {
     // Only reset the form when opening the dialog, not closing it
     if (isOpen && !wasOpen) {
-      form.reset(getDefaultValues());
+      const defaultValues = getDefaultValues();
+      form.reset(defaultValues);
       setWasOpen(true);
     } else if (!isOpen && wasOpen) {
       setWasOpen(false);
@@ -198,26 +217,29 @@ export function TimeblockRestrictionDialog({
         formData.endTime = "";
       }
 
-      // Ensure dates are properly formatted
+      // Handle dates properly using the preserveDate function
       if (formData.startDate) {
-        // Make sure we're using the date without time zone issues
-        const startDate = new Date(formData.startDate);
-        formData.startDate = startDate;
+        formData.startDate = preserveDate(formData.startDate);
+      } else {
+        formData.startDate = null;
       }
 
       if (formData.endDate) {
-        // Make sure we're using the date without time zone issues
-        const endDate = new Date(formData.endDate);
-        formData.endDate = endDate;
+        formData.endDate = preserveDate(formData.endDate);
+      } else {
+        formData.endDate = null;
       }
 
       // Call the appropriate server action
-      const result = existingRestriction
-        ? await updateTimeblockRestriction({
-            id: existingRestriction.id,
-            ...formData,
-          })
-        : await createTimeblockRestriction(formData);
+      let result;
+      if (existingRestriction) {
+        result = await updateTimeblockRestriction({
+          id: existingRestriction.id,
+          ...formData,
+        });
+      } else {
+        result = await createTimeblockRestriction(formData);
+      }
 
       if (result && "error" in result) {
         toast.error(result.error || "Unknown error occurred");
@@ -243,6 +265,31 @@ export function TimeblockRestrictionDialog({
     }
   };
 
+  // Enhanced direct handler to ensure form validation and submission work
+  const handleSubmitClick = () => {
+    setSubmitAttempts((prev) => prev + 1);
+
+    try {
+      // Manually trigger form validation first
+      const isValid = form.trigger();
+
+      // Use Promise.resolve to handle both synchronous and asynchronous validation
+      Promise.resolve(isValid).then((valid) => {
+        if (valid) {
+          // If form is valid, get values and call onSubmit directly
+          const values = form.getValues();
+          onSubmit(values);
+        } else {
+          // Show error toast if validation fails
+          toast.error("Please fix form errors before submitting");
+        }
+      });
+    } catch (e) {
+      console.error("Error in handleSubmitClick:", e);
+      toast.error("Error submitting form");
+    }
+  };
+
   const handleDialogChange = (open: boolean) => {
     if (!open) {
       onClose();
@@ -259,7 +306,13 @@ export function TimeblockRestrictionDialog({
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              form.handleSubmit(onSubmit)(e);
+            }}
+            className="space-y-6"
+          >
             {/* Basic Information */}
             <div className="space-y-4">
               <FormField
@@ -445,9 +498,9 @@ export function TimeblockRestrictionDialog({
                 Cancel
               </Button>
               <Button
-                type="submit"
+                type="button"
                 disabled={isSubmitting}
-           
+                onClick={handleSubmitClick}
               >
                 {isSubmitting
                   ? "Saving..."

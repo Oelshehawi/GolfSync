@@ -12,6 +12,7 @@ import { Checkbox } from "~/components/ui/checkbox";
 import { UseFormReturn } from "react-hook-form";
 import { DatePicker } from "~/components/ui/date-picker";
 import { TimeblockRestrictionFormValues } from "../TimeblockRestrictionDialog";
+import { preserveDate } from "~/lib/utils";
 
 interface TimeRestrictionFieldsProps {
   form: UseFormReturn<TimeblockRestrictionFormValues>;
@@ -96,11 +97,13 @@ export function TimeRestrictionFields({ form }: TimeRestrictionFieldsProps) {
                   <FormLabel className="cursor-pointer font-normal">
                     {day.label}
                   </FormLabel>
+                  <FormMessage />
                 </FormItem>
               )}
             />
           ))}
         </div>
+        <FormMessage />
       </div>
 
       {/* Date Range */}
@@ -112,8 +115,15 @@ export function TimeRestrictionFields({ form }: TimeRestrictionFieldsProps) {
             <FormItem className="flex flex-col">
               <FormLabel>Start Date</FormLabel>
               <DatePicker
-                date={field.value ? new Date(field.value) : undefined}
-                setDate={(date?: Date) => field.onChange(date)}
+                date={field.value ? preserveDate(field.value) : undefined}
+                setDate={(date?: Date) => {
+                  if (date) {
+                    // Ensure selected date doesn't get timezone-shifted
+                    field.onChange(preserveDate(date));
+                  } else {
+                    field.onChange(null);
+                  }
+                }}
                 placeholder="Select start date"
               />
               <FormMessage />
@@ -128,8 +138,15 @@ export function TimeRestrictionFields({ form }: TimeRestrictionFieldsProps) {
             <FormItem className="flex flex-col">
               <FormLabel>End Date</FormLabel>
               <DatePicker
-                date={field.value ? new Date(field.value) : undefined}
-                setDate={(date?: Date) => field.onChange(date)}
+                date={field.value ? preserveDate(field.value) : undefined}
+                setDate={(date?: Date) => {
+                  if (date) {
+                    // Ensure selected date doesn't get timezone-shifted
+                    field.onChange(preserveDate(date));
+                  } else {
+                    field.onChange(null);
+                  }
+                }}
                 placeholder="Select end date"
               />
               <FormMessage />

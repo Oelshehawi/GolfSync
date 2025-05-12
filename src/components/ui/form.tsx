@@ -95,7 +95,7 @@ const FormLabel = React.forwardRef<
       ref={ref}
       className={cn(
         "text-sm leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70",
-        error && "text-[var(--org-primary)]",
+        error && "text-red-600",
         className,
       )}
       htmlFor={formItemId}
@@ -160,7 +160,7 @@ const FormMessage = React.forwardRef<
     <p
       ref={ref}
       id={formMessageId}
-      className={cn("text-sm font-medium text-[var(--org-primary)]", className)}
+      className={cn("text-sm font-medium text-red-600", className)}
       {...props}
     >
       {body}

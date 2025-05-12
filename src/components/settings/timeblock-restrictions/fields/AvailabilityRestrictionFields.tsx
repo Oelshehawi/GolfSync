@@ -13,6 +13,7 @@ import { Input } from "~/components/ui/input";
 import { DatePicker } from "~/components/ui/date-picker";
 import { Switch } from "~/components/ui/switch";
 import { TimeblockRestrictionFormValues } from "../TimeblockRestrictionDialog";
+import { preserveDate } from "~/lib/utils";
 
 interface AvailabilityRestrictionFieldsProps {
   form: UseFormReturn<TimeblockRestrictionFormValues>;
@@ -62,6 +63,7 @@ export function AvailabilityRestrictionFields({
                 onCheckedChange={handleFullDayChange}
               />
             </FormControl>
+            <FormMessage />
           </FormItem>
         )}
       />
@@ -148,34 +150,5 @@ export function AvailabilityRestrictionFields({
         />
       </div>
     </div>
-  );
-}
-
-// Helper function to preserve date without timezone issues
-function preserveDate(date: Date | string): Date {
-  // If date is a string like "2025-05-05", parse it directly
-  if (typeof date === "string" && date.match(/^\d{4}-\d{2}-\d{2}$/)) {
-    // Split the date string into year, month, day
-    const parts = date.split("-").map(Number);
-    const year = parts[0] || 2000;
-    const month = parts[1] || 1;
-    const day = parts[2] || 1;
-
-    // Create date with the correct local date (month is 0-indexed in JS)
-    return new Date(year, month - 1, day, 12, 0, 0);
-  }
-
-  // Otherwise, use the existing date object or parse the string
-  const d = new Date(date);
-
-  // Create a new date using local time components to prevent timezone shifts
-  return new Date(
-    d.getFullYear(),
-    d.getMonth(),
-    d.getDate(),
-    12, // Use noon to avoid any DST issues
-    0,
-    0,
-    0,
   );
 }

@@ -459,3 +459,51 @@ export function formatPaceOfPlayTimestamp(
     return "Invalid Date";
   }
 }
+
+/**
+ * Preserves date without timezone issues, used in date pickers and form processing
+ * @param date Date object, string, or null/undefined
+ * @returns A clean Date object with consistent timezone handling or undefined if input is invalid
+ */
+export function preserveDate(
+  date: Date | string | null | undefined,
+): Date | undefined {
+  if (!date) return undefined;
+
+  // If date is a string like "2025-05-05", parse it directly
+  if (typeof date === "string" && date.match(/^\d{4}-\d{2}-\d{2}$/)) {
+    // Split the date string into year, month, day
+    const parts = date.split("-").map(Number);
+    const year = parts[0] || 2000;
+    const month = (parts[1] || 1) - 1; // 0-indexed in JS
+    const day = parts[2] || 1;
+
+    // Create date with the correct local date
+    return new Date(year, month, day, 12, 0, 0);
+  }
+
+  try {
+    // Otherwise, use the existing date object or parse the string
+    const d = new Date(date);
+
+    // Check if the date is valid
+    if (isNaN(d.getTime())) {
+      console.warn("Invalid date provided to preserveDate:", date);
+      return undefined;
+    }
+
+    // Create a new date using local time components to prevent timezone shifts
+    return new Date(
+      d.getFullYear(),
+      d.getMonth(),
+      d.getDate(),
+      12, // Use noon to avoid any DST issues
+      0,
+      0,
+      0,
+    );
+  } catch (error) {
+    console.error("Error parsing date in preserveDate:", error);
+    return undefined;
+  }
+}

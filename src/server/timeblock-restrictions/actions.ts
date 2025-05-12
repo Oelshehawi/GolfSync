@@ -11,11 +11,22 @@ import {
   formatDateToYYYYMMDD,
   formatDisplayTime,
   formatCalendarDate,
+  preserveDate,
 } from "~/lib/utils";
 import { format } from "date-fns";
 
 export async function createTimeblockRestriction(data: any) {
   try {
+    if (
+      !data ||
+      !data.name ||
+      !data.restrictionCategory ||
+      !data.restrictionType
+    ) {
+      console.error("Missing required data for creation:", data);
+      return { error: "Missing required fields for restriction creation" };
+    }
+
     const orgId = await getOrganizationId();
     if (!orgId) {
       return { error: "No organization selected" };
@@ -25,11 +36,40 @@ export async function createTimeblockRestriction(data: any) {
     const authData = await auth();
     const lastUpdatedBy = authData.userId || "Unknown";
 
+    // Process the form data
+    const processedData = { ...data };
+
+    // Clean up undefined values that can cause database errors
+    Object.keys(processedData).forEach((key) => {
+      if (processedData[key] === undefined) {
+        processedData[key] = null;
+      }
+    });
+
+    // Handle date fields properly using preserveDate utility
+    if (processedData.startDate) {
+      processedData.startDate = preserveDate(processedData.startDate);
+      if (!processedData.startDate) {
+        processedData.startDate = null;
+      }
+    } else {
+      processedData.startDate = null;
+    }
+
+    if (processedData.endDate) {
+      processedData.endDate = preserveDate(processedData.endDate);
+      if (!processedData.endDate) {
+        processedData.endDate = null;
+      }
+    } else {
+      processedData.endDate = null;
+    }
+
     // Insert the new restriction
     const result = await db
       .insert(timeblockRestrictions)
       .values({
-        ...data,
+        ...processedData,
         clerkOrgId: orgId,
         lastUpdatedBy,
       })
@@ -54,6 +94,11 @@ export async function updateTimeblockRestriction(data: {
   [key: string]: any;
 }) {
   try {
+    if (!data || !data.id) {
+      console.error("Missing required data for update:", data);
+      return { error: "Missing required data for update" };
+    }
+
     const orgId = await getOrganizationId();
     if (!orgId) {
       return { error: "No organization selected" };
@@ -65,6 +110,32 @@ export async function updateTimeblockRestriction(data: {
 
     // Extract the ID and remove it from the data to update
     const { id, ...updateData } = data;
+
+    // Clean up undefined values that can cause database errors
+    Object.keys(updateData).forEach((key) => {
+      if (updateData[key] === undefined) {
+        updateData[key] = null;
+      }
+    });
+
+    // Handle date fields properly using preserveDate utility
+    if (updateData.startDate) {
+      updateData.startDate = preserveDate(updateData.startDate);
+      if (!updateData.startDate) {
+        updateData.startDate = null;
+      }
+    } else {
+      updateData.startDate = null;
+    }
+
+    if (updateData.endDate) {
+      updateData.endDate = preserveDate(updateData.endDate);
+      if (!updateData.endDate) {
+        updateData.endDate = null;
+      }
+    } else {
+      updateData.endDate = null;
+    }
 
     // Update the restriction
     const result = await db
@@ -83,6 +154,7 @@ export async function updateTimeblockRestriction(data: {
       .returning();
 
     if (!result || result.length === 0) {
+      console.error("Failed to update restriction or restriction not found");
       return { error: "Failed to update restriction or restriction not found" };
     }
 
