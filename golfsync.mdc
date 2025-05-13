@@ -1,9 +1,8 @@
 ---
-description: 
-globs: 
-alwaysApply: true
+description:
+globs:
+alwaysApply: false
 ---
-
 # Your rule content
 
 - COME UP WITH IMPLEMENATION FOR ANY PROMPT I SEND, AND EXPLAIN HOW YOU WILL IMPLEMENT, WHAT FILES WILL BE EDITED AND GET AGREEMENT FROM ME BEFORE ACTUALY EDITING OR CHANGING FILES
@@ -16,7 +15,7 @@ alwaysApply: true
 - any function defined in a data.ts file canot be used in components marked with use client directive. only functions that are actions can, otherwise we must fetch in parent server compnent and pass down to client components.
 
 ## Date and Timezone Handling
-- Always use utility functions in @utils.ts for date manipulation and formatting
+- Always use utility functions in [utils.ts](mdc:src/lib/utils.ts) for date manipulation and formatting
 - When passing dates between server and client components, use string format (YYYY-MM-DD) instead of Date objects to avoid timezone inconsistencies
 - Server-rendered dates may be interpreted differently when hydrated on the client due to timezone differences
 - Use `formatCalendarDate()` when formatting dates for display
