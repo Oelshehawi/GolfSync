@@ -37,6 +37,7 @@ export default async function MemberTeesheetPage({ searchParams }: PageProps) {
   const { teesheet, config, member } = teesheetData;
   const timeBlocks = teesheetData.timeBlocks || [];
 
+
   return (
     <TeesheetClient
       teesheet={teesheet}

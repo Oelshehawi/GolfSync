@@ -166,7 +166,7 @@ export function RestrictionCard({
               {getEntityIcon()}
               <span>
                 {restriction.restrictionCategory === "MEMBER_CLASS"
-                  ? restriction.memberClass
+                  ? "Members"
                   : restriction.restrictionCategory === "GUEST"
                     ? "Guest"
                     : "Course"}
@@ -185,6 +185,26 @@ export function RestrictionCard({
         <p className="mb-2 text-sm text-gray-600">
           {restriction.description || "No description provided"}
         </p>
+
+        {/* Display member classes if applicable */}
+        {restriction.restrictionCategory === "MEMBER_CLASS" &&
+          restriction.memberClasses &&
+          restriction.memberClasses.length > 0 && (
+            <div className="mb-3">
+              <p className="mb-1 text-sm font-medium">Applies to:</p>
+              <div className="flex flex-wrap gap-1">
+                {restriction.memberClasses.map((className) => (
+                  <Badge
+                    key={className}
+                    variant="secondary"
+                    className="text-xs"
+                  >
+                    {className}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          )}
 
         <div className="mt-3 space-y-1 text-gray-700">
           {getRestrictionDetails()}

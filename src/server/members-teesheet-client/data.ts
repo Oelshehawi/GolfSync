@@ -160,6 +160,7 @@ export async function getMemberTeesheetDataWithRestrictions(
       memberClass: member.class,
     });
 
+
     if (Array.isArray(batchResults)) {
       // Map the results back to the timeBlocks
 

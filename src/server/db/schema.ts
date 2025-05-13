@@ -451,7 +451,7 @@ export const timeblockRestrictions = createTable(
     restrictionType: varchar("restriction_type", { length: 15 }).notNull(), // 'TIME', 'FREQUENCY', 'AVAILABILITY'
 
     // Entity being restricted (for member class restrictions)
-    memberClass: varchar("member_class", { length: 50 }),
+    memberClasses: varchar("member_classes", { length: 50 }).array(),
 
     // Time restriction
     startTime: varchar("start_time", { length: 5 }),
@@ -486,7 +486,7 @@ export const timeblockRestrictions = createTable(
     index("timeblock_restrictions_org_id_idx").on(table.clerkOrgId),
     index("timeblock_restrictions_category_idx").on(table.restrictionCategory),
     index("timeblock_restrictions_type_idx").on(table.restrictionType),
-    index("timeblock_restrictions_member_class_idx").on(table.memberClass),
+    index("timeblock_restrictions_member_classes_idx").on(table.memberClasses),
   ],
 );
 

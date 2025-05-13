@@ -29,7 +29,7 @@ export type TimeblockRestriction = {
   description: string | null;
   restrictionCategory: "MEMBER_CLASS" | "GUEST" | "COURSE_AVAILABILITY";
   restrictionType: "TIME" | "FREQUENCY" | "AVAILABILITY";
-  memberClass?: string;
+  memberClasses?: string[];
   startTime?: string;
   endTime?: string;
   daysOfWeek?: number[];

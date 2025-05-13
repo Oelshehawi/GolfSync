@@ -124,21 +124,6 @@ function scrollToClosestTime(
   }
 }
 
-// Loading skeleton component for time blocks
-const TimeBlockSkeleton = () => (
-  <div className="animate-pulse rounded-lg border border-gray-200 p-4 transition-all">
-    <div className="flex items-center justify-between">
-      <div className="flex items-center gap-2">
-        <Skeleton className="h-6 w-20" />
-      </div>
-      <Skeleton className="h-8 w-20" />
-    </div>
-    <div className="mt-2">
-      <Skeleton className="h-4 w-3/4" />
-    </div>
-  </div>
-);
-
 // Client component to handle interactive elements
 export default function TeesheetClient({
   config,

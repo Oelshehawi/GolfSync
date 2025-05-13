@@ -1,19 +1,25 @@
 "use client";
 
-import { useState, useCallback, useMemo, CSSProperties } from "react";
-import { X, Check } from "lucide-react";
+import * as React from "react";
+import { Check, ChevronsUpDown, X } from "lucide-react";
+import { cn } from "~/lib/utils";
+import { Button } from "~/components/ui/button";
 import { Badge } from "~/components/ui/badge";
-import { Command, CommandGroup } from "~/components/ui/command";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+} from "~/components/ui/command";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "~/components/ui/popover";
-import { cn } from "~/lib/utils";
-import { Button } from "./button";
 
 export type OptionType = {
-  value: string | number;
+  value: string;
   label: string;
 };
 
@@ -22,6 +28,8 @@ interface MultiSelectProps {
   selected: string[];
   onChange: (selectedValues: string[]) => void;
   placeholder?: string;
+  emptyMessage?: string;
+  disabled?: boolean;
   className?: string;
 }
 
@@ -30,42 +38,67 @@ export function MultiSelect({
   selected,
   onChange,
   placeholder = "Select options",
+  emptyMessage = "No options found.",
+  disabled = false,
   className,
 }: MultiSelectProps) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = React.useState(false);
+  const [searchQuery, setSearchQuery] = React.useState("");
+  const triggerRef = React.useRef<HTMLButtonElement>(null);
+  const inputRef = React.useRef<HTMLInputElement>(null);
 
-  // Convert string array to set for faster lookups
-  const selectedSet = useMemo(() => new Set(selected), [selected]);
+  // Create a set of selected values for faster lookups
+  const selectedSet = React.useMemo(() => new Set(selected), [selected]);
 
-  const handleSelect = useCallback(
-    (value: string) => {
-      const isSelected = selectedSet.has(value);
-      if (isSelected) {
-        // Remove the item
-        const newSelected = selected.filter((item) => item !== value);
-        onChange(newSelected);
-      } else {
-        // Add the item
-        onChange([...selected, value]);
-      }
-    },
-    [selected, selectedSet, onChange],
-  );
-
-  const handleUnselect = useCallback(
-    (item: string) => {
-      onChange(selected.filter((i) => i !== item));
-    },
-    [selected, onChange],
-  );
-
-  // Convert selected values to readable labels for display
-  const selectedLabels = useMemo(() => {
+  // Get labels for the selected values for display
+  const selectedLabels = React.useMemo(() => {
     return selected.map((value) => {
-      const option = options.find((o) => String(o.value) === value);
+      const option = options.find((o) => o.value === value);
       return option ? option.label : value;
     });
   }, [selected, options]);
+
+  // Filter options based on search query
+  const filteredOptions = React.useMemo(() => {
+    if (!searchQuery) return options;
+    return options.filter((option) =>
+      option.label.toLowerCase().includes(searchQuery.toLowerCase()),
+    );
+  }, [options, searchQuery]);
+
+  // Focus input when popover opens
+  React.useEffect(() => {
+    if (open && inputRef.current) {
+      setTimeout(() => {
+        inputRef.current?.focus();
+      }, 0);
+    } else {
+      setSearchQuery("");
+    }
+  }, [open]);
+
+  // Handle selection/deselection of an option
+  const handleSelect = (value: string) => {
+    const newSelected = [...selected];
+    const index = newSelected.indexOf(value);
+
+    if (index > -1) {
+      // Remove if already selected
+      newSelected.splice(index, 1);
+    } else {
+      // Add if not selected
+      newSelected.push(value);
+    }
+
+    onChange(newSelected);
+  };
+
+  // Remove a selected item via badge click
+  const handleRemove = (value: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    onChange(selected.filter((item) => item !== value));
+  };
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -74,81 +107,87 @@ export function MultiSelect({
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className={cn("h-auto min-h-10 w-full justify-between", className)}
+          className={cn(
+            "w-full justify-between hover:bg-[var(--org-secondary)]",
+            className,
+          )}
+          disabled={disabled}
+          ref={triggerRef}
         >
-          <div className="flex flex-wrap gap-1 px-2 py-1">
-            {selected.length === 0 && <span>{placeholder}</span>}
-            {selectedLabels.map((label, i) => (
-              <Badge
-                variant="secondary"
-                key={selected[i] || i}
-                className="mr-1 mb-1 px-2 py-1"
-              >
-                {label}
-                <div
-                  className="ml-1 cursor-pointer rounded-full outline-none focus-visible:ring-2 focus-visible:ring-[var(--org-primary)] focus-visible:ring-offset-2"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    if (selected[i]) {
-                      handleUnselect(selected[i]);
-                    }
-                  }}
-                  role="button"
-                  tabIndex={0}
-                  aria-label={`Remove ${label}`}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault();
-                      if (selected[i]) {
-                        handleUnselect(selected[i]);
-                      }
-                    }
-                  }}
-                >
-                  <X className="h-3 w-3" />
-                </div>
-              </Badge>
-            ))}
+          <div className="flex flex-wrap gap-1">
+            {selected.length === 0 ? (
+              <span className="text-muted">{placeholder}</span>
+            ) : (
+              <div className="flex flex-wrap gap-1">
+                {selected.map((value, i) => {
+                  const option = options.find((o) => o.value === value);
+                  return (
+                    <Badge
+                      variant="secondary"
+                      key={value}
+                      className="px-2 py-1"
+                    >
+                      {option?.label || value}
+                      <X
+                        className="ml-1 h-3 w-3 cursor-pointer"
+                        onClick={(e) => handleRemove(value, e)}
+                      />
+                    </Badge>
+                  );
+                })}
+              </div>
+            )}
           </div>
-          <div className="shrink-0 opacity-70">▼</div>
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
       <PopoverContent
-        className="w-[var(--radix-popover-trigger-width)] p-0"
+        className="p-0"
+        style={{
+          width: triggerRef.current?.offsetWidth
+            ? `${triggerRef.current.offsetWidth}px`
+            : "auto",
+        }}
         align="start"
-        sideOffset={4}
       >
         <Command>
-          <CommandGroup className="max-h-64 overflow-auto">
-            {options.map((option) => {
-              const value = String(option.value);
-              const isSelected = selectedSet.has(value);
-
-              return (
+          <CommandInput
+            placeholder="Search options..."
+            value={searchQuery}
+            onValueChange={setSearchQuery}
+            ref={inputRef}
+            className="h-9"
+          />
+          {filteredOptions.length === 0 && (
+            <CommandEmpty>{emptyMessage}</CommandEmpty>
+          )}
+          <CommandGroup className="max-h-[200px] overflow-y-auto">
+            {filteredOptions.map((option) => (
+              <CommandItem
+                key={option.value}
+                value={option.value}
+                className={cn(
+                  "flex cursor-pointer items-center",
+                  selectedSet.has(option.value) &&
+                    "bg-[var(--org-primary-light)]",
+                )}
+                onSelect={() => handleSelect(option.value)}
+              >
                 <div
-                  key={value}
                   className={cn(
-                    "flex cursor-pointer items-center gap-2 px-2 py-1.5",
-                    isSelected &&
-                      "bg-[var(--org-secondary)] text-[var(--org-primary)]",
+                    "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border",
+                    selectedSet.has(option.value)
+                      ? "border-[var(--org-primary)] bg-[var(--org-primary)] text-white"
+                      : "border-[var(--org-primary-light)]",
                   )}
-                  onClick={() => handleSelect(value)}
                 >
-                  <div
-                    className={cn(
-                      "flex h-4 w-4 items-center justify-center rounded-sm border",
-                      isSelected
-                        ? "border-[var(--org-primary)] bg-[var(--org-primary)]"
-                        : "border-opacity-50 border-[var(--org-primary)]",
-                    )}
-                  >
-                    {isSelected && <Check className="h-3 w-3 text-white" />}
-                  </div>
-                  <span>{option.label}</span>
+                  {selectedSet.has(option.value) && (
+                    <Check className="h-3 w-3" />
+                  )}
                 </div>
-              );
-            })}
+                {option.label}
+              </CommandItem>
+            ))}
           </CommandGroup>
         </Command>
       </PopoverContent>

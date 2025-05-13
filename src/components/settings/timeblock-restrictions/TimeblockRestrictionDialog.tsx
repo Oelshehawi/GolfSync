@@ -40,6 +40,7 @@ import {
 } from "~/server/timeblock-restrictions/actions";
 import toast from "react-hot-toast";
 import { preserveDate } from "~/lib/utils";
+import { MultiSelect, type OptionType } from "~/components/ui/multi-select";
 
 // Define the form schema based on the TimeblockRestriction type
 const formSchema = z.object({
@@ -47,7 +48,7 @@ const formSchema = z.object({
   description: z.string().nullable().optional(),
   restrictionCategory: z.enum(["MEMBER_CLASS", "GUEST", "COURSE_AVAILABILITY"]),
   restrictionType: z.enum(["TIME", "FREQUENCY", "AVAILABILITY"]),
-  memberClass: z.string().optional(),
+  memberClasses: z.array(z.string()).default([]),
   isActive: z.boolean().default(true),
   priority: z.coerce.number().default(0),
   canOverride: z.boolean().default(true),
@@ -102,6 +103,12 @@ export function TimeblockRestrictionDialog({
   // Add state to track submission attempts for debugging
   const [submitAttempts, setSubmitAttempts] = useState(0);
 
+  // Convert memberClasses to options for MultiSelect
+  const memberClassOptions: OptionType[] = memberClasses.map((className) => ({
+    value: className,
+    label: className,
+  }));
+
   // Determine default restriction type based on category
   const getDefaultRestrictionType = () => {
     if (restrictionCategory === "COURSE_AVAILABILITY") return "AVAILABILITY";
@@ -128,7 +135,7 @@ export function TimeblockRestrictionDialog({
           | "TIME"
           | "FREQUENCY"
           | "AVAILABILITY",
-        memberClass: existingRestriction.memberClass || "",
+        memberClasses: existingRestriction.memberClasses || [],
         isActive: existingRestriction.isActive ?? true,
         priority: existingRestriction.priority ?? 0,
         canOverride: existingRestriction.canOverride ?? true,
@@ -154,8 +161,10 @@ export function TimeblockRestrictionDialog({
           | "TIME"
           | "FREQUENCY"
           | "AVAILABILITY",
-        memberClass:
-          restrictionCategory === "MEMBER_CLASS" ? memberClasses[0] || "" : "",
+        memberClasses:
+          restrictionCategory === "MEMBER_CLASS"
+            ? [memberClasses[0] || ""]
+            : [],
         isActive: true,
         priority: 0,
         canOverride: true,
@@ -351,28 +360,19 @@ export function TimeblockRestrictionDialog({
               {restrictionCategory === "MEMBER_CLASS" && (
                 <FormField
                   control={form.control}
-                  name="memberClass"
+                  name="memberClasses"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Member Class</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                        value={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select a member class" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {memberClasses.map((className) => (
-                            <SelectItem key={className} value={className}>
-                              {className}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <FormLabel>Member Classes</FormLabel>
+                      <FormControl>
+                        <MultiSelect
+                          options={memberClassOptions}
+                          selected={field.value || []}
+                          onChange={field.onChange}
+                          placeholder="Select member classes"
+                          className="w-full"
+                        />
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}

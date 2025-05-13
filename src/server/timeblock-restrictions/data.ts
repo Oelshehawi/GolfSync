@@ -258,8 +258,11 @@ export async function checkBatchTimeblockRestrictions(params: {
       if (memberId && memberClass) {
         for (const restriction of memberRestrictions) {
           if (restriction.restrictionType === "TIME") {
-            // Check day of week
-            if (restriction.daysOfWeek?.includes(dayOfWeek)) {
+            // Check day of week - empty array means apply to all days
+            if (
+              restriction.daysOfWeek?.length === 0 ||
+              restriction.daysOfWeek?.includes(dayOfWeek)
+            ) {
               // Check time range
               if (
                 bookingTime >= (restriction.startTime || "00:00") &&
@@ -299,7 +302,11 @@ export async function checkBatchTimeblockRestrictions(params: {
       if (guestId) {
         for (const restriction of guestRestrictions) {
           if (restriction.restrictionType === "TIME") {
-            if (restriction.daysOfWeek?.includes(dayOfWeek)) {
+            // Empty array means apply to all days of the week
+            if (
+              restriction.daysOfWeek?.length === 0 ||
+              restriction.daysOfWeek?.includes(dayOfWeek)
+            ) {
               if (
                 bookingTime >= (restriction.startTime || "00:00") &&
                 bookingTime <= (restriction.endTime || "23:59")

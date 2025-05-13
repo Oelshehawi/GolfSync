@@ -376,14 +376,20 @@ export async function checkTimeblockRestrictionsAction(params: {
           eq(timeblockRestrictions.clerkOrgId, orgId),
           eq(timeblockRestrictions.restrictionCategory, "MEMBER_CLASS"),
           eq(timeblockRestrictions.isActive, true),
-          or(
-            eq(timeblockRestrictions.memberClass, memberClass),
-            isNull(timeblockRestrictions.memberClass),
-          ),
         ),
       });
 
       for (const restriction of memberRestrictions) {
+        // Check if this restriction applies to the member class
+        // Either memberClasses includes the member's class or the memberClasses array is empty/null (applies to all)
+        const memberClassesApplies =
+          !restriction.memberClasses?.length ||
+          restriction.memberClasses?.includes(memberClass);
+
+        if (!memberClassesApplies) {
+          continue; // Skip this restriction if it doesn't apply to this member class
+        }
+
         if (restriction.restrictionType === "TIME") {
           if (restriction.daysOfWeek?.includes(dayOfWeek)) {
             if (

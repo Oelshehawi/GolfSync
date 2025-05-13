@@ -2,8 +2,9 @@
 import { useState } from "react";
 import Link from "next/link";
 import { AccountDialog } from "./AccountDialog";
-import { Menu, X } from "lucide-react";
+import { Menu, X, LogOut } from "lucide-react";
 import { usePathname } from "next/navigation";
+import { useClerk } from "@clerk/nextjs";
 
 interface HeaderNavClientProps {
   member?: any;
@@ -13,6 +14,13 @@ export const HeaderNavClient = ({ member }: HeaderNavClientProps) => {
   const [isAccountDialogOpen, setIsAccountDialogOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const pathname = usePathname();
+  const { signOut } = useClerk();
+
+  const handleSignOut = () => {
+    signOut(() => {
+      window.location.href = "/";
+    });
+  };
 
   const navButtonClass = `
     relative z-0 flex items-center justify-center overflow-hidden whitespace-nowrap rounded-lg border-[1.5px]
@@ -73,6 +81,13 @@ export const HeaderNavClient = ({ member }: HeaderNavClientProps) => {
           >
             Tee Sheet
           </Link>
+          <button
+            onClick={handleSignOut}
+            className="ml-3 flex cursor-pointer items-center gap-1 text-base text-neutral-700 transition-colors hover:text-[var(--org-primary)]"
+          >
+            <LogOut size={16} />
+            <span>Sign Out</span>
+          </button>
         </div>
 
         {/* Mobile Menu Button */}
@@ -120,6 +135,16 @@ export const HeaderNavClient = ({ member }: HeaderNavClientProps) => {
             >
               Tee Sheet
             </Link>
+            <button
+              className="flex w-full items-center gap-2 px-4 py-2 text-left text-base text-neutral-700 hover:text-[var(--org-primary)]"
+              onClick={() => {
+                handleSignOut();
+                setIsMobileMenuOpen(false);
+              }}
+            >
+              <LogOut size={16} />
+              <span>Sign Out</span>
+            </button>
           </div>
         </div>
       )}
