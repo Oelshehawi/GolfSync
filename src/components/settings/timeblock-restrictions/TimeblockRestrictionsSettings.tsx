@@ -14,7 +14,7 @@ import { GuestRestrictions } from "./GuestRestrictions";
 import { CourseAvailability } from "./CourseAvailability";
 import { Button } from "~/components/ui/button";
 import { Search } from "lucide-react";
-import { TimeblockRestrictionsSearch } from "./TimeblockRestrictionsDialog";
+import { TimeblockRestrictionsSearch } from "./TimeblockRestrictionsSearchDialog";
 import {
   Dialog,
   DialogContent,
