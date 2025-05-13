@@ -18,7 +18,7 @@ interface PageProps {
 
 export default async function AdminPage({ searchParams }: PageProps) {
   try {
-    // Safely handle the date parameter using string representation
+    // Get the date parameter as a string
     const dateParam = (await searchParams)?.date;
 
     // Log date debugging info - server-side
@@ -33,32 +33,46 @@ export default async function AdminPage({ searchParams }: PageProps) {
       timezone: currentServerDate.getTimezoneOffset() / -60, // Convert to hours and invert
     });
 
+    // Determine the date string to use
     let dateString: string;
 
     if (dateParam) {
-      // Validate that the date is in YYYY-MM-DD format
+      // If date parameter is provided
       if (/^\d{4}-\d{2}-\d{2}$/.test(dateParam)) {
+        // It's already in YYYY-MM-DD format, use directly
         dateString = dateParam;
         console.log("[SERVER] Using date param directly:", dateString);
       } else {
-        // If not in correct format, convert it
+        // It's in another format, convert it
         const paramDate = new Date(dateParam);
         console.log("[SERVER] Parsed param date:", paramDate);
         dateString = formatCalendarDate(paramDate);
         console.log("[SERVER] Formatted param date:", dateString);
       }
     } else {
-      // Default to today in YYYY-MM-DD format
-      const todayDate = new Date();
-      console.log("[SERVER] Creating default today date:", todayDate);
-      dateString = formatCalendarDate(todayDate);
-      console.log("[SERVER] Formatted default date:", dateString);
+      // No date parameter - get today's date as a string in YYYY-MM-DD format
+      // Use UTC date components directly to create the string to avoid timezone issues
+      const now = new Date();
+      const utcYear = now.getUTCFullYear();
+      const utcMonth = (now.getUTCMonth() + 1).toString().padStart(2, "0");
+      const utcDay = now.getUTCDate().toString().padStart(2, "0");
+      dateString = `${utcYear}-${utcMonth}-${utcDay}`;
+      console.log("[SERVER] Created today's date string directly:", dateString);
     }
 
-    // Parse the date string to a Date object for functions that need it
-    const date = parse(dateString, "yyyy-MM-dd", new Date());
+    // Parse the date string to a Date object for database queries
+    // Use a consistent approach that won't be affected by timezone
+    const dateParts = dateString.split("-");
+    const dateYear = parseInt(dateParts[0] || "0", 10);
+    const dateMonth = parseInt(dateParts[1] || "1", 10) - 1; // JS months are 0-indexed
+    const dateDay = parseInt(dateParts[2] || "1", 10);
+
+    // Create date object for database operations
+    const date = new Date(dateYear, dateMonth, dateDay);
+
     console.log("[SERVER] Final parsed date for teesheet:", date);
 
+    // Rest of the code accessing database, etc.
     const { teesheet, config } = await getOrCreateTeesheet(date);
 
     if (!teesheet) {
@@ -96,10 +110,11 @@ export default async function AdminPage({ searchParams }: PageProps) {
       },
     });
 
+    // Pass the date string to the client component
     return (
       <div className="container mx-auto space-y-2 p-6">
         <TeesheetHeader
-          date={date}
+          dateString={dateString}
           config={config}
           teesheetId={teesheet.id}
           timeBlocks={timeBlocks}

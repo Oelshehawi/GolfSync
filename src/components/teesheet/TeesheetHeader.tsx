@@ -17,17 +17,17 @@ import type {
   TimeBlockWithMembers,
 } from "~/app/types/TeeSheetTypes";
 import { formatCalendarDate, formatDisplayDate } from "~/lib/utils";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 interface TeesheetHeaderProps {
-  date: Date;
+  dateString: string;
   config: TeesheetConfig;
   teesheetId: number;
   timeBlocks: TimeBlockWithMembers[];
 }
 
 export function TeesheetHeader({
-  date: initialDate,
+  dateString: initialDateString,
   config,
   teesheetId,
   timeBlocks,
@@ -35,12 +35,7 @@ export function TeesheetHeader({
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // Debug initial props date
-  console.log("[CLIENT] initialDate from props:", initialDate, {
-    year: initialDate.getFullYear(),
-    month: initialDate.getMonth() + 1,
-    day: initialDate.getDate(),
-  });
+  console.log("[CLIENT] Initial date string from props:", initialDateString);
 
   // Debug current client date
   const clientNow = new Date();
@@ -53,15 +48,18 @@ export function TeesheetHeader({
     timezone: clientNow.getTimezoneOffset() / -60,
   });
 
-  // Use search params date if available, otherwise use initial date
+  // Use search params date if available, otherwise use initial date string
   const dateFromParams = searchParams.get("date");
   console.log("[CLIENT] Date from search params:", dateFromParams);
 
-  const date = dateFromParams
-    ? parse(dateFromParams, "yyyy-MM-dd", new Date())
-    : initialDate;
+  // Determine the active date string
+  const activeDateString = dateFromParams || initialDateString;
+  console.log("[CLIENT] Active date string:", activeDateString);
 
-  console.log("[CLIENT] Final date after params check:", date, {
+  // Parse the string to a Date object for display purposes only
+  const date = parse(activeDateString, "yyyy-MM-dd", new Date());
+
+  console.log("[CLIENT] Parsed date object:", date, {
     year: date.getFullYear(),
     month: date.getMonth() + 1,
     day: date.getDate(),
@@ -140,7 +138,7 @@ export function TeesheetHeader({
           ) : (
             <CalendarIcon className="mr-2 h-4 w-4" />
           )}
-          {formatCalendarDate(date)}
+          {activeDateString}
         </Button>
       </div>
 
