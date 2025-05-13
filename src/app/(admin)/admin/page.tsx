@@ -6,7 +6,7 @@ import { TeesheetView } from "~/components/teesheet/TeesheetView";
 import { TeesheetHeader } from "~/components/teesheet/TeesheetHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { getTeesheetConfigs } from "~/server/settings/data";
-import { formatCalendarDate } from "~/lib/utils";
+import { formatCalendarDate, preserveDate } from "~/lib/utils";
 import { parse } from "date-fns";
 import { getAllPaceOfPlayForDate } from "~/server/pace-of-play/actions";
 
@@ -31,8 +31,13 @@ export default async function AdminPage({ searchParams }: PageProps) {
         dateString = formatCalendarDate(new Date(dateParam));
       }
     } else {
-      // Default to today in YYYY-MM-DD format
-      dateString = formatCalendarDate(new Date());
+      // Get today's date in a timezone-consistent way
+      // Create date at UTC midnight for today, then format it - this avoids timezone problems
+      const now = new Date();
+      const todayUTC = new Date(
+        Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()),
+      );
+      dateString = formatCalendarDate(todayUTC);
     }
 
     // Parse the date string to a Date object for functions that need it
