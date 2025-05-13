@@ -260,6 +260,8 @@ export function formatCalendarDate(
 ): string {
   if (!date) return "";
 
+  console.log("[FORMAT] formatCalendarDate input:", date);
+
   try {
     // For string dates, first validate if it's a valid date string
     if (typeof date === "string") {
@@ -274,6 +276,12 @@ export function formatCalendarDate(
         const month = parseInt(monthStr, 10) - 1; // JS months are 0-indexed
         const day = parseInt(dayStr, 10);
 
+        console.log("[FORMAT] String date parts:", {
+          year,
+          month: month + 1,
+          day,
+        });
+
         // Validate the date components
         if (
           isNaN(year) ||
@@ -286,20 +294,27 @@ export function formatCalendarDate(
           year < 1000 ||
           year > 9999
         ) {
+          console.log("[FORMAT] Invalid date parts, returning original:", date);
           return date; // Return the original string if it's an invalid date
         }
 
         // Create a new date in local time and format it
         const safeDate = new Date(year, month, day);
+        console.log("[FORMAT] Safe Date from string parts:", safeDate);
         if (isNaN(safeDate.getTime())) {
+          console.log("[FORMAT] Invalid safeDate, returning original:", date);
           return date; // Return original if it results in invalid date
         }
-        return format(safeDate, formatString);
+        const result = format(safeDate, formatString);
+        console.log("[FORMAT] Formatted result from string parts:", result);
+        return result;
       }
 
       // For ISO strings, parse carefully
       const parsedDate = new Date(date);
+      console.log("[FORMAT] Parsed date from string:", parsedDate);
       if (isNaN(parsedDate.getTime())) {
+        console.log("[FORMAT] Invalid parsed date, returning original:", date);
         return date; // Return the original string if parsing fails
       }
 
@@ -308,13 +323,25 @@ export function formatCalendarDate(
       const month = parsedDate.getMonth();
       const day = parsedDate.getDate();
 
+      console.log("[FORMAT] Parsed date components:", {
+        year,
+        month: month + 1,
+        day,
+      });
+
       // Create a new date using just the year, month, day (no time)
       const safeDate = new Date(year, month, day);
-      return format(safeDate, formatString);
+      console.log("[FORMAT] Safe date from parsed components:", safeDate);
+      const result = format(safeDate, formatString);
+      console.log("[FORMAT] Formatted result:", result);
+      return result;
     }
 
     // For Date objects, first check if it's a valid date
     if (isNaN(date.getTime())) {
+      console.log(
+        "[FORMAT] Invalid Date object, returning string representation",
+      );
       return String(date); // Return string representation of invalid date
     }
 
@@ -323,11 +350,20 @@ export function formatCalendarDate(
     const month = date.getMonth();
     const day = date.getDate();
 
+    console.log("[FORMAT] Date object components:", {
+      year,
+      month: month + 1,
+      day,
+    });
+
     // Create a new date with just the date portion
     const safeDate = new Date(year, month, day);
-    return format(safeDate, formatString);
+    console.log("[FORMAT] Safe date from Date object:", safeDate);
+    const result = format(safeDate, formatString);
+    console.log("[FORMAT] Formatted result:", result);
+    return result;
   } catch (error) {
-    console.error("Error formatting calendar date:", error);
+    console.error("[FORMAT] Error formatting calendar date:", error);
     return String(date);
   }
 }

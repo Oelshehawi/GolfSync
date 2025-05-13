@@ -17,6 +17,7 @@ import type {
   TimeBlockWithMembers,
 } from "~/app/types/TeeSheetTypes";
 import { formatCalendarDate, formatDisplayDate } from "~/lib/utils";
+import { useEffect } from "react";
 
 interface TeesheetHeaderProps {
   date: Date;
@@ -34,20 +35,68 @@ export function TeesheetHeader({
   const router = useRouter();
   const searchParams = useSearchParams();
 
+  // Debug initial props date
+  console.log("[CLIENT] initialDate from props:", initialDate, {
+    year: initialDate.getFullYear(),
+    month: initialDate.getMonth() + 1,
+    day: initialDate.getDate(),
+  });
+
+  // Debug current client date
+  const clientNow = new Date();
+  console.log("[CLIENT] Current client browser date:", clientNow, {
+    year: clientNow.getFullYear(),
+    month: clientNow.getMonth() + 1,
+    day: clientNow.getDate(),
+    hours: clientNow.getHours(),
+    minutes: clientNow.getMinutes(),
+    timezone: clientNow.getTimezoneOffset() / -60,
+  });
+
   // Use search params date if available, otherwise use initial date
-  const date = searchParams.get("date")
-    ? parse(searchParams.get("date")!, "yyyy-MM-dd", new Date())
+  const dateFromParams = searchParams.get("date");
+  console.log("[CLIENT] Date from search params:", dateFromParams);
+
+  const date = dateFromParams
+    ? parse(dateFromParams, "yyyy-MM-dd", new Date())
     : initialDate;
+
+  console.log("[CLIENT] Final date after params check:", date, {
+    year: date.getFullYear(),
+    month: date.getMonth() + 1,
+    day: date.getDate(),
+  });
+
+  // Log on component mount
+  useEffect(() => {
+    console.log("[CLIENT] TeesheetHeader mounted with date:", date, {
+      formattedDisplay: formatDisplayDate(date),
+      formattedCalendar: formatCalendarDate(date),
+    });
+
+    // Check today's date in client
+    const today = new Date();
+    console.log("[CLIENT] Today's date in client:", today, {
+      year: today.getFullYear(),
+      month: today.getMonth() + 1,
+      day: today.getDate(),
+    });
+  }, [date]);
 
   const handleDateChange = (days: number) => {
     const newDate = new Date(date);
     newDate.setDate(date.getDate() + days);
+    console.log("[CLIENT] Changed date:", newDate);
     const params = new URLSearchParams(searchParams.toString());
-    params.set("date", formatCalendarDate(newDate));
+    const formattedDate = formatCalendarDate(newDate);
+    console.log("[CLIENT] Formatted date for URL:", formattedDate);
+    params.set("date", formattedDate);
     router.push(`?${params.toString()}`);
   };
 
   const today = new Date();
+  console.log("[CLIENT] Today for calendar modifier:", today);
+
   const modifiers = {
     today: (day: Date) => isSameDay(day, today),
     selected: (day: Date) => isSameDay(day, date),
@@ -108,8 +157,14 @@ export function TeesheetHeader({
             modifiers={modifiers}
             onSelect={(newDate: Date | undefined) => {
               if (newDate) {
+                console.log("[CLIENT] Calendar selected date:", newDate);
                 const params = new URLSearchParams(searchParams.toString());
-                params.set("date", formatCalendarDate(newDate));
+                const formattedDate = formatCalendarDate(newDate);
+                console.log(
+                  "[CLIENT] Formatted calendar selection:",
+                  formattedDate,
+                );
+                params.set("date", formattedDate);
                 router.push(`?${params.toString()}`);
               }
             }}
