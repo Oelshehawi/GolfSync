@@ -19,10 +19,6 @@ export function TimeBlockPageHeader({
 
   return (
     <div className="flex items-center space-x-4 border-b pb-4">
-      <Button variant="outline" size="sm" onClick={() => router.back()}>
-        <ChevronLeft className="mr-2 h-4 w-4" />
-        Back
-      </Button>
       <div className="flex items-center space-x-2">
         <Calendar className="h-5 w-5 text-gray-500" />
         <h1 className="text-2xl font-bold">

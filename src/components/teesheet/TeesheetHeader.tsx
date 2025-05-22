@@ -10,6 +10,10 @@ import {
   ChevronRight,
   Calendar as CalendarIcon,
   X,
+  Settings,
+  Activity,
+  RotateCw,
+  Bug,
 } from "lucide-react";
 import { ConfigInfo } from "../settings/teesheet/ConfigInfo";
 import type {
@@ -18,6 +22,19 @@ import type {
 } from "~/app/types/TeeSheetTypes";
 import { formatCalendarDate, formatDisplayDate } from "~/lib/utils";
 import { useEffect, useState } from "react";
+import Link from "next/link";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "~/components/ui/dropdown-menu";
+import { updateTeesheetConfigForDate } from "~/server/settings/actions";
+import toast from "react-hot-toast";
+import { populateTimeBlocksWithRandomMembers } from "~/server/teesheet/actions";
+
+// Check if we're in development mode
+const isDev = process.env.NODE_ENV === "development";
 
 interface TeesheetHeaderProps {
   dateString: string;
@@ -34,6 +51,8 @@ export function TeesheetHeader({
 }: TeesheetHeaderProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [isPopulating, setIsPopulating] = useState(false);
 
   // Use search params date if available, otherwise use initial date string
   const dateFromParams = searchParams.get("date");
@@ -58,6 +77,48 @@ export function TeesheetHeader({
   const modifiers = {
     today: (day: Date) => isSameDay(day, today),
     selected: (day: Date) => isSameDay(day, date),
+  };
+
+  const handleConfigChange = async (configId: number) => {
+    if (configId === config.id) return;
+
+    setIsUpdating(true);
+    try {
+      const result = await updateTeesheetConfigForDate(teesheetId, configId);
+      if (result.success) {
+        toast.success("Teesheet configuration updated successfully");
+      } else {
+        toast.error(result.error || "Failed to update teesheet configuration");
+      }
+    } catch (error) {
+      toast.error("An unexpected error occurred");
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  // DEBUG: Populate timeblocks with random members
+  const handlePopulateTimeBlocks = async () => {
+    if (!teesheetId || !activeDateString) return;
+
+    setIsPopulating(true);
+    try {
+      const result = await populateTimeBlocksWithRandomMembers(
+        teesheetId,
+        activeDateString,
+      );
+
+      if (result.success) {
+        toast.success(result.message || "Successfully populated timeblocks");
+      } else {
+        toast.error(result.error || "Failed to populate timeblocks");
+      }
+    } catch (error) {
+      toast.error("An unexpected error occurred while populating timeblocks");
+      console.error(error);
+    } finally {
+      setIsPopulating(false);
+    }
   };
 
   return (

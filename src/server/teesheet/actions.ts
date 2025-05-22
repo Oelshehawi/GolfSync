@@ -9,6 +9,7 @@ import {
   paceOfPlay,
   members,
   guests,
+  teesheets,
 } from "~/server/db/schema";
 import { and, eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
@@ -453,6 +454,43 @@ export async function populateTimeBlocksWithRandomMembers(
     return {
       success: false,
       error: `Failed to populate timeblocks: ${error instanceof Error ? error.message : String(error)}`,
+    };
+  }
+}
+
+/**
+ * Updates the general notes for a teesheet
+ */
+export async function updateTeesheetGeneralNotes(
+  teesheetId: number,
+  generalNotes: string | null,
+): Promise<ActionResult> {
+  try {
+    const clerkOrgId = await getOrganizationId();
+
+    const result = await db
+      .update(teesheets)
+      .set({ generalNotes })
+      .where(
+        and(eq(teesheets.id, teesheetId), eq(teesheets.clerkOrgId, clerkOrgId)),
+      )
+      .returning();
+
+    if (!result || result.length === 0) {
+      return {
+        success: false,
+        error: "Teesheet not found",
+      };
+    }
+
+    revalidatePath(`/teesheet`);
+    revalidatePath(`/admin`);
+    return { success: true };
+  } catch (error) {
+    console.error("Error updating teesheet general notes:", error);
+    return {
+      success: false,
+      error: "Failed to update teesheet general notes",
     };
   }
 }

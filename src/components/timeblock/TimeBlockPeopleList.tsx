@@ -6,27 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { EntitySearchCard } from "~/components/ui/entity-search-card";
 import type { TimeBlockMemberView } from "~/app/types/TeeSheetTypes";
 import { Badge } from "~/components/ui/badge";
-
-type TimeBlockGuest = {
-  id: number;
-  guestId: number;
-  timeBlockId: number;
-  invitedByMemberId: number;
-  guest: {
-    id: number;
-    firstName: string;
-    lastName: string;
-    email: string | null;
-    phone: string | null;
-    handicap: string | null;
-  };
-  invitedByMember: {
-    id: number;
-    firstName: string;
-    lastName: string;
-    memberNumber: string;
-  };
-};
+import { TimeBlockGuest } from "~/app/types/GuestTypes";
+import { getMemberClassStyling } from "~/lib/utils";
 
 type PersonType = "member" | "guest";
 
@@ -45,7 +26,7 @@ export const TimeBlockPersonItem = ({
     if (type === "member") {
       onRemove((person as TimeBlockMemberView).id, "member");
     } else {
-      onRemove((person as TimeBlockGuest).guest.id, "guest");
+      onRemove((person as TimeBlockGuest).id, "guest");
     }
   };
 
@@ -53,50 +34,56 @@ export const TimeBlockPersonItem = ({
   let lastName = "";
   let subtitle = "";
   let memberInfo = null;
-  let memberClass = null;
+  let memberClass = "";
+
+  // Get styling according to the person type and class
+  let personStyle = getMemberClassStyling(type === "guest" ? "GUEST" : null);
 
   if (type === "member") {
     const member = person as TimeBlockMemberView;
     firstName = member.firstName;
     lastName = member.lastName;
     subtitle = `#${member.memberNumber}`;
+    memberClass = member.class || "";
 
-    // Add member class badge if available
-    if (member.class) {
-      memberClass = (
-        <Badge variant="secondary" className="ml-2 text-xs">
-          {member.class}
-        </Badge>
-      );
-    }
+    // Get specific styling for this member class
+    personStyle = getMemberClassStyling(member.class);
   } else {
     const guest = person as TimeBlockGuest;
-    firstName = guest.guest.firstName;
-    lastName = guest.guest.lastName;
-    subtitle = guest.guest.email || guest.guest.phone || "No contact";
+    firstName = guest.firstName;
+    lastName = guest.lastName;
+    subtitle = guest.email || guest.phone || "No contact";
     memberInfo = (
       <div>
         <p className="font-medium">Invited by</p>
         <p className="text-sm text-gray-500">
-          {guest.invitedByMember.firstName} {guest.invitedByMember.lastName} (
-          {guest.invitedByMember.memberNumber})
+          {guest.invitedByMember?.firstName} {guest.invitedByMember?.lastName} (
+          {guest.invitedByMember?.memberNumber})
         </p>
       </div>
     );
+
+    // Guest styling is already set above
   }
 
   return (
-    <div className="flex items-center justify-between rounded-lg border p-3 transition-colors hover:bg-gray-50">
+    <div
+      className={`flex items-center justify-between rounded-lg border ${personStyle.border} p-3 transition-colors hover:${personStyle.bg}`}
+    >
       <div className="grid flex-1 grid-cols-2 gap-x-6 gap-y-1">
         <div>
           <div className="flex items-center space-x-2">
-            <p className="font-medium">
+            <p className={`font-medium ${personStyle.text}`}>
               {firstName} {lastName}
             </p>
-            <Badge variant="outline" className="text-xs">
-              {type === "member" ? "Member" : "Guest"}
+            <Badge
+              variant={
+                type === "guest" ? "outline" : (personStyle.badgeVariant as any)
+              }
+              className="text-xs"
+            >
+              {type === "member" ? memberClass || "Member" : "Guest"}
             </Badge>
-            {memberClass}
           </div>
           <p className="text-sm text-gray-500">{subtitle}</p>
         </div>
@@ -227,6 +214,7 @@ export function TimeBlockMemberSearch({
       searchPlaceholder="Search members by name or number..."
       limitReachedMessage="This time block is full. Remove a member or guest before adding more."
       noResultsMessage="No members found matching your search"
+      itemsPerPage={5}
       renderEntityCard={(member) => (
         <div
           key={member.id}
@@ -317,6 +305,7 @@ export function TimeBlockGuestSearch({
       searchPlaceholder="Search guests by name or email..."
       limitReachedMessage="This time block is full. Remove a member or guest before adding more."
       noResultsMessage="No guests found matching your search"
+      itemsPerPage={5}
       renderEntityCard={(guest) => (
         <div
           key={guest.id}

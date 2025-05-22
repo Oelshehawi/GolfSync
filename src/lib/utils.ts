@@ -8,6 +8,280 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /**
+ * Maps member classes and user types to their color schemes and descriptions
+ * @param className the class name or user type to get styling for
+ * @returns object containing color information and description
+ */
+export function getMemberClassStyling(className?: string | null) {
+  // Default styling for unknown classes
+  const defaultStyle = {
+    bg: "bg-gray-100",
+    text: "text-gray-800",
+    border: "border-gray-200",
+    description: "Regular member",
+    badgeVariant: "secondary",
+  };
+
+  if (!className) return defaultStyle;
+
+  // Standardize input to uppercase for consistent matching
+  const classUpper = className.toUpperCase();
+
+  // System for Golf Club Member Classes
+  const classMap: Record<string, typeof defaultStyle> = {
+    // Unlimited Play
+    "UNLIMITED PLAY MALE": {
+      bg: "bg-blue-50",
+      text: "text-blue-700",
+      border: "border-blue-100",
+      description: "Unlimited Play Male Member",
+      badgeVariant: "default",
+    },
+    "UNLIMITED PLAY FEMALE": {
+      bg: "bg-purple-50",
+      text: "text-purple-700",
+      border: "border-purple-100",
+      description: "Unlimited Play Female Member",
+      badgeVariant: "default",
+    },
+
+    // Full Play
+    "FULL PLAY MALE": {
+      bg: "bg-blue-100",
+      text: "text-blue-800",
+      border: "border-blue-200",
+      description: "Full Play Male Member",
+      badgeVariant: "default",
+    },
+    "FULL PLAY FEMALE": {
+      bg: "bg-purple-100",
+      text: "text-purple-800",
+      border: "border-purple-200",
+      description: "Full Play Female Member",
+      badgeVariant: "default",
+    },
+
+    // Social
+    "SOCIAL MALE": {
+      bg: "bg-orange-50",
+      text: "text-orange-700",
+      border: "border-orange-100",
+      description: "Social Male Member",
+      badgeVariant: "secondary",
+    },
+    "SOCIAL FEMALE": {
+      bg: "bg-orange-50",
+      text: "text-orange-700",
+      border: "border-orange-100",
+      description: "Social Female Member",
+      badgeVariant: "secondary",
+    },
+
+    // Intermediate
+    "INTERMEDIATE MALE": {
+      bg: "bg-cyan-50",
+      text: "text-cyan-700",
+      border: "border-cyan-100",
+      description: "Intermediate Male Member",
+      badgeVariant: "default",
+    },
+    "INTERMEDIATE FEMALE": {
+      bg: "bg-pink-50",
+      text: "text-pink-700",
+      border: "border-pink-100",
+      description: "Intermediate Female Member",
+      badgeVariant: "default",
+    },
+
+    // Jr Intermediate
+    "JR INTERMEDIATE MALE": {
+      bg: "bg-sky-100",
+      text: "text-sky-800",
+      border: "border-sky-200",
+      description: "Jr Intermediate Male Member",
+      badgeVariant: "default",
+    },
+    "JR INTERMEDIATE FEMALE": {
+      bg: "bg-fuchsia-100",
+      text: "text-fuchsia-800",
+      border: "border-fuchsia-200",
+      description: "Jr Intermediate Female Member",
+      badgeVariant: "default",
+    },
+
+    // Junior
+    "JUNIOR BOY": {
+      bg: "bg-blue-100",
+      text: "text-blue-800",
+      border: "border-blue-200",
+      description: "Junior Boy Member",
+      badgeVariant: "default",
+    },
+    "JUNIOR GIRL": {
+      bg: "bg-purple-100",
+      text: "text-purple-800",
+      border: "border-purple-200",
+      description: "Junior Girl Member",
+      badgeVariant: "default",
+    },
+
+    // Weekday Play
+    "WEEKDAY PLAY MALE": {
+      bg: "bg-lime-50",
+      text: "text-lime-700",
+      border: "border-lime-100",
+      description: "Weekday Play Male Member",
+      badgeVariant: "secondary",
+    },
+    "WEEKDAY PLAY FEMALE": {
+      bg: "bg-lime-50",
+      text: "text-lime-700",
+      border: "border-lime-100",
+      description: "Weekday Play Female Member",
+      badgeVariant: "secondary",
+    },
+
+    // Non-Resident
+    "NON-RESIDENT MALE": {
+      bg: "bg-yellow-50",
+      text: "text-yellow-700",
+      border: "border-yellow-100",
+      description: "Non-Resident Male Member",
+      badgeVariant: "secondary",
+    },
+    "NON-RESIDENT FEMALE": {
+      bg: "bg-yellow-50",
+      text: "text-yellow-700",
+      border: "border-yellow-100",
+      description: "Non-Resident Female Member",
+      badgeVariant: "secondary",
+    },
+
+    // Staff
+    "STAFF PLAY": {
+      bg: "bg-indigo-100",
+      text: "text-indigo-800",
+      border: "border-indigo-200",
+      description: "Staff Play Member",
+      badgeVariant: "outline",
+    },
+    "MGMT / PRO": {
+      bg: "bg-blue-200",
+      text: "text-blue-900",
+      border: "border-blue-300",
+      description: "Management or Pro Staff Member",
+      badgeVariant: "outline",
+    },
+
+    // Dining
+    DINING: {
+      bg: "bg-amber-50",
+      text: "text-amber-700",
+      border: "border-amber-100",
+      description: "Dining Member",
+      badgeVariant: "secondary",
+    },
+
+    // Privileged
+    "PRIVILEGED MALE": {
+      bg: "bg-green-50",
+      text: "text-green-700",
+      border: "border-green-100",
+      description: "Privileged Male Member",
+      badgeVariant: "secondary",
+    },
+    "PRIVILEGED FEMALE": {
+      bg: "bg-green-50",
+      text: "text-green-700",
+      border: "border-green-100",
+      description: "Privileged Female Member",
+      badgeVariant: "secondary",
+    },
+
+    // Senior
+    "SENIOR RETIRED MALE": {
+      bg: "bg-amber-100",
+      text: "text-amber-800",
+      border: "border-amber-200",
+      description: "Senior Retired Male Member",
+      badgeVariant: "default",
+    },
+    "SENIOR RETIRED FEMALE": {
+      bg: "bg-amber-100",
+      text: "text-amber-800",
+      border: "border-amber-200",
+      description: "Senior Retired Female Member",
+      badgeVariant: "default",
+    },
+
+    // Honorary
+    "HONORARY MALE": {
+      bg: "bg-green-100",
+      text: "text-green-800",
+      border: "border-green-200",
+      description: "Honorary Male Member",
+      badgeVariant: "secondary",
+    },
+    "HONORARY FEMALE": {
+      bg: "bg-green-100",
+      text: "text-green-800",
+      border: "border-green-200",
+      description: "Honorary Female Member",
+      badgeVariant: "secondary",
+    },
+
+    // Other status types
+    REGULAR: {
+      bg: "bg-gray-100",
+      text: "text-gray-800",
+      border: "border-gray-200",
+      description: "Regular Member",
+      badgeVariant: "secondary",
+    },
+    SENIOR: {
+      bg: "bg-amber-100",
+      text: "text-amber-800",
+      border: "border-amber-200",
+      description: "Senior Member",
+      badgeVariant: "default",
+    },
+    HONORARY: {
+      bg: "bg-green-100",
+      text: "text-green-800",
+      border: "border-green-200",
+      description: "Honorary Member",
+      badgeVariant: "secondary",
+    },
+    RESIGNED: {
+      bg: "bg-rose-100",
+      text: "text-rose-800",
+      border: "border-rose-200",
+      description: "Resigned Member",
+      badgeVariant: "destructive",
+    },
+
+    // Special user types
+    GUEST: {
+      bg: "bg-lime-200",
+      text: "text-lime-800",
+      border: "border-lime-200",
+      description: "Guest",
+      badgeVariant: "outline",
+    },
+    STAFF: {
+      bg: "bg-indigo-100",
+      text: "text-indigo-800",
+      border: "border-indigo-200",
+      description: "Staff Member",
+      badgeVariant: "outline",
+    },
+  };
+
+  // Return the styling for the class or default if not found
+  return classMap[classUpper] || defaultStyle;
+}
+
+/**
  * Generates an array of time strings in "HH:MM" format based on config
  */
 export function generateTimeBlocks(config: TeesheetConfig): string[] {
@@ -260,7 +534,6 @@ export function formatCalendarDate(
 ): string {
   if (!date) return "";
 
-
   try {
     // For string dates, first validate if it's a valid date string
     if (typeof date === "string") {
@@ -274,7 +547,6 @@ export function formatCalendarDate(
         const year = parseInt(yearStr, 10);
         const month = parseInt(monthStr, 10) - 1; // JS months are 0-indexed
         const day = parseInt(dayStr, 10);
-
 
         // Validate the date components
         if (
@@ -311,7 +583,6 @@ export function formatCalendarDate(
       const month = parsedDate.getMonth();
       const day = parsedDate.getDate();
 
-
       // Create a new date using just the year, month, day (no time)
       const safeDate = new Date(year, month, day);
       const result = format(safeDate, formatString);
@@ -327,8 +598,6 @@ export function formatCalendarDate(
     const year = date.getFullYear();
     const month = date.getMonth();
     const day = date.getDate();
-
-
 
     // Create a new date with just the date portion
     const safeDate = new Date(year, month, day);

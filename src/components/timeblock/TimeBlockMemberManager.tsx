@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useDebouncedCallback } from "use-debounce";
 import { TimeBlockPageHeader } from "./TimeBlockPageHeader";
 import { TimeBlockHeader } from "./TimeBlockHeader";
@@ -16,7 +16,10 @@ import {
 } from "~/server/guests/actions";
 import { checkTimeblockRestrictionsAction } from "~/server/timeblock-restrictions/actions";
 import type { Member } from "~/app/types/MemberTypes";
-import type { TimeBlockWithMembers } from "~/app/types/TeeSheetTypes";
+import type {
+  TimeBlockWithMembers,
+  TimeBlockMemberView,
+} from "~/app/types/TeeSheetTypes";
 import {
   TimeBlockMemberSearch,
   TimeBlockGuestSearch,
@@ -27,27 +30,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { RestrictionViolation } from "~/app/types/RestrictionTypes";
 import { RestrictionViolationAlert } from "~/components/settings/timeblock-restrictions/RestrictionViolationAlert";
 import { formatDateToYYYYMMDD } from "~/lib/utils";
-
-type TimeBlockGuest = {
-  id: number;
-  guestId: number;
-  timeBlockId: number;
-  invitedByMemberId: number;
-  guest: {
-    id: number;
-    firstName: string;
-    lastName: string;
-    email: string | null;
-    phone: string | null;
-    handicap: string | null;
-  };
-  invitedByMember: {
-    id: number;
-    firstName: string;
-    lastName: string;
-    memberNumber: string;
-  };
-};
+import { TimeBlockGuest } from "~/app/types/GuestTypes";
 
 type Guest = {
   id: number;
@@ -61,13 +44,25 @@ type Guest = {
 interface TimeBlockMemberManagerProps {
   timeBlock: TimeBlockWithMembers;
   timeBlockGuests?: TimeBlockGuest[];
-
 }
 
 export function TimeBlockMemberManager({
   timeBlock,
   timeBlockGuests = [],
 }: TimeBlockMemberManagerProps) {
+  // Track members and guests in local state to allow immediate updates
+  const [localMembers, setLocalMembers] = useState<TimeBlockMemberView[]>(
+    timeBlock.members,
+  );
+  const [localGuests, setLocalGuests] =
+    useState<TimeBlockGuest[]>(timeBlockGuests);
+
+  // Update local state when props change
+  useEffect(() => {
+    setLocalMembers(timeBlock.members);
+    setLocalGuests(timeBlockGuests);
+  }, [timeBlock.members, timeBlockGuests]);
+
   // Member state
   const [memberSearchQuery, setMemberSearchQuery] = useState("");
   const [memberSearchResults, setMemberSearchResults] = useState<Member[]>([]);
@@ -90,8 +85,11 @@ export function TimeBlockMemberManager({
 
   // Constants
   const MAX_PEOPLE = 4;
-  const totalPeople = timeBlock.members.length + timeBlockGuests.length;
+  const totalPeople = localMembers.length + localGuests.length;
   const isTimeBlockFull = totalPeople >= MAX_PEOPLE;
+
+  // Create a key that changes when members or guests change
+  const peopleListKey = `people-list-${localMembers.map((m) => m.id).join("-")}-${localGuests.map((g) => g.id).join("-")}`;
 
   // Member search handler
   const handleMemberSearch = useCallback(async (query: string) => {
@@ -228,6 +226,19 @@ export function TimeBlockMemberManager({
               const result = await addMemberToTimeBlock(timeBlock.id, memberId);
               if (result.success) {
                 toast.success("Member added successfully");
+
+                // Add member to local state for immediate UI update
+                const newMember: TimeBlockMemberView = {
+                  id: memberToAdd.id,
+                  firstName: memberToAdd.firstName,
+                  lastName: memberToAdd.lastName,
+                  memberNumber: memberToAdd.memberNumber,
+                  class: memberToAdd.class,
+                  bagNumber: memberToAdd.bagNumber,
+                  checkedIn: false,
+                  checkedInAt: null,
+                };
+                setLocalMembers((prev) => [...prev, newMember]);
               } else {
                 toast.error(result.error || "Failed to add member");
               }
@@ -245,6 +256,19 @@ export function TimeBlockMemberManager({
         const result = await addMemberToTimeBlock(timeBlock.id, memberId);
         if (result.success) {
           toast.success("Member added successfully");
+
+          // Add member to local state for immediate UI update
+          const newMember: TimeBlockMemberView = {
+            id: memberToAdd.id,
+            firstName: memberToAdd.firstName,
+            lastName: memberToAdd.lastName,
+            memberNumber: memberToAdd.memberNumber,
+            class: memberToAdd.class,
+            bagNumber: memberToAdd.bagNumber,
+            checkedIn: false,
+            checkedInAt: null,
+          };
+          setLocalMembers((prev) => [...prev, newMember]);
         } else {
           toast.error(result.error || "Failed to add member");
         }
@@ -263,6 +287,11 @@ export function TimeBlockMemberManager({
       const result = await removeMemberFromTimeBlock(timeBlock.id, memberId);
       if (result.success) {
         toast.success("Member removed successfully");
+
+        // Remove member from local state for immediate UI update
+        setLocalMembers((prev) =>
+          prev.filter((member) => member.id !== memberId),
+        );
       } else {
         toast.error(result.error || "Failed to remove member");
       }
@@ -275,6 +304,17 @@ export function TimeBlockMemberManager({
   const handleAddGuest = async (guestId: number) => {
     if (!selectedMemberId) {
       toast.error("Please select a member who is inviting this guest");
+      return;
+    }
+
+    const guestToAdd = guestSearchResults.find((g) => g.id === guestId);
+    if (!guestToAdd) {
+      return;
+    }
+
+    const invitingMember = localMembers.find((m) => m.id === selectedMemberId);
+    if (!invitingMember) {
+      toast.error("Selected member not found");
       return;
     }
 
@@ -293,6 +333,26 @@ export function TimeBlockMemberManager({
             );
             if (result.success) {
               toast.success("Guest added successfully");
+
+              // Add guest to local state for immediate UI update
+              const newGuest: TimeBlockGuest = {
+                id: guestToAdd.id,
+                firstName: guestToAdd.firstName,
+                lastName: guestToAdd.lastName,
+                email: guestToAdd.email,
+                phone: guestToAdd.phone,
+                handicap: guestToAdd.handicap,
+                checkedIn: false,
+                checkedInAt: null,
+                invitedByMember: {
+                  id: invitingMember.id,
+                  firstName: invitingMember.firstName,
+                  lastName: invitingMember.lastName,
+                  memberNumber: invitingMember.memberNumber,
+                },
+              };
+              setLocalGuests((prev) => [...prev, newGuest]);
+
               setSelectedMemberId(null);
             } else {
               toast.error(result.error || "Failed to add guest");
@@ -315,6 +375,26 @@ export function TimeBlockMemberManager({
       );
       if (result.success) {
         toast.success("Guest added successfully");
+
+        // Add guest to local state for immediate UI update
+        const newGuest: TimeBlockGuest = {
+          id: guestToAdd.id,
+          firstName: guestToAdd.firstName,
+          lastName: guestToAdd.lastName,
+          email: guestToAdd.email,
+          phone: guestToAdd.phone,
+          handicap: guestToAdd.handicap,
+          checkedIn: false,
+          checkedInAt: null,
+          invitedByMember: {
+            id: invitingMember.id,
+            firstName: invitingMember.firstName,
+            lastName: invitingMember.lastName,
+            memberNumber: invitingMember.memberNumber,
+          },
+        };
+        setLocalGuests((prev) => [...prev, newGuest]);
+
         setSelectedMemberId(null);
       } else {
         toast.error(result.error || "Failed to add guest");
@@ -330,6 +410,9 @@ export function TimeBlockMemberManager({
       const result = await removeGuestFromTimeBlock(timeBlock.id, guestId);
       if (result.success) {
         toast.success("Guest removed successfully");
+
+        // Remove guest from local state for immediate UI update
+        setLocalGuests((prev) => prev.filter((guest) => guest.id !== guestId));
       } else {
         toast.error(result.error || "Failed to remove guest");
       }
@@ -356,7 +439,7 @@ export function TimeBlockMemberManager({
       <TimeBlockPageHeader timeBlock={timeBlock} />
       <TimeBlockHeader
         timeBlock={timeBlock}
-        guestsCount={timeBlockGuests.length}
+        guestsCount={localGuests.length}
         maxPeople={MAX_PEOPLE}
       />
 
@@ -391,7 +474,7 @@ export function TimeBlockMemberManager({
             isLoading={isGuestSearching}
             onAddGuest={handleAddGuest}
             isTimeBlockFull={isTimeBlockFull}
-            members={timeBlock.members}
+            members={localMembers}
             onMemberSelect={handleMemberSelect}
             selectedMemberId={selectedMemberId}
           />
@@ -400,8 +483,9 @@ export function TimeBlockMemberManager({
 
       {/* Combined People List - always visible */}
       <TimeBlockPeopleList
-        members={timeBlock.members}
-        guests={timeBlockGuests}
+        key={peopleListKey}
+        members={localMembers}
+        guests={localGuests}
         onRemoveMember={handleRemoveMember}
         onRemoveGuest={handleRemoveGuest}
         maxPeople={MAX_PEOPLE}

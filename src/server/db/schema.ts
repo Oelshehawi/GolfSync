@@ -150,6 +150,7 @@ export const teesheets = createTable(
     clerkOrgId: varchar("clerk_org_id", { length: 50 }).notNull(),
     date: date("date").notNull(),
     configId: integer("config_id").notNull(),
+    generalNotes: text("general_notes"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .default(sql`CURRENT_TIMESTAMP`)
       .notNull(),

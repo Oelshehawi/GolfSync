@@ -29,7 +29,7 @@ interface AddMemberFormProps {
 
 export function AddMemberForm({ onSubmit, onCancel }: AddMemberFormProps) {
   const form = useForm<MemberFormValues>({
-    resolver: zodResolver(memberFormSchema),
+    resolver: zodResolver(memberFormSchema) as any,
     defaultValues: {
       memberNumber: "",
       firstName: "",
@@ -79,10 +79,13 @@ export function AddMemberForm({ onSubmit, onCancel }: AddMemberFormProps) {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+      <form
+        onSubmit={form.handleSubmit(handleSubmit as any)}
+        className="space-y-4"
+      >
         <div className="grid grid-cols-2 gap-4">
           <FormField
-            control={form.control}
+            control={form.control as any}
             name="memberNumber"
             render={({ field }) => (
               <FormItem>
@@ -96,7 +99,7 @@ export function AddMemberForm({ onSubmit, onCancel }: AddMemberFormProps) {
           />
 
           <FormField
-            control={form.control}
+            control={form.control as any}
             name="class"
             render={({ field }) => (
               <FormItem>
@@ -117,7 +120,7 @@ export function AddMemberForm({ onSubmit, onCancel }: AddMemberFormProps) {
 
         <div className="grid grid-cols-2 gap-4">
           <FormField
-            control={form.control}
+            control={form.control as any}
             name="firstName"
             render={({ field }) => (
               <FormItem>
@@ -131,7 +134,7 @@ export function AddMemberForm({ onSubmit, onCancel }: AddMemberFormProps) {
           />
 
           <FormField
-            control={form.control}
+            control={form.control as any}
             name="lastName"
             render={({ field }) => (
               <FormItem>
@@ -147,7 +150,7 @@ export function AddMemberForm({ onSubmit, onCancel }: AddMemberFormProps) {
 
         <div className="grid grid-cols-2 gap-4">
           <FormField
-            control={form.control}
+            control={form.control as any}
             name="username"
             render={({ field }) => (
               <FormItem>
@@ -161,7 +164,7 @@ export function AddMemberForm({ onSubmit, onCancel }: AddMemberFormProps) {
           />
 
           <FormField
-            control={form.control}
+            control={form.control as any}
             name="email"
             render={({ field }) => (
               <FormItem>
@@ -177,7 +180,7 @@ export function AddMemberForm({ onSubmit, onCancel }: AddMemberFormProps) {
 
         <div className="grid grid-cols-2 gap-4">
           <FormField
-            control={form.control}
+            control={form.control as any}
             name="gender"
             render={({ field }) => (
               <FormItem>
@@ -202,7 +205,7 @@ export function AddMemberForm({ onSubmit, onCancel }: AddMemberFormProps) {
           />
 
           <FormField
-            control={form.control}
+            control={form.control as any}
             name="dateOfBirth"
             render={({ field }) => (
               <FormItem>
@@ -218,7 +221,7 @@ export function AddMemberForm({ onSubmit, onCancel }: AddMemberFormProps) {
 
         <div className="grid grid-cols-2 gap-4">
           <FormField
-            control={form.control}
+            control={form.control as any}
             name="handicap"
             render={({ field }) => (
               <FormItem>
@@ -232,7 +235,7 @@ export function AddMemberForm({ onSubmit, onCancel }: AddMemberFormProps) {
           />
 
           <FormField
-            control={form.control}
+            control={form.control as any}
             name="bagNumber"
             render={({ field }) => (
               <FormItem>
