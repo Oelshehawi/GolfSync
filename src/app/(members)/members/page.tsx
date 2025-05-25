@@ -8,11 +8,11 @@ import {
   getUpcomingEvents,
   getMemberEventRegistrations,
 } from "~/server/events/data";
-import { CourseInfoDisplay } from "~/components/course-info/CourseInfoDisplay";
+import { CourseInfoClient } from "~/components/course-info/CourseInfoClient";
 import { UpcomingTeeTimes } from "~/components/member-teesheet-client/UpcomingTeeTimes";
 import { Member } from "~/app/types/MemberTypes";
 import { EventCard } from "~/components/events/EventCard";
-import { Event, EventType } from "~/app/types/events";
+import { EventType } from "~/app/types/events";
 
 export default async function MembersHome() {
   const { sessionClaims } = await auth();
@@ -42,23 +42,8 @@ export default async function MembersHome() {
     <div className="flex flex-col gap-6 px-4 py-16 sm:px-12 md:pt-24">
       {/* Course Info */}
       {courseInfo && !("success" in courseInfo) && (
-        <CourseInfoDisplay data={courseInfo} />
+        <CourseInfoClient data={courseInfo} />
       )}
-
-      <div className="rounded-lg bg-white p-6 shadow-md sm:p-8">
-        <h2 className="mb-4 text-xl font-semibold sm:text-2xl">
-          Welcome,{" "}
-          <span className="text-[var(--org-primary)]">
-            {member?.firstName} {member?.lastName}
-          </span>
-          !
-        </h2>
-        <div className="space-y-6">
-          <p className="text-gray-700">
-            View your upcoming events, tee times, and more.
-          </p>
-        </div>
-      </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <div className="rounded-lg bg-white p-6 shadow-md">

@@ -43,15 +43,26 @@ export const HeaderNavClient = ({ member }: HeaderNavClientProps) => {
     return false;
   };
 
+  console.log(member);
+
   return (
     <>
       <div className="mx-auto flex h-14 items-center justify-between px-6">
-        <Link
-          href="/members"
-          className="text-xl font-bold text-[var(--org-primary)]"
-        >
-          GolfSync
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/members"
+            className="text-xl font-bold text-[var(--org-primary)]"
+          >
+            GolfSync
+          </Link>
+          <div className="flex items-center gap-2">
+            {member?.firstName && (
+              <span className="ml-2 border-l-2 border-[var(--org-primary)] pl-2 text-sm font-medium text-neutral-600">
+                Welcome, {member.firstName}!
+              </span>
+            )}
+          </div>
+        </div>
 
         {/* Desktop Navigation */}
         <div className="hidden items-center gap-4 md:flex">
