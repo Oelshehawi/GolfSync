@@ -6,6 +6,7 @@ import {
   members,
   timeBlockGuests,
   guests,
+  timeBlockFills,
 } from "~/server/db/schema";
 import { eq, and, inArray, sql } from "drizzle-orm";
 import { getOrganizationId } from "~/lib/auth";
@@ -178,6 +179,7 @@ export async function getTimeBlocksForTeesheet(
         updatedAt: row.updatedAt,
         members: [],
         guests: [],
+        fills: [],
       });
     }
 
@@ -248,6 +250,35 @@ export async function getTimeBlocksForTeesheet(
               memberNumber: row.invitedByMember.memberNumber!,
             }
           : undefined,
+      });
+    }
+  });
+
+  // Fetch fills in a separate query
+  const fillsResult = await db
+    .select()
+    .from(timeBlockFills)
+    .where(
+      and(
+        eq(timeBlockFills.clerkOrgId, clerkOrgId),
+        inArray(timeBlockFills.timeBlockId, Array.from(timeBlocksMap.keys())),
+      ),
+    );
+
+  // Add fills to the corresponding time blocks
+  fillsResult.forEach((fill) => {
+    const timeBlock = timeBlocksMap.get(fill.timeBlockId);
+    if (timeBlock) {
+      if (!timeBlock.fills) {
+        timeBlock.fills = [];
+      }
+      timeBlock.fills.push({
+        id: fill.id,
+        timeBlockId: fill.timeBlockId,
+        fillType: fill.fillType,
+        customName: fill.customName,
+        clerkOrgId: fill.clerkOrgId,
+        createdAt: fill.createdAt || new Date(),
       });
     }
   });
@@ -396,6 +427,17 @@ export async function getTimeBlockWithMembers(
       : undefined,
   }));
 
+  // Fetch fills data separately
+  const fillsResult = await db
+    .select()
+    .from(timeBlockFills)
+    .where(
+      and(
+        eq(timeBlockFills.clerkOrgId, clerkOrgId),
+        eq(timeBlockFills.timeBlockId, timeBlockId),
+      ),
+    );
+
   return {
     id: timeBlock.id,
     clerkOrgId: timeBlock.clerkOrgId,
@@ -408,5 +450,14 @@ export async function getTimeBlockWithMembers(
     date: teesheet?.date,
     members: blockMembers || [],
     guests: blockGuests || [],
+    fills:
+      fillsResult.map((fill) => ({
+        id: fill.id,
+        timeBlockId: fill.timeBlockId,
+        fillType: fill.fillType,
+        customName: fill.customName,
+        clerkOrgId: fill.clerkOrgId,
+        createdAt: fill.createdAt || new Date(),
+      })) || [],
   };
 }

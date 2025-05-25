@@ -20,6 +20,7 @@ import {
   checkInGuest,
   checkInAllTimeBlockParticipants,
   updateTimeBlockNotes,
+  removeFillFromTimeBlock,
 } from "~/server/teesheet/actions";
 
 // Extended ActionResult type to include violations
@@ -35,6 +36,37 @@ interface TeesheetViewProps {
   availableConfigs: TeesheetConfig[];
   paceOfPlayData?: TimeBlockWithPaceOfPlay[];
   isAdmin?: boolean;
+}
+
+interface ViewProps {
+  teesheet: TeeSheet;
+  timeBlocks: TimeBlockWithMembers[];
+  availableConfigs: TeesheetConfig[];
+  paceOfPlayMap: Map<number, any>;
+  isAdmin?: boolean;
+  onRestrictionViolation: (violations: RestrictionViolation[]) => void;
+  setPendingAction: React.Dispatch<
+    React.SetStateAction<(() => Promise<void>) | null>
+  >;
+  violations: RestrictionViolation[];
+  showRestrictionAlert: boolean;
+  setShowRestrictionAlert: (show: boolean) => void;
+  pendingAction: (() => Promise<void>) | null;
+  onRemoveMember: (timeBlockId: number, memberId: number) => Promise<void>;
+  onRemoveGuest: (timeBlockId: number, guestId: number) => Promise<void>;
+  onCheckInMember: (
+    timeBlockId: number,
+    memberId: number,
+    isCheckedIn: boolean,
+  ) => Promise<void>;
+  onCheckInGuest: (
+    timeBlockId: number,
+    guestId: number,
+    isCheckedIn: boolean,
+  ) => Promise<void>;
+  onCheckInAll: (timeBlockId: number) => Promise<void>;
+  onSaveNotes: (timeBlockId: number, notes: string) => Promise<boolean>;
+  onRemoveFill: (timeBlockId: number, fillId: number) => Promise<void>;
 }
 
 export function TeesheetView({
@@ -258,6 +290,41 @@ export function TeesheetView({
     }
   };
 
+  // Handle removing a fill from a timeblock
+  const handleRemoveFill = async (timeBlockId: number, fillId: number) => {
+    try {
+      const result = await removeFillFromTimeBlock(timeBlockId, fillId);
+      if (result.success) {
+        toast.success("Fill removed successfully");
+      } else {
+        toast.error(result.error || "Failed to remove fill");
+      }
+    } catch (error) {
+      toast.error("An unexpected error occurred");
+    }
+  };
+
+  const viewProps: ViewProps = {
+    teesheet,
+    timeBlocks: sortedTimeBlocks,
+    availableConfigs,
+    paceOfPlayMap,
+    isAdmin,
+    onRestrictionViolation: handleRestrictionViolations,
+    setPendingAction,
+    violations,
+    showRestrictionAlert,
+    setShowRestrictionAlert,
+    pendingAction,
+    onRemoveMember: handleRemoveMember,
+    onRemoveGuest: handleRemoveGuest,
+    onCheckInMember: handleCheckInMember,
+    onCheckInGuest: handleCheckInGuest,
+    onCheckInAll: handleCheckInAll,
+    onSaveNotes: handleSaveNotes,
+    onRemoveFill: handleRemoveFill,
+  };
+
   return (
     <div className="rounded-lg bg-white p-4 shadow">
       <div className="mb-4 flex items-center justify-between">
@@ -286,46 +353,9 @@ export function TeesheetView({
       </div>
 
       {viewMode === "grid" ? (
-        <GridTeesheetView
-          teesheet={teesheet}
-          timeBlocks={sortedTimeBlocks}
-          availableConfigs={availableConfigs}
-          paceOfPlayMap={paceOfPlayMap}
-          isAdmin={isAdmin}
-          onRestrictionViolation={handleRestrictionViolations}
-          setPendingAction={setPendingAction}
-          violations={violations}
-          showRestrictionAlert={showRestrictionAlert}
-          setShowRestrictionAlert={setShowRestrictionAlert}
-          pendingAction={pendingAction}
-          onRemoveMember={handleRemoveMember}
-          onRemoveGuest={handleRemoveGuest}
-          onCheckInMember={handleCheckInMember}
-          onCheckInGuest={handleCheckInGuest}
-          onCheckInAll={handleCheckInAll}
-          onSaveNotes={handleSaveNotes}
-        />
+        <GridTeesheetView {...viewProps} />
       ) : (
-        <VerticalTeesheetView
-          teesheet={teesheet}
-          timeBlocks={sortedTimeBlocks}
-          availableConfigs={availableConfigs}
-          paceOfPlayData={paceOfPlayData}
-          paceOfPlayMap={paceOfPlayMap}
-          isAdmin={isAdmin}
-          onRestrictionViolation={handleRestrictionViolations}
-          setPendingAction={setPendingAction}
-          violations={violations}
-          showRestrictionAlert={showRestrictionAlert}
-          setShowRestrictionAlert={setShowRestrictionAlert}
-          pendingAction={pendingAction}
-          onRemoveMember={handleRemoveMember}
-          onRemoveGuest={handleRemoveGuest}
-          onCheckInMember={handleCheckInMember}
-          onCheckInGuest={handleCheckInGuest}
-          onCheckInAll={handleCheckInAll}
-          onSaveNotes={handleSaveNotes}
-        />
+        <VerticalTeesheetView {...viewProps} />
       )}
     </div>
   );

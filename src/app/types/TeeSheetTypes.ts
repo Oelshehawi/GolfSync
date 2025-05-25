@@ -1,5 +1,22 @@
 import { TimeBlockGuest } from "./GuestTypes";
 
+export const FillTypes = {
+  GUEST: "guest_fill",
+  RECIPROCAL: "reciprocal_fill",
+  CUSTOM: "custom_fill",
+} as const;
+
+export type FillType = (typeof FillTypes)[keyof typeof FillTypes];
+
+export interface TimeBlockFill {
+  id: number;
+  timeBlockId: number;
+  fillType: FillType;
+  customName?: string | null;
+  clerkOrgId: string;
+  createdAt: Date;
+}
+
 export interface TeeSheet {
   id: number;
   clerkOrgId: string;
@@ -34,6 +51,7 @@ export interface TimeBlockMemberView {
 export interface TimeBlockWithMembers extends TimeBlock {
   members: TimeBlockMemberView[];
   guests: TimeBlockGuest[];
+  fills: TimeBlockFill[];
   notes?: string | null;
   date?: string;
 }

@@ -1,34 +1,25 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import type {
   TeeSheet,
   TimeBlockWithMembers,
   TeesheetConfig,
 } from "~/app/types/TeeSheetTypes";
 import { RestrictionViolation } from "~/app/types/RestrictionTypes";
-import type { TimeBlockWithPaceOfPlay } from "~/server/pace-of-play/data";
 import { TimeBlock as TimeBlockComponent } from "../timeblock/TimeBlock";
 import { RestrictionViolationAlert } from "~/components/settings/timeblock-restrictions/RestrictionViolationAlert";
+import type { TimeBlockWithPaceOfPlay } from "~/server/pace-of-play/data";
 import { TeesheetControlPanel } from "./TeesheetControlPanel";
 import { TeesheetGeneralNotes } from "./TeesheetGeneralNotes";
-import {
-  TimeBlockNote,
-  TimeBlockNoteEditor,
-  TimeBlockNoteAddIndicator,
-} from "../timeblock/TimeBlockNotes";
 import { AddPlayerModal } from "../timeblock/AddPlayerModal";
-import type { TimeBlockGuest } from "~/app/types/GuestTypes";
+import { useTeesheetPolling } from "~/hooks/useTeesheetPolling";
+import { useRestrictionHandling } from "~/hooks/useRestrictionHandling";
 
-// Poll interval in milliseconds
-const POLL_INTERVAL = 60000;
-
-interface VerticalTeesheetViewProps {
+interface ViewProps {
   teesheet: TeeSheet;
   timeBlocks: TimeBlockWithMembers[];
   availableConfigs: TeesheetConfig[];
-  paceOfPlayData?: TimeBlockWithPaceOfPlay[];
   paceOfPlayMap: Map<number, any>;
   isAdmin?: boolean;
   onRestrictionViolation: (violations: RestrictionViolation[]) => void;
@@ -53,49 +44,39 @@ interface VerticalTeesheetViewProps {
   ) => Promise<void>;
   onCheckInAll: (timeBlockId: number) => Promise<void>;
   onSaveNotes: (timeBlockId: number, notes: string) => Promise<boolean>;
+  onRemoveFill: (timeBlockId: number, fillId: number) => Promise<void>;
 }
 
-export function VerticalTeesheetView({
-  teesheet,
-  timeBlocks,
-  availableConfigs,
-  paceOfPlayData = [],
-  paceOfPlayMap,
-  isAdmin = true,
-  onRestrictionViolation,
-  setPendingAction,
-  violations,
-  showRestrictionAlert,
-  setShowRestrictionAlert,
-  pendingAction,
-  onRemoveMember,
-  onRemoveGuest,
-  onCheckInMember,
-  onCheckInGuest,
-  onCheckInAll,
-  onSaveNotes,
-}: VerticalTeesheetViewProps) {
-  const router = useRouter();
+export function VerticalTeesheetView(props: ViewProps) {
+  const {
+    teesheet,
+    timeBlocks,
+    availableConfigs,
+    paceOfPlayMap,
+    isAdmin = true,
+    onRestrictionViolation,
+    setPendingAction,
+    violations,
+    showRestrictionAlert,
+    setShowRestrictionAlert,
+    pendingAction,
+    onRemoveMember,
+    onRemoveGuest,
+    onCheckInMember,
+    onCheckInGuest,
+    onCheckInAll,
+    onSaveNotes,
+    onRemoveFill,
+  } = props;
+
   const [selectedTimeBlock, setSelectedTimeBlock] =
     useState<TimeBlockWithMembers | null>(null);
   const [addPlayerModalOpen, setAddPlayerModalOpen] = useState(false);
-  const [editingTimeBlockNote, setEditingTimeBlockNote] = useState<
-    number | null
-  >(null);
 
-  // Add polling for admin view only
-  useEffect(() => {
-    // Only poll if this is the admin view
-    if (!isAdmin) return;
-
-    // Set up polling interval
-    const interval = setInterval(() => {
-      router.refresh();
-    }, POLL_INTERVAL);
-
-    // Clean up interval on component unmount
-    return () => clearInterval(interval);
-  }, [router, isAdmin]);
+  // Use shared hooks
+  useTeesheetPolling(isAdmin);
+  const { handleOverrideContinue, handleRestrictionCancel } =
+    useRestrictionHandling();
 
   // Add event listener for opening the add player modal
   useEffect(() => {
@@ -121,26 +102,6 @@ export function VerticalTeesheetView({
       );
     };
   }, [timeBlocks]);
-
-  // Handle admin override continuation
-  const handleOverrideContinue = async () => {
-    if (pendingAction) {
-      await pendingAction();
-      setPendingAction(null);
-    }
-    setShowRestrictionAlert(false);
-  };
-
-  // Handle cancellation of restriction alert
-  const handleRestrictionCancel = () => {
-    setPendingAction(null);
-    setShowRestrictionAlert(false);
-  };
-
-  // Toggle timeblock note editing
-  const toggleTimeBlockNoteEdit = (timeBlockId: number | null) => {
-    setEditingTimeBlockNote(timeBlockId);
-  };
 
   // Handle modal close
   const handleModalOpenChange = (open: boolean) => {
@@ -178,77 +139,39 @@ export function VerticalTeesheetView({
           </thead>
           <tbody className="divide-y divide-gray-200">
             {timeBlocks.map((block) => (
-              <React.Fragment key={`block-${block.id}`}>
-                {/* Render the actual timeblock */}
-                <TimeBlockComponent
-                  key={`timeblock-${block.id}`}
-                  timeBlock={{
-                    ...block,
-                    startTime: block.startTime,
-                    endTime: block.endTime,
-                    date: block.date || teesheet.date,
-                    members: block.members || [],
-                    guests: block.guests || [],
-                  }}
-                  onRestrictionViolation={onRestrictionViolation}
-                  setPendingAction={setPendingAction}
-                  paceOfPlay={paceOfPlayMap.get(block.id) || null}
-                  showMemberClass={true}
-                  onRemoveMember={(memberId: number) =>
-                    onRemoveMember(block.id, memberId)
-                  }
-                  onRemoveGuest={(guestId: number) =>
-                    onRemoveGuest(block.id, guestId)
-                  }
-                  onCheckInMember={(memberId: number, isCheckedIn: boolean) =>
-                    onCheckInMember(block.id, memberId, isCheckedIn)
-                  }
-                  onCheckInGuest={(guestId: number, isCheckedIn: boolean) =>
-                    onCheckInGuest(block.id, guestId, isCheckedIn)
-                  }
-                  onCheckInAll={() => onCheckInAll(block.id)}
-                  onSaveNotes={(notes: string) => onSaveNotes(block.id, notes)}
-                  viewMode="vertical"
-                />
-
-                {/* Display existing notes if any */}
-                {block.notes && block.notes.trim() !== "" && (
-                  <tr>
-                    <td
-                      colSpan={4}
-                      className="border-b border-[var(--org-primary-light)] p-0"
-                    >
-                      <TimeBlockNote
-                        notes={block.notes}
-                        onEditClick={() => toggleTimeBlockNoteEdit(block.id)}
-                        timeBlockId={block.id}
-                        onSaveNotes={onSaveNotes}
-                      />
-                    </td>
-                  </tr>
-                )}
-
-                {/* Add note indicator or editor after timeblock */}
-                <tr className="hover:bg-gray-50">
-                  <td colSpan={4} className="h-2 p-0">
-                    {editingTimeBlockNote === block.id ? (
-                      <TimeBlockNoteEditor
-                        timeBlockId={block.id}
-                        initialNote={block.notes || ""}
-                        onSaveNotes={(timeBlockId, notes) => {
-                          toggleTimeBlockNoteEdit(null);
-                          return onSaveNotes(timeBlockId, notes);
-                        }}
-                        onCancel={() => toggleTimeBlockNoteEdit(null)}
-                      />
-                    ) : (
-                      <TimeBlockNoteAddIndicator
-                        onClick={() => toggleTimeBlockNoteEdit(block.id)}
-                      />
-                    )}
-                  </td>
-                </tr>
-              </React.Fragment>
+              <TimeBlockComponent
+                key={`timeblock-${block.id}`}
+                timeBlock={{
+                  ...block,
+                  startTime: block.startTime,
+                  endTime: block.endTime,
+                  date: block.date || teesheet.date,
+                  members: block.members || [],
+                  guests: block.guests || [],
+                }}
+                onRestrictionViolation={onRestrictionViolation}
+                setPendingAction={setPendingAction}
+                paceOfPlay={paceOfPlayMap.get(block.id) || null}
+                showMemberClass={true}
+                onRemoveMember={(memberId: number) =>
+                  onRemoveMember(block.id, memberId)
+                }
+                onRemoveGuest={(guestId: number) =>
+                  onRemoveGuest(block.id, guestId)
+                }
+                onRemoveFill={(fillId: number) =>
+                  onRemoveFill(block.id, fillId)
+                }
+                onCheckInMember={(memberId: number, isCheckedIn: boolean) =>
+                  onCheckInMember(block.id, memberId, isCheckedIn)
+                }
+                onCheckInGuest={(guestId: number, isCheckedIn: boolean) =>
+                  onCheckInGuest(block.id, guestId, isCheckedIn)
+                }
+                onCheckInAll={() => onCheckInAll(block.id)}
+                onSaveNotes={(notes: string) => onSaveNotes(block.id, notes)}
+                viewMode="vertical"
+              />
             ))}
           </tbody>
         </table>

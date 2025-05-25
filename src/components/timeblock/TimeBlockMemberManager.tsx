@@ -7,24 +7,31 @@ import { TimeBlockHeader } from "./TimeBlockHeader";
 import {
   searchMembersAction,
   addMemberToTimeBlock,
-  removeMemberFromTimeBlock,
 } from "~/server/members/actions";
 import {
   searchGuestsAction,
   addGuestToTimeBlock,
   removeGuestFromTimeBlock,
 } from "~/server/guests/actions";
+import {
+  addFillToTimeBlock,
+  removeFillFromTimeBlock,
+  removeTimeBlockMember,
+} from "~/server/teesheet/actions";
 import { checkTimeblockRestrictionsAction } from "~/server/timeblock-restrictions/actions";
 import type { Member } from "~/app/types/MemberTypes";
 import type {
   TimeBlockWithMembers,
   TimeBlockMemberView,
+  TimeBlockFill,
+  FillType,
 } from "~/app/types/TeeSheetTypes";
 import {
   TimeBlockMemberSearch,
   TimeBlockGuestSearch,
   TimeBlockPeopleList,
 } from "./TimeBlockPeopleList";
+import { TimeBlockFillForm } from "./fills/TimeBlockFillForm";
 import toast from "react-hot-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { RestrictionViolation } from "~/app/types/RestrictionTypes";
@@ -50,18 +57,22 @@ export function TimeBlockMemberManager({
   timeBlock,
   timeBlockGuests = [],
 }: TimeBlockMemberManagerProps) {
-  // Track members and guests in local state to allow immediate updates
+  // Track members, guests, and fills in local state
   const [localMembers, setLocalMembers] = useState<TimeBlockMemberView[]>(
     timeBlock.members,
   );
   const [localGuests, setLocalGuests] =
     useState<TimeBlockGuest[]>(timeBlockGuests);
+  const [localFills, setLocalFills] = useState<TimeBlockFill[]>(
+    timeBlock.fills || [],
+  );
 
   // Update local state when props change
   useEffect(() => {
     setLocalMembers(timeBlock.members);
     setLocalGuests(timeBlockGuests);
-  }, [timeBlock.members, timeBlockGuests]);
+    setLocalFills(timeBlock.fills || []);
+  }, [timeBlock.members, timeBlockGuests, timeBlock.fills]);
 
   // Member state
   const [memberSearchQuery, setMemberSearchQuery] = useState("");
@@ -85,11 +96,12 @@ export function TimeBlockMemberManager({
 
   // Constants
   const MAX_PEOPLE = 4;
-  const totalPeople = localMembers.length + localGuests.length;
+  const totalPeople =
+    localMembers.length + localGuests.length + localFills.length;
   const isTimeBlockFull = totalPeople >= MAX_PEOPLE;
 
-  // Create a key that changes when members or guests change
-  const peopleListKey = `people-list-${localMembers.map((m) => m.id).join("-")}-${localGuests.map((g) => g.id).join("-")}`;
+  // Create a key that changes when members, guests, or fills change
+  const peopleListKey = `people-list-${localMembers.map((m) => m.id).join("-")}-${localGuests.map((g) => g.id).join("-")}-${localFills.map((f) => f.id).join("-")}`;
 
   // Member search handler
   const handleMemberSearch = useCallback(async (query: string) => {
@@ -284,7 +296,7 @@ export function TimeBlockMemberManager({
 
   const handleRemoveMember = async (memberId: number) => {
     try {
-      const result = await removeMemberFromTimeBlock(timeBlock.id, memberId);
+      const result = await removeTimeBlockMember(timeBlock.id, memberId);
       if (result.success) {
         toast.success("Member removed successfully");
 
@@ -434,6 +446,50 @@ export function TimeBlockMemberManager({
     setShowViolationAlert(false);
   };
 
+  const handleAddFill = async (fillType: FillType, customName?: string) => {
+    try {
+      const result = await addFillToTimeBlock(
+        timeBlock.id,
+        fillType,
+        1, // Always add one fill at a time
+        customName,
+      );
+
+      if (result.success) {
+        toast.success("Fill added successfully");
+        // Add fill to local state
+        const newFill = {
+          id: result.fill?.id ?? 0,
+          timeBlockId: timeBlock.id,
+          fillType,
+          customName: customName || null,
+          clerkOrgId: result.fill?.clerkOrgId ?? "",
+        } as TimeBlockFill; // Schema will add createdAt with defaultNow()
+        setLocalFills((prev) => [...prev, newFill]);
+      } else {
+        toast.error(result.error || "Failed to add fill");
+      }
+    } catch (error) {
+      console.error("Error adding fill:", error);
+      toast.error("An error occurred while adding the fill");
+    }
+  };
+
+  const handleRemoveFill = async (fillId: number) => {
+    try {
+      const result = await removeFillFromTimeBlock(timeBlock.id, fillId);
+      if (result.success) {
+        toast.success("Fill removed successfully");
+        setLocalFills((prev) => prev.filter((fill) => fill.id !== fillId));
+      } else {
+        toast.error(result.error || "Failed to remove fill");
+      }
+    } catch (error) {
+      console.error("Error removing fill:", error);
+      toast.error("An error occurred while removing the fill");
+    }
+  };
+
   return (
     <div className="space-y-6">
       <TimeBlockPageHeader timeBlock={timeBlock} />
@@ -447,6 +503,7 @@ export function TimeBlockMemberManager({
         <TabsList className="mb-4">
           <TabsTrigger value="members">Add Members</TabsTrigger>
           <TabsTrigger value="guests">Add Guests</TabsTrigger>
+          <TabsTrigger value="fills">Add Fills</TabsTrigger>
         </TabsList>
 
         <TabsContent value="members" className="space-y-6">
@@ -479,6 +536,15 @@ export function TimeBlockMemberManager({
             selectedMemberId={selectedMemberId}
           />
         </TabsContent>
+
+        <TabsContent value="fills">
+          <TimeBlockFillForm
+            onAddFill={handleAddFill}
+            isTimeBlockFull={isTimeBlockFull}
+            maxPeople={MAX_PEOPLE}
+            currentPeopleCount={totalPeople}
+          />
+        </TabsContent>
       </Tabs>
 
       {/* Combined People List - always visible */}
@@ -486,8 +552,10 @@ export function TimeBlockMemberManager({
         key={peopleListKey}
         members={localMembers}
         guests={localGuests}
+        fills={localFills}
         onRemoveMember={handleRemoveMember}
         onRemoveGuest={handleRemoveGuest}
+        onRemoveFill={handleRemoveFill}
         maxPeople={MAX_PEOPLE}
       />
 

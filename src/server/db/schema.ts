@@ -14,8 +14,11 @@ import {
   boolean,
   text,
   real,
+  serial,
+  pgTable,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
+import { FillTypes, type FillType } from "~/app/types/TeeSheetTypes";
 
 /**
  * This is an example of how to use the multi-project schema feature of Drizzle ORM. Use the same
@@ -408,6 +411,7 @@ export const timeBlocksRelations = relations(timeBlocks, ({ many, one }) => ({
     fields: [timeBlocks.teesheetId],
     references: [teesheets.id],
   }),
+  fills: many(timeBlockFills),
 }));
 
 // Course Info table
@@ -662,5 +666,25 @@ export const eventDetailsRelations = relations(eventDetails, ({ one }) => ({
   event: one(events, {
     fields: [eventDetails.eventId],
     references: [events.id],
+  }),
+}));
+
+export const timeBlockFills = pgTable("timeblock_fills", {
+  id: serial("id").primaryKey(),
+  timeBlockId: integer("time_block_id")
+    .notNull()
+    .references(() => timeBlocks.id, { onDelete: "cascade" }),
+  fillType: text("fill_type", {
+    enum: ["guest_fill", "reciprocal_fill", "custom_fill"] as const,
+  }).notNull(),
+  customName: text("custom_name"),
+  clerkOrgId: text("clerk_org_id").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const timeBlockFillsRelations = relations(timeBlockFills, ({ one }) => ({
+  timeBlock: one(timeBlocks, {
+    fields: [timeBlockFills.timeBlockId],
+    references: [timeBlocks.id],
   }),
 }));

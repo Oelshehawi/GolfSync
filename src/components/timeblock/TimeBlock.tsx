@@ -15,14 +15,6 @@ import {
   UserPlus,
 } from "lucide-react";
 import { toast } from "react-hot-toast";
-import {
-  removeTimeBlockMember,
-  removeTimeBlockGuest,
-  checkInMember,
-  checkInGuest,
-  checkInAllTimeBlockParticipants,
-  updateTimeBlockNotes,
-} from "~/server/teesheet/actions";
 import { Textarea } from "~/components/ui/textarea";
 import { RestrictionViolation } from "~/app/types/RestrictionTypes";
 import { formatDisplayTime, getMemberClassStyling } from "~/lib/utils";
@@ -37,13 +29,12 @@ import type {
 interface TimeBlockProps {
   timeBlock: TimeBlockWithMembers;
   onRestrictionViolation?: (violations: RestrictionViolation[]) => void;
-  setPendingAction?: React.Dispatch<
-    React.SetStateAction<(() => Promise<void>) | null>
-  >;
+  setPendingAction?: (action: (() => Promise<void>) | null) => void;
   paceOfPlay?: PaceOfPlayRecord | null;
   showMemberClass?: boolean;
   onRemoveMember?: (memberId: number) => Promise<void>;
   onRemoveGuest?: (guestId: number) => Promise<void>;
+  onRemoveFill?: (fillId: number) => Promise<void>;
   onCheckInMember?: (memberId: number, isCheckedIn: boolean) => Promise<void>;
   onCheckInGuest?: (guestId: number, isCheckedIn: boolean) => Promise<void>;
   onCheckInAll?: () => Promise<void>;
@@ -53,12 +44,11 @@ interface TimeBlockProps {
 
 export function TimeBlock({
   timeBlock,
-  onRestrictionViolation,
-  setPendingAction,
   paceOfPlay = null,
   showMemberClass = false,
   onRemoveMember,
   onRemoveGuest,
+  onRemoveFill,
   onCheckInMember,
   onCheckInGuest,
   onCheckInAll,
@@ -66,99 +56,37 @@ export function TimeBlock({
   viewMode = "grid",
 }: TimeBlockProps) {
   const formattedTime = formatDisplayTime(timeBlock.startTime);
-  const totalPeople = timeBlock.members.length + timeBlock.guests.length;
+  const totalPeople =
+    timeBlock.members.length +
+    timeBlock.guests.length +
+    (timeBlock.fills || []).length;
   const [notes, setNotes] = useState(timeBlock.notes || "");
   const [isEditingNotes, setIsEditingNotes] = useState(false);
   const [isSavingNotes, setIsSavingNotes] = useState(false);
 
-  // Use state to preserve the original order of members and guests
-  const [orderedMembers, setOrderedMembers] = useState(() =>
-    timeBlock.members.map((member, index) => ({
-      ...member,
-      originalOrder: index,
-    })),
-  );
-  const [orderedGuests, setOrderedGuests] = useState(() =>
-    timeBlock.guests.map((guest, index) => ({
-      ...guest,
-      originalOrder: index,
-    })),
-  );
-
-  // Update ordered lists when timeBlock changes while preserving order
+  // Reset notes if they change externally while not editing
   useEffect(() => {
-    // Use a Map to quickly look up members by ID
-    const memberMap = new Map(
-      timeBlock.members.map((member) => [member.id, member]),
-    );
-    const guestMap = new Map(
-      timeBlock.guests.map((guest) => [guest.id, guest]),
-    );
-
-    // Update existing members with new data while preserving order
-    setOrderedMembers((prevMembers) => {
-      // First, ensure any existing members are updated with latest data
-      const updatedMembers = prevMembers.map((prevMember) => {
-        const updatedMember = memberMap.get(prevMember.id);
-        if (updatedMember) {
-          // Keep the originalOrder property while updating the rest of the data
-          return { ...updatedMember, originalOrder: prevMember.originalOrder };
-        }
-        return prevMember;
-      });
-
-      // Add any new members that weren't in the previous list
-      const existingIds = new Set(prevMembers.map((m) => m.id));
-      const newMembers = timeBlock.members
-        .filter((member) => !existingIds.has(member.id))
-        .map((member, idx) => ({
-          ...member,
-          originalOrder: prevMembers.length + idx,
-        }));
-
-      // Sort to preserve the original order
-      return [...updatedMembers, ...newMembers].sort(
-        (a, b) => a.originalOrder - b.originalOrder,
-      );
-    });
-
-    // Do the same for guests
-    setOrderedGuests((prevGuests) => {
-      const updatedGuests = prevGuests.map((prevGuest) => {
-        const updatedGuest = guestMap.get(prevGuest.id);
-        if (updatedGuest) {
-          // Keep the originalOrder property while updating the rest of the data
-          return { ...updatedGuest, originalOrder: prevGuest.originalOrder };
-        }
-        return prevGuest;
-      });
-
-      // Add any new guests that weren't in the previous list
-      const existingIds = new Set(prevGuests.map((g) => g.id));
-      const newGuests = timeBlock.guests
-        .filter((guest) => !existingIds.has(guest.id))
-        .map((guest, idx) => ({
-          ...guest,
-          originalOrder: prevGuests.length + idx,
-        }));
-
-      // Sort to preserve the original order
-      return [...updatedGuests, ...newGuests].sort(
-        (a, b) => a.originalOrder - b.originalOrder,
-      );
-    });
-
-    // Update notes if they've changed
-    if (timeBlock.notes !== notes && !isEditingNotes) {
+    if (!isEditingNotes && timeBlock.notes !== notes) {
       setNotes(timeBlock.notes || "");
     }
-  }, [
-    timeBlock.members,
-    timeBlock.guests,
-    timeBlock.notes,
-    notes,
-    isEditingNotes,
-  ]);
+  }, [timeBlock.notes, notes, isEditingNotes]);
+
+  // Map members, guests, and fills with their index as key for stable ordering
+  const members = timeBlock.members.map((member, index) => ({
+    ...member,
+    key: `${member.id}-${index}`,
+  }));
+
+  const guests = timeBlock.guests.map((guest, index) => ({
+    ...guest,
+    key: `${guest.id}-${index}`,
+  }));
+
+  // Expand fills into individual entries
+  const fills = (timeBlock.fills || []).map((fill) => ({
+    ...fill,
+    key: `${fill.id}`,
+  }));
 
   const handleRemoveMember = async (memberId: number) => {
     try {
@@ -290,131 +218,81 @@ export function TimeBlock({
     return `${hour12}:${minute} ${ampm}`;
   };
 
-  // Grid view layout
-  if (viewMode === "grid") {
+  const handleRemoveFill = async (fillId: number) => {
+    try {
+      if (onRemoveFill) {
+        await onRemoveFill(fillId);
+      } else {
+        toast.error("Remove fill function not provided");
+      }
+    } catch (error) {
+      toast.error("An unexpected error occurred");
+    }
+  };
+
+  // Vertical view layout (for table row)
+  if (viewMode === "vertical") {
     return (
-      <div className="rounded-lg border p-3 hover:border-blue-500 hover:bg-blue-50 hover:shadow-md">
-        <div className="mb-2 flex items-center justify-between">
-          <Link
-            href={`/admin/timeblock/${timeBlock.id}`}
-            className="text-base font-semibold text-gray-800"
-          >
-            {formattedTime}
+      <tr className="cursor-pointer transition-colors hover:bg-gray-50">
+        <td className="px-3 py-3 text-lg font-semibold whitespace-nowrap text-gray-900">
+          <Link href={`/admin/timeblock/${timeBlock.id}`}>
+            {formatTo12Hour(timeBlock.startTime)}
           </Link>
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-gray-500">{totalPeople}/4 spots</span>
-            {paceOfPlay?.status && (
-              <div className="ml-2 flex items-center gap-1">
-                <Activity className="h-4 w-4" />
-                <PaceOfPlayStatus
-                  status={paceOfPlay.status as PaceOfPlayStatusType}
-                />
-              </div>
-            )}
-            {totalPeople > 0 && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleCheckInAll}
-                className="h-7 rounded-md bg-green-50 px-2 text-xs text-green-600 hover:bg-green-100 hover:text-green-700"
-              >
-                <Users className="mr-1 h-3 w-3" />
-                Check In All
-              </Button>
-            )}
-          </div>
-        </div>
+        </td>
 
-        {/* Notes Section */}
-        <div className="mb-2 rounded-md border border-gray-200 bg-gray-50 p-2">
-          {isEditingNotes ? (
-            <div className="flex flex-col space-y-2">
-              <Textarea
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="Enter notes for this tee time..."
-                className="min-h-[60px] text-xs"
-                disabled={isSavingNotes}
-              />
-              <div className="flex justify-end space-x-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setIsEditingNotes(false);
-                    setNotes(timeBlock.notes || "");
-                  }}
-                  className="h-7 text-xs"
-                  disabled={isSavingNotes}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  variant="default"
-                  size="sm"
-                  onClick={handleSaveNotes}
-                  className="h-7 text-xs"
-                  disabled={isSavingNotes}
-                >
-                  <Check className="mr-1 h-3 w-3" />
-                  Save
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <div
-              className="flex cursor-pointer items-start justify-between"
-              onClick={() => setIsEditingNotes(true)}
+        {/* Status Column */}
+        <td className="px-3 py-3">
+          {paceOfPlay ? (
+            <Badge
+              variant="outline"
+              className={cn(
+                "px-2 py-1 text-xs font-medium",
+                getPaceOfPlayStatusClass(paceOfPlay.status),
+              )}
             >
-              <div className="flex-1 text-xs text-gray-600">
-                {timeBlock.notes ? (
-                  timeBlock.notes
-                ) : (
-                  <span className="text-gray-400 italic">
-                    No notes. Click to add...
-                  </span>
-                )}
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setIsEditingNotes(true);
-                }}
-                className="ml-1 h-5 w-5 p-0 text-gray-500 hover:bg-blue-100 hover:text-blue-600"
-              >
-                <Edit className="h-3 w-3" />
-              </Button>
-            </div>
+              {formatStatusForDisplay(paceOfPlay.status) || "N/A"}
+            </Badge>
+          ) : (
+            <Badge
+              variant="outline"
+              className="bg-gray-100 px-2 py-1 text-xs font-medium text-gray-800"
+            >
+              Not Started
+            </Badge>
           )}
-        </div>
+        </td>
 
-        {totalPeople > 0 ? (
-          <div className="space-y-1">
-            {timeBlock.members.length > 0 && (
-              <div className="grid grid-cols-1 gap-1">
-                {orderedMembers.map((member) => {
-                  // Get styling for this member class
-                  const memberStyle = getMemberClassStyling(member.class);
-                  // Remove originalOrder prop from member
-                  const { originalOrder, ...memberData } = member;
+        {/* Players Column */}
+        <td className="px-3 py-3">
+          {totalPeople > 0 ? (
+            <div className="grid grid-cols-2 gap-2">
+              {members.map((member) => {
+                const memberStyle = getMemberClassStyling(member.class);
+                const { key, ...memberData } = member;
 
-                  return (
-                    <div
-                      key={memberData.id}
-                      className={`flex items-center justify-between rounded px-2 py-1 ${
-                        memberData.checkedIn
-                          ? "bg-green-200 text-green-800"
-                          : memberStyle.bg
-                      }`}
-                    >
+                return (
+                  <div
+                    key={key}
+                    className={cn(
+                      "flex items-center gap-2 rounded-md p-1",
+                      memberData.checkedIn ? "bg-green-200" : memberStyle.bg,
+                    )}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <div className="min-w-0 flex-1">
                       <div
-                        className={`truncate text-xs ${memberData.checkedIn ? "text-green-800" : memberStyle.text}`}
-                        title={`${memberData.firstName} ${memberData.lastName} (${memberData.memberNumber})${memberData.class ? ` [${memberData.class}]` : ""}`}
+                        className={cn(
+                          "truncate text-sm font-medium",
+                          memberData.checkedIn
+                            ? "text-green-800"
+                            : memberStyle.text,
+                        )}
                       >
                         {memberData.firstName} {memberData.lastName} (
                         {memberData.memberNumber})
+                        {memberData.checkedIn && (
+                          <span className="ml-1 text-xs text-green-700">✓</span>
+                        )}
                         {showMemberClass && memberData.class && (
                           <Badge
                             variant={memberStyle.badgeVariant as any}
@@ -423,204 +301,352 @@ export function TimeBlock({
                             {memberData.class}
                           </Badge>
                         )}
-                        {memberData.checkedIn && (
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          handleCheckInMember(
+                            memberData.id,
+                            !!memberData.checkedIn,
+                          );
+                        }}
+                        className={`ml-1 h-5 w-5 p-0 ${
+                          memberData.checkedIn
+                            ? "text-green-700 hover:bg-red-100 hover:text-red-600"
+                            : "text-gray-500 hover:bg-green-100 hover:text-green-600"
+                        }`}
+                      >
+                        {memberData.checkedIn ? (
+                          <UserX className="h-3 w-3" />
+                        ) : (
+                          <UserCheck className="h-3 w-3" />
+                        )}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          handleRemoveMember(memberData.id);
+                        }}
+                        className="ml-1 h-5 w-5 p-0 text-gray-500 hover:bg-red-100 hover:text-red-600"
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })}
+
+              {guests.map((guest) => {
+                const guestStyle = getMemberClassStyling("GUEST");
+                const { key, ...guestData } = guest;
+
+                return (
+                  <div
+                    key={key}
+                    className={cn(
+                      "flex items-center gap-2 rounded-md p-1",
+                      guestData.checkedIn ? "bg-green-200" : guestStyle.bg,
+                      guestStyle.border,
+                    )}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div
+                        className={cn(
+                          "truncate text-sm font-medium",
+                          guestData.checkedIn
+                            ? "text-green-800"
+                            : guestStyle.text,
+                        )}
+                      >
+                        {guestData.firstName} {guestData.lastName}
+                        <Badge variant="outline" className="ml-1 text-xs">
+                          Guest
+                        </Badge>
+                        {guestData.checkedIn && (
                           <span className="ml-1 text-xs text-green-700">✓</span>
                         )}
                       </div>
-                      <div className="flex">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            handleCheckInMember(
-                              memberData.id,
-                              !!memberData.checkedIn,
-                            );
-                          }}
-                          className={`ml-1 h-5 w-5 p-0 ${
-                            memberData.checkedIn
-                              ? "text-green-700 hover:bg-red-100 hover:text-red-600"
-                              : "text-gray-500 hover:bg-green-100 hover:text-green-600"
-                          }`}
-                        >
-                          {memberData.checkedIn ? (
-                            <UserX className="h-3 w-3" />
-                          ) : (
-                            <UserCheck className="h-3 w-3" />
-                          )}
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            handleRemoveMember(memberData.id);
-                          }}
-                          className="ml-1 h-5 w-5 p-0 text-gray-500 hover:bg-red-100 hover:text-red-600"
-                        >
-                          <X className="h-3 w-3" />
-                        </Button>
+                      <p className="truncate text-xs text-gray-500">
+                        Invited:{" "}
+                        {guestData.invitedByMember?.firstName?.charAt(0)}.{" "}
+                        {guestData.invitedByMember?.lastName}
+                      </p>
+                    </div>
+                    <div className="flex items-center space-x-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          handleCheckInGuest(
+                            guestData.id,
+                            !!guestData.checkedIn,
+                          );
+                        }}
+                        className={`ml-1 h-5 w-5 p-0 ${
+                          guestData.checkedIn
+                            ? "text-green-700 hover:bg-red-100 hover:text-red-600"
+                            : "text-gray-500 hover:bg-green-100 hover:text-green-600"
+                        }`}
+                      >
+                        {guestData.checkedIn ? (
+                          <UserX className="h-3 w-3" />
+                        ) : (
+                          <UserCheck className="h-3 w-3" />
+                        )}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          handleRemoveGuest(guestData.id);
+                        }}
+                        className="ml-1 h-5 w-5 p-0 text-gray-500 hover:bg-red-100 hover:text-red-600"
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })}
+
+              {fills.map((fill) => {
+                const fillStyle = {
+                  bg: "bg-gray-50",
+                  border: "border-gray-200",
+                  text: "text-gray-700",
+                };
+                return (
+                  <div
+                    key={fill.key}
+                    className={`flex items-center justify-between rounded px-2 py-1 ${fillStyle.bg} ${fillStyle.border}`}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className={`truncate text-xs ${fillStyle.text}`}>
+                        {fill.fillType === "custom_fill"
+                          ? fill.customName || "Custom"
+                          : fill.fillType === "guest_fill"
+                            ? "Guest"
+                            : "Reciprocal"}
+                        <Badge variant="secondary" className="ml-1 text-xs">
+                          Fill
+                        </Badge>
                       </div>
                     </div>
-                  );
-                })}
-              </div>
-            )}
+                    {onRemoveFill && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleRemoveFill(fill.id);
+                        }}
+                        className="ml-1 h-5 w-5 p-0 text-gray-500 hover:bg-red-100 hover:text-red-600"
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    )}
+                  </div>
+                );
+              })}
 
-            {timeBlock.guests.length > 0 && (
-              <div className="grid grid-cols-1 gap-1">
-                {orderedGuests.map((guest) => {
-                  // Get styling for guests
-                  const guestStyle = getMemberClassStyling("GUEST");
-                  // Remove originalOrder prop from guest
-                  const { originalOrder, ...guestData } = guest;
-
-                  return (
-                    <div
-                      key={guestData.id}
-                      className={`flex items-center justify-between rounded px-2 py-1 ${
-                        guestData.checkedIn
-                          ? "bg-green-200 text-green-800"
-                          : guestStyle.bg
-                      } ${guestStyle.border}`}
-                    >
-                      <div className="min-w-0 flex-1">
-                        <div
-                          className={`truncate text-xs ${guestData.checkedIn ? "text-green-800" : guestStyle.text}`}
-                        >
-                          {guestData.firstName} {guestData.lastName}
-                          <Badge variant="outline" className="ml-1 text-xs">
-                            Guest
-                          </Badge>
-                          {guestData.checkedIn && (
-                            <span className="ml-1 text-xs text-green-700">
-                              ✓
-                            </span>
-                          )}
-                        </div>
-                        <div className="truncate text-xs text-gray-500">
-                          Invited:{" "}
-                          {guestData.invitedByMember?.firstName?.charAt(0)}.{" "}
-                          {guestData.invitedByMember?.lastName}
-                        </div>
-                      </div>
-                      <div className="flex">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            handleCheckInGuest(
-                              guestData.id,
-                              !!guestData.checkedIn,
-                            );
-                          }}
-                          className={`ml-1 h-5 w-5 p-0 ${
-                            guestData.checkedIn
-                              ? "text-green-700 hover:bg-red-100 hover:text-red-600"
-                              : "text-gray-500 hover:bg-green-100 hover:text-green-600"
-                          }`}
-                        >
-                          {guestData.checkedIn ? (
-                            <UserX className="h-3 w-3" />
-                          ) : (
-                            <UserCheck className="h-3 w-3" />
-                          )}
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            handleRemoveGuest(guestData.id);
-                          }}
-                          className="ml-1 h-5 w-5 p-0 text-gray-500 hover:bg-red-100 hover:text-red-600"
-                        >
-                          <X className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    </div>
-                  );
-                })}
+              {/* Add Player button when slots are available */}
+              {totalPeople < 4 && (
+                <div
+                  className="flex cursor-pointer items-center gap-2 rounded-md border border-dashed border-blue-300 p-1 hover:bg-blue-50"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    window.dispatchEvent(
+                      new CustomEvent("open-add-player-modal", {
+                        detail: { timeBlockId: timeBlock.id },
+                      }),
+                    );
+                  }}
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium text-blue-600">
+                      <UserPlus className="mr-1 inline-block h-3 w-3" />
+                      Add Player
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div
+              className="flex cursor-pointer items-center gap-2 rounded-md border border-dashed border-blue-300 p-2 hover:bg-blue-50"
+              onClick={(e) => {
+                e.stopPropagation();
+                window.dispatchEvent(
+                  new CustomEvent("open-add-player-modal", {
+                    detail: { timeBlockId: timeBlock.id },
+                  }),
+                );
+              }}
+            >
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium text-blue-600">
+                  <UserPlus className="mr-1 inline-block h-3 w-3" />
+                  Add Player
+                </p>
               </div>
-            )}
+            </div>
+          )}
+        </td>
+
+        {/* Actions Column */}
+        <td className="px-3 py-3">
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="bg-green-50 px-2 py-1 text-xs shadow-sm hover:bg-green-100 hover:text-green-800"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleCheckInAll();
+              }}
+            >
+              <Users className="mr-1 h-3 w-3" />
+              Check In All
+            </Button>
           </div>
-        ) : (
-          <div className="text-xs text-gray-400">Available</div>
-        )}
-      </div>
+        </td>
+      </tr>
     );
   }
 
-  // Vertical view layout (for table row)
+  // Grid view layout
   return (
-    <tr
-      className="cursor-pointer transition-colors hover:bg-gray-50"
-      onClick={() =>
-        (window.location.href = `/admin/timeblock/${timeBlock.id}`)
-      }
-    >
-      {/* Time Column */}
-      <td className="px-3 py-3 text-lg font-semibold whitespace-nowrap text-gray-900">
-        {formatTo12Hour(timeBlock.startTime)}
-      </td>
+    <div className="rounded-lg border p-3 hover:border-blue-500 hover:bg-blue-50 hover:shadow-md">
+      <div className="mb-2 flex items-center justify-between">
+        <Link
+          href={`/admin/timeblock/${timeBlock.id}`}
+          className="text-base font-semibold text-gray-800"
+        >
+          {formattedTime}
+        </Link>
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-gray-500">{totalPeople}/4 spots</span>
+          {paceOfPlay?.status && (
+            <div className="ml-2 flex items-center gap-1">
+              <Activity className="h-4 w-4" />
+              <PaceOfPlayStatus
+                status={paceOfPlay.status as PaceOfPlayStatusType}
+              />
+            </div>
+          )}
+          {totalPeople > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleCheckInAll()}
+              className="h-7 rounded-md bg-green-50 px-2 text-xs text-green-600 hover:bg-green-100 hover:text-green-700"
+            >
+              <Users className="mr-1 h-3 w-3" />
+              Check In All
+            </Button>
+          )}
+        </div>
+      </div>
 
-      {/* Status Column */}
-      <td className="px-3 py-3">
-        {paceOfPlay ? (
-          <Badge
-            variant="outline"
-            className={cn(
-              "px-2 py-1 text-xs font-medium",
-              getPaceOfPlayStatusClass(paceOfPlay.status),
-            )}
-          >
-            {formatStatusForDisplay(paceOfPlay.status) || "N/A"}
-          </Badge>
+      {/* Notes Section */}
+      <div className="mb-2 rounded-md border border-gray-200 bg-gray-50 p-2">
+        {isEditingNotes ? (
+          <div className="flex flex-col space-y-2">
+            <Textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Enter notes for this tee time..."
+              className="min-h-[60px] text-xs"
+              disabled={isSavingNotes}
+            />
+            <div className="flex justify-end space-x-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setIsEditingNotes(false);
+                  setNotes(timeBlock.notes || "");
+                }}
+                className="h-7 text-xs"
+                disabled={isSavingNotes}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="default"
+                size="sm"
+                onClick={handleSaveNotes}
+                className="h-7 text-xs"
+                disabled={isSavingNotes}
+              >
+                <Check className="mr-1 h-3 w-3" />
+                Save
+              </Button>
+            </div>
+          </div>
         ) : (
-          <Badge
-            variant="outline"
-            className="bg-gray-100 px-2 py-1 text-xs font-medium text-gray-800"
+          <div
+            className="flex cursor-pointer items-start justify-between"
+            onClick={() => setIsEditingNotes(true)}
           >
-            Not Started
-          </Badge>
+            <div className="flex-1 text-xs text-gray-600">
+              {timeBlock.notes ? (
+                timeBlock.notes
+              ) : (
+                <span className="text-gray-400 italic">
+                  No notes. Click to add...
+                </span>
+              )}
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsEditingNotes(true);
+              }}
+              className="ml-1 h-5 w-5 p-0 text-gray-500 hover:bg-blue-100 hover:text-blue-600"
+            >
+              <Edit className="h-3 w-3" />
+            </Button>
+          </div>
         )}
-      </td>
+      </div>
 
-      {/* Players Column */}
-      <td className="px-3 py-3">
-        {totalPeople > 0 ? (
-          <div className="grid grid-cols-2 gap-2">
-            {orderedMembers.map((member, index) => {
-              // Get styling for this member class
-              const memberStyle = getMemberClassStyling(member.class);
-              // Remove originalOrder prop
-              const { originalOrder, ...memberData } = member;
+      {totalPeople > 0 ? (
+        <div className="space-y-1">
+          {members.length > 0 && (
+            <div className="grid grid-cols-1 gap-1">
+              {members.map((member) => {
+                const memberStyle = getMemberClassStyling(member.class);
+                const { key, ...memberData } = member;
 
-              return (
-                <div
-                  key={`member-${memberData.id}`}
-                  className={cn(
-                    "flex items-center gap-2 rounded-md p-1",
-                    memberData.checkedIn ? "bg-green-200" : memberStyle.bg,
-                  )}
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <div className="min-w-0 flex-1">
+                return (
+                  <div
+                    key={key}
+                    className={`flex items-center justify-between rounded px-2 py-1 ${
+                      memberData.checkedIn
+                        ? "bg-green-200 text-green-800"
+                        : memberStyle.bg
+                    }`}
+                  >
                     <div
-                      className={cn(
-                        "truncate text-sm font-medium",
-                        memberData.checkedIn
-                          ? "text-green-800"
-                          : memberStyle.text,
-                      )}
+                      className={`truncate text-xs ${memberData.checkedIn ? "text-green-800" : memberStyle.text}`}
+                      title={`${memberData.firstName} ${memberData.lastName} (${memberData.memberNumber})${memberData.class ? ` [${memberData.class}]` : ""}`}
                     >
                       {memberData.firstName} {memberData.lastName} (
                       {memberData.memberNumber})
-                      {memberData.checkedIn && (
-                        <span className="ml-1 text-xs text-green-700">✓</span>
-                      )}
                       {showMemberClass && memberData.class && (
                         <Badge
                           variant={memberStyle.badgeVariant as any}
@@ -629,176 +655,170 @@ export function TimeBlock({
                           {memberData.class}
                         </Badge>
                       )}
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-1">
-                    <button
-                      className={cn(
-                        "cursor-pointer rounded-full p-1",
-                        memberData.checkedIn
-                          ? "text-green-700 hover:bg-red-100 hover:text-red-600"
-                          : "text-gray-500 hover:bg-green-100 hover:text-green-600",
-                      )}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleCheckInMember(
-                          memberData.id,
-                          !!memberData.checkedIn,
-                        );
-                      }}
-                    >
-                      {memberData.checkedIn ? (
-                        <UserX className="h-4 w-4" />
-                      ) : (
-                        <UserCheck className="h-4 w-4" />
-                      )}
-                    </button>
-                    <button
-                      className="cursor-pointer rounded-full p-1 text-red-600 hover:bg-red-100"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleRemoveMember(memberData.id);
-                      }}
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-
-            {orderedGuests.map((guest) => {
-              // Get styling for guests
-              const guestStyle = getMemberClassStyling("GUEST");
-              // Remove originalOrder prop
-              const { originalOrder, ...guestData } = guest;
-
-              return (
-                <div
-                  key={`guest-${guestData.id}`}
-                  className={cn(
-                    "flex items-center gap-2 rounded-md p-1",
-                    guestData.checkedIn ? "bg-green-200" : guestStyle.bg,
-                    guestStyle.border,
-                  )}
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <div className="min-w-0 flex-1">
-                    <div
-                      className={cn(
-                        "truncate text-sm font-medium",
-                        guestData.checkedIn
-                          ? "text-green-800"
-                          : guestStyle.text,
-                      )}
-                    >
-                      {guestData.firstName} {guestData.lastName}
-                      <Badge variant="outline" className="ml-1 text-xs">
-                        Guest
-                      </Badge>
-                      {guestData.checkedIn && (
+                      {memberData.checkedIn && (
                         <span className="ml-1 text-xs text-green-700">✓</span>
                       )}
                     </div>
-                    <p className="truncate text-xs text-gray-500">
-                      Invited: {guestData.invitedByMember?.firstName?.charAt(0)}
-                      . {guestData.invitedByMember?.lastName}
-                    </p>
+                    <div className="flex">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          handleCheckInMember(
+                            memberData.id,
+                            !!memberData.checkedIn,
+                          );
+                        }}
+                        className={`ml-1 h-5 w-5 p-0 ${
+                          memberData.checkedIn
+                            ? "text-green-700 hover:bg-red-100 hover:text-red-600"
+                            : "text-gray-500 hover:bg-green-100 hover:text-green-600"
+                        }`}
+                      >
+                        {memberData.checkedIn ? (
+                          <UserX className="h-3 w-3" />
+                        ) : (
+                          <UserCheck className="h-3 w-3" />
+                        )}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          handleRemoveMember(memberData.id);
+                        }}
+                        className="ml-1 h-5 w-5 p-0 text-gray-500 hover:bg-red-100 hover:text-red-600"
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
                   </div>
-                  <div className="flex items-center space-x-1">
-                    <button
-                      className={cn(
-                        "cursor-pointer rounded-full p-1",
-                        guestData.checkedIn
-                          ? "text-green-700 hover:bg-red-100 hover:text-red-600"
-                          : "text-gray-500 hover:bg-green-100 hover:text-green-600",
-                      )}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleCheckInGuest(guestData.id, !!guestData.checkedIn);
-                      }}
-                    >
-                      {guestData.checkedIn ? (
-                        <UserX className="h-4 w-4" />
-                      ) : (
-                        <UserCheck className="h-4 w-4" />
-                      )}
-                    </button>
-                    <button
-                      className="cursor-pointer rounded-full p-1 text-red-600 hover:bg-red-100"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleRemoveGuest(guestData.id);
-                      }}
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
+          )}
 
-            {/* Add Player button when slots are available */}
-            {totalPeople < 4 && (
+          {guests.length > 0 && (
+            <div className="grid grid-cols-1 gap-1">
+              {guests.map((guest) => {
+                const guestStyle = getMemberClassStyling("GUEST");
+                const { key, ...guestData } = guest;
+
+                return (
+                  <div
+                    key={key}
+                    className={`flex items-center justify-between rounded px-2 py-1 ${
+                      guestData.checkedIn
+                        ? "bg-green-200 text-green-800"
+                        : guestStyle.bg
+                    } ${guestStyle.border}`}
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div
+                        className={`truncate text-xs ${guestData.checkedIn ? "text-green-800" : guestStyle.text}`}
+                      >
+                        {guestData.firstName} {guestData.lastName}
+                        <Badge variant="outline" className="ml-1 text-xs">
+                          Guest
+                        </Badge>
+                        {guestData.checkedIn && (
+                          <span className="ml-1 text-xs text-green-700">✓</span>
+                        )}
+                      </div>
+                      <div className="truncate text-xs text-gray-500">
+                        Invited:{" "}
+                        {guestData.invitedByMember?.firstName?.charAt(0)}.{" "}
+                        {guestData.invitedByMember?.lastName}
+                      </div>
+                    </div>
+                    <div className="flex">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          handleCheckInGuest(
+                            guestData.id,
+                            !!guestData.checkedIn,
+                          );
+                        }}
+                        className={`ml-1 h-5 w-5 p-0 ${
+                          guestData.checkedIn
+                            ? "text-green-700 hover:bg-red-100 hover:text-red-600"
+                            : "text-gray-500 hover:bg-green-100 hover:text-green-600"
+                        }`}
+                      >
+                        {guestData.checkedIn ? (
+                          <UserX className="h-3 w-3" />
+                        ) : (
+                          <UserCheck className="h-3 w-3" />
+                        )}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          handleRemoveGuest(guestData.id);
+                        }}
+                        className="ml-1 h-5 w-5 p-0 text-gray-500 hover:bg-red-100 hover:text-red-600"
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {fills.map((fill) => {
+            const fillStyle = {
+              bg: "bg-gray-50",
+              border: "border-gray-200",
+              text: "text-gray-700",
+            };
+            return (
               <div
-                className="flex cursor-pointer items-center gap-2 rounded-md border border-dashed border-blue-300 p-1 hover:bg-blue-50"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  window.dispatchEvent(
-                    new CustomEvent("open-add-player-modal", {
-                      detail: { timeBlockId: timeBlock.id },
-                    }),
-                  );
-                }}
+                key={fill.key}
+                className={`flex items-center justify-between rounded px-2 py-1 ${fillStyle.bg} ${fillStyle.border}`}
+                onClick={(e) => e.stopPropagation()}
               >
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-blue-600">
-                    <UserPlus className="mr-1 inline-block h-3 w-3" />
-                    Add Player
-                  </p>
+                  <div className={`truncate text-xs ${fillStyle.text}`}>
+                    {fill.fillType === "custom_fill"
+                      ? fill.customName || "Custom"
+                      : fill.fillType === "guest_fill"
+                        ? "Guest"
+                        : "Reciprocal"}
+                    <Badge variant="secondary" className="ml-1 text-xs">
+                      Fill
+                    </Badge>
+                  </div>
                 </div>
+                {onRemoveFill && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleRemoveFill(fill.id);
+                    }}
+                    className="ml-1 h-5 w-5 p-0 text-gray-500 hover:bg-red-100 hover:text-red-600"
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                )}
               </div>
-            )}
-          </div>
-        ) : (
-          <div
-            className="flex cursor-pointer items-center gap-2 rounded-md border border-dashed border-blue-300 p-2 hover:bg-blue-50"
-            onClick={(e) => {
-              e.stopPropagation();
-              window.dispatchEvent(
-                new CustomEvent("open-add-player-modal", {
-                  detail: { timeBlockId: timeBlock.id },
-                }),
-              );
-            }}
-          >
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-medium text-blue-600">
-                <UserPlus className="mr-1 inline-block h-3 w-3" />
-                Add Player
-              </p>
-            </div>
-          </div>
-        )}
-      </td>
-
-      {/* Actions Column */}
-      <td className="px-3 py-3">
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            className="bg-green-50 px-2 py-1 text-xs shadow-sm hover:bg-green-100 hover:text-green-800"
-            onClick={(e) => {
-              e.stopPropagation();
-              handleCheckInAll();
-            }}
-          >
-            <Users className="mr-1 h-3 w-3" />
-            Check In All
-          </Button>
+            );
+          })}
         </div>
-      </td>
-    </tr>
+      ) : (
+        <div className="text-xs text-gray-400">Available</div>
+      )}
+    </div>
   );
 }

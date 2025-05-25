@@ -10,14 +10,20 @@ import {
   members,
   guests,
   teesheets,
+  timeBlockFills,
 } from "~/server/db/schema";
 import { and, eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { initializePaceOfPlay } from "~/server/pace-of-play/actions";
+import type { FillType } from "~/app/types/TeeSheetTypes";
 
 type ActionResult = {
   success: boolean;
   error?: string;
+};
+
+type FillActionResult = ActionResult & {
+  fill?: typeof timeBlockFills.$inferSelect;
 };
 
 export async function removeTimeBlockMember(
@@ -491,6 +497,90 @@ export async function updateTeesheetGeneralNotes(
     return {
       success: false,
       error: "Failed to update teesheet general notes",
+    };
+  }
+}
+
+export async function addFillToTimeBlock(
+  timeBlockId: number,
+  fillType: FillType,
+  count: number,
+  customName?: string,
+): Promise<FillActionResult> {
+  try {
+    const clerkOrgId = await getOrganizationId();
+
+    // Create individual fill records instead of using count
+    const fillPromises = Array.from({ length: count }, () =>
+      db
+        .insert(timeBlockFills)
+        .values({
+          timeBlockId,
+          fillType,
+          customName: customName || null,
+          clerkOrgId,
+        })
+        .returning(),
+    );
+
+    const results = await Promise.all(fillPromises);
+
+    if (
+      !results ||
+      results.length === 0 ||
+      !results[0] ||
+      results[0].length === 0
+    ) {
+      return {
+        success: false,
+        error: "Failed to add fills to time block",
+      };
+    }
+
+    revalidatePath(`/teesheet`);
+    return { success: true, fill: results[0][0] };
+  } catch (error) {
+    console.error("Error adding fills to time block:", error);
+    return {
+      success: false,
+      error: "Failed to add fills to time block",
+    };
+  }
+}
+
+export async function removeFillFromTimeBlock(
+  timeBlockId: number,
+  fillId: number,
+): Promise<ActionResult> {
+  try {
+    const clerkOrgId = await getOrganizationId();
+
+    // Delete the fill directly, similar to member removal
+    const result = await db
+      .delete(timeBlockFills)
+      .where(
+        and(
+          eq(timeBlockFills.timeBlockId, timeBlockId),
+          eq(timeBlockFills.id, fillId),
+          eq(timeBlockFills.clerkOrgId, clerkOrgId),
+        ),
+      )
+      .returning();
+
+    if (!result || result.length === 0) {
+      return {
+        success: false,
+        error: "Fill not found in time block",
+      };
+    }
+
+    revalidatePath(`/teesheet`);
+    return { success: true };
+  } catch (error) {
+    console.error("Error removing fill from time block:", error);
+    return {
+      success: false,
+      error: "Failed to remove fill from time block",
     };
   }
 }

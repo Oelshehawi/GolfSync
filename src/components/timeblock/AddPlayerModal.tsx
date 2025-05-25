@@ -18,10 +18,12 @@ export function AddPlayerModal({
   timeBlock,
   timeBlockGuests = [],
 }: AddPlayerModalProps) {
-  // Create a key that changes when members or guests are added/removed
+  // Create a key that changes when members, guests, or fills are added/removed
   const membersKey = timeBlock.members.map((m) => m.id).join("-");
   const guestsKey = timeBlockGuests.map((g) => g.id).join("-");
-  const componentKey = `modal-timeblock-${timeBlock.id}-members-${membersKey}-guests-${guestsKey}`;
+  const fillsKey =
+    timeBlock.fills?.map((f) => `${f.id}`).join("-") || "";
+  const componentKey = `modal-timeblock-${timeBlock.id}-members-${membersKey}-guests-${guestsKey}-fills-${fillsKey}`;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

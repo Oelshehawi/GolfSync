@@ -102,34 +102,10 @@ export async function addMemberToTimeBlock(
   }
 }
 
-export async function removeMemberFromTimeBlock(
-  timeBlockId: number,
-  memberId: number,
-) {
-  try {
-    const orgId = await getOrganizationId();
-
-    if (!orgId) {
-      return { success: false, error: "No organization selected" };
-    }
-
-    await db
-      .delete(timeBlockMembers)
-      .where(
-        and(
-          eq(timeBlockMembers.timeBlockId, timeBlockId),
-          eq(timeBlockMembers.memberId, memberId),
-          eq(timeBlockMembers.clerkOrgId, orgId),
-        ),
-      );
-
-    revalidatePath(`/admin/timeblock/${timeBlockId}`);
-    return { success: true };
-  } catch (error) {
-    console.error("Error removing member from time block:", error);
-    return { success: false, error: "Failed to remove member from time block" };
-  }
-}
+/*
+ * Note: Member removal from timeblock functionality has been consolidated into
+ * the removeTimeBlockMember function in src/server/teesheet/actions.ts
+ */
 
 // Member management functions
 export async function createMember(data: {

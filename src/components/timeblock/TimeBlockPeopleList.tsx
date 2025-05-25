@@ -4,12 +4,16 @@ import { UserMinus, UserPlus } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { EntitySearchCard } from "~/components/ui/entity-search-card";
-import type { TimeBlockMemberView } from "~/app/types/TeeSheetTypes";
+import type {
+  TimeBlockMemberView,
+  TimeBlockFill,
+  FillType,
+} from "~/app/types/TeeSheetTypes";
 import { Badge } from "~/components/ui/badge";
 import { TimeBlockGuest } from "~/app/types/GuestTypes";
 import { getMemberClassStyling } from "~/lib/utils";
 
-type PersonType = "member" | "guest";
+type PersonType = "member" | "guest" | "fill";
 
 interface TimeBlockPersonItemProps {
   type: PersonType;
@@ -97,12 +101,71 @@ export const TimeBlockPersonItem = ({
   );
 };
 
-// Unified people list component
+// New component for displaying fills
+interface TimeBlockFillItemProps {
+  fill: TimeBlockFill;
+  onRemove: (fillId: number) => Promise<void>;
+}
+
+export const TimeBlockFillItem = ({
+  fill,
+  onRemove,
+}: TimeBlockFillItemProps) => {
+  const handleRemove = () => {
+    onRemove(fill.id);
+  };
+
+  const getFillLabel = () => {
+    switch (fill.fillType) {
+      case "guest_fill":
+        return "Guest Fill";
+      case "reciprocal_fill":
+        return "Reciprocal Fill";
+      case "custom_fill":
+        return fill.customName || "Custom Fill";
+      default:
+        return "Fill";
+    }
+  };
+
+  // Use a neutral style for fills
+  const fillStyle = {
+    border: "border-gray-200",
+    bg: "bg-gray-50",
+    text: "text-gray-700",
+    badgeVariant: "secondary",
+  };
+
+  return (
+    <div
+      className={`flex items-center justify-between rounded-lg border ${fillStyle.border} p-3 transition-colors hover:${fillStyle.bg}`}
+    >
+      <div className="grid flex-1 grid-cols-2 gap-x-6 gap-y-1">
+        <div>
+          <div className="flex items-center space-x-2">
+            <p className={`font-medium ${fillStyle.text}`}>{getFillLabel()}</p>
+            <Badge variant={fillStyle.badgeVariant as any} className="text-xs">
+              Fill
+            </Badge>
+          </div>
+        </div>
+      </div>
+      <Button variant="destructive" size="sm" onClick={handleRemove}>
+        <UserMinus className="mr-2 h-4 w-4" />
+        Remove
+      </Button>
+    </div>
+  );
+};
+
+// Update the props interface to include fills
 interface TimeBlockPeopleListProps {
   members: TimeBlockMemberView[];
   guests: TimeBlockGuest[];
+  fills: TimeBlockFill[];
   onRemoveMember: (memberId: number) => Promise<void>;
   onRemoveGuest: (guestId: number) => Promise<void>;
+  onRemoveFill: (fillId: number) => Promise<void>;
   title?: string;
   maxPeople?: number;
 }
@@ -110,18 +173,23 @@ interface TimeBlockPeopleListProps {
 export function TimeBlockPeopleList({
   members,
   guests,
+  fills,
   onRemoveMember,
   onRemoveGuest,
+  onRemoveFill,
   title = "People",
   maxPeople = 4,
 }: TimeBlockPeopleListProps) {
-  const totalPeople = members.length + guests.length;
+  // Calculate total people including fills
+  const totalPeople = members.length + guests.length + fills.length;
 
   const handleRemove = async (id: number, type: PersonType) => {
     if (type === "member") {
       await onRemoveMember(id);
-    } else {
+    } else if (type === "guest") {
       await onRemoveGuest(id);
+    } else {
+      await onRemoveFill(id);
     }
   };
 
@@ -140,13 +208,16 @@ export function TimeBlockPeopleList({
     );
   }
 
-  // Create combined and sorted array of members and guests
+  // Create combined array of members and guests first
   const allPeople = [
     ...members.map((member) => ({
       type: "member" as PersonType,
       data: member,
     })),
-    ...guests.map((guest) => ({ type: "guest" as PersonType, data: guest })),
+    ...guests.map((guest) => ({
+      type: "guest" as PersonType,
+      data: guest,
+    })),
   ];
 
   return (
@@ -161,16 +232,20 @@ export function TimeBlockPeopleList({
       </CardHeader>
       <CardContent>
         <div className="space-y-3">
-          {allPeople.map((person) => (
+          {allPeople.map((person, index) => (
             <TimeBlockPersonItem
-              key={`${person.type}-${
-                person.type === "member"
-                  ? (person.data as TimeBlockMemberView).id
-                  : (person.data as TimeBlockGuest).id
-              }`}
+              key={`${person.type}-${person.data.id}-${index}`}
               type={person.type}
               person={person.data}
               onRemove={handleRemove}
+            />
+          ))}
+          {/* Render fills separately */}
+          {fills.map((fill) => (
+            <TimeBlockFillItem
+              key={`fill-${fill.id}`}
+              fill={fill}
+              onRemove={onRemoveFill}
             />
           ))}
         </div>

@@ -1,7 +1,5 @@
 "use client";
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
 import type {
   TeeSheet,
   TimeBlockWithMembers,
@@ -9,15 +7,13 @@ import type {
 } from "~/app/types/TeeSheetTypes";
 import { TimeBlock as TimeBlockComponent } from "../timeblock/TimeBlock";
 import { RestrictionViolationAlert } from "~/components/settings/timeblock-restrictions/RestrictionViolationAlert";
-import { RestrictionViolation } from "~/app/types/RestrictionTypes";
-import type { TimeBlockWithPaceOfPlay } from "~/server/pace-of-play/data";
 import { TeesheetControlPanel } from "./TeesheetControlPanel";
 import { TeesheetGeneralNotes } from "./TeesheetGeneralNotes";
+import { useTeesheetPolling } from "~/hooks/useTeesheetPolling";
+import { useRestrictionHandling } from "~/hooks/useRestrictionHandling";
+import { RestrictionViolation } from "~/app/types/RestrictionTypes";
 
-// Poll interval in milliseconds
-const POLL_INTERVAL = 30000;
-
-interface GridTeesheetViewProps {
+interface ViewProps {
   teesheet: TeeSheet;
   timeBlocks: TimeBlockWithMembers[];
   availableConfigs: TeesheetConfig[];
@@ -45,57 +41,35 @@ interface GridTeesheetViewProps {
   ) => Promise<void>;
   onCheckInAll: (timeBlockId: number) => Promise<void>;
   onSaveNotes: (timeBlockId: number, notes: string) => Promise<boolean>;
+  onRemoveFill: (timeBlockId: number, fillId: number) => Promise<void>;
 }
 
-export function GridTeesheetView({
-  teesheet,
-  timeBlocks,
-  availableConfigs,
-  paceOfPlayMap,
-  isAdmin = true,
-  onRestrictionViolation,
-  setPendingAction,
-  violations,
-  showRestrictionAlert,
-  setShowRestrictionAlert,
-  pendingAction,
-  onRemoveMember,
-  onRemoveGuest,
-  onCheckInMember,
-  onCheckInGuest,
-  onCheckInAll,
-  onSaveNotes,
-}: GridTeesheetViewProps) {
-  const router = useRouter();
+export function GridTeesheetView(props: ViewProps) {
+  const {
+    teesheet,
+    timeBlocks,
+    availableConfigs,
+    paceOfPlayMap,
+    isAdmin = true,
+    onRestrictionViolation,
+    setPendingAction,
+    violations,
+    showRestrictionAlert,
+    setShowRestrictionAlert,
+    pendingAction,
+    onRemoveMember,
+    onRemoveGuest,
+    onCheckInMember,
+    onCheckInGuest,
+    onCheckInAll,
+    onSaveNotes,
+    onRemoveFill,
+  } = props;
 
-  // Add polling for admin view only
-  useEffect(() => {
-    // Only poll if this is the admin view
-    if (!isAdmin) return;
-
-    // Set up polling interval
-    const interval = setInterval(() => {
-      router.refresh();
-    }, POLL_INTERVAL);
-
-    // Clean up interval on component unmount
-    return () => clearInterval(interval);
-  }, [router, isAdmin]);
-
-  // Handle admin override continuation
-  const handleOverrideContinue = async () => {
-    if (pendingAction) {
-      await pendingAction();
-      setPendingAction(null);
-    }
-    setShowRestrictionAlert(false);
-  };
-
-  // Handle cancellation of restriction alert
-  const handleRestrictionCancel = () => {
-    setPendingAction(null);
-    setShowRestrictionAlert(false);
-  };
+  // Use shared hooks
+  useTeesheetPolling(isAdmin);
+  const { handleOverrideContinue, handleRestrictionCancel } =
+    useRestrictionHandling();
 
   return (
     <>
@@ -130,6 +104,7 @@ export function GridTeesheetView({
             onRemoveGuest={(guestId: number) =>
               onRemoveGuest(block.id, guestId)
             }
+            onRemoveFill={(fillId: number) => onRemoveFill(block.id, fillId)}
             onCheckInMember={(memberId: number, isCheckedIn: boolean) =>
               onCheckInMember(block.id, memberId, isCheckedIn)
             }
