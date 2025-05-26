@@ -16,6 +16,7 @@ import {
   real,
   serial,
   pgTable,
+  jsonb,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { FillTypes, type FillType } from "~/app/types/TeeSheetTypes";
@@ -80,10 +81,14 @@ export const teesheetConfigs = createTable(
     id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
     clerkOrgId: varchar("clerk_org_id", { length: 50 }).notNull(),
     name: varchar("name", { length: 50 }).notNull(),
-    startTime: varchar("start_time", { length: 5 }).notNull(),
-    endTime: varchar("end_time", { length: 5 }).notNull(),
-    interval: integer("interval").notNull(),
-    maxMembersPerBlock: integer("max_members_per_block").notNull().default(4),
+    type: varchar("type", { length: 20 }).notNull().default("regular"),
+    // Optional fields for REGULAR type
+    startTime: varchar("start_time", { length: 5 }),
+    endTime: varchar("end_time", { length: 5 }),
+    interval: integer("interval"),
+    maxMembersPerBlock: integer("max_members_per_block"),
+    // Template reference for CUSTOM type
+    templateId: integer("template_id").references(() => templates.id),
     isActive: boolean("is_active").notNull().default(true),
     isSystemConfig: boolean("is_system_config").notNull().default(false),
     createdAt: timestamp("created_at", { withTimezone: true })
@@ -96,6 +101,7 @@ export const teesheetConfigs = createTable(
   (table) => [
     unique("configs_org_name_unq").on(table.clerkOrgId, table.name),
     index("configs_org_id_idx").on(table.clerkOrgId),
+    index("configs_template_id_idx").on(table.templateId),
   ],
 );
 
@@ -145,6 +151,34 @@ export const teesheetConfigRulesRelations = relations(
   }),
 );
 
+// Add new templates table
+export const templates = createTable(
+  "templates",
+  {
+    id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+    clerkOrgId: varchar("clerk_org_id", { length: 50 }).notNull(),
+    name: varchar("name", { length: 50 }).notNull(),
+    type: varchar("type", { length: 20 }).notNull(), // REGULAR or CUSTOM
+    // For REGULAR templates
+    startTime: varchar("start_time", { length: 5 }),
+    endTime: varchar("end_time", { length: 5 }),
+    interval: integer("interval"),
+    maxMembersPerBlock: integer("max_members_per_block"),
+    // For CUSTOM templates
+    blocks: jsonb("blocks"), // Array of block definitions
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).$onUpdate(
+      () => new Date(),
+    ),
+  },
+  (table) => [
+    unique("templates_org_name_unq").on(table.clerkOrgId, table.name),
+    index("templates_org_id_idx").on(table.clerkOrgId),
+  ],
+);
+
 // Teesheets table
 export const teesheets = createTable(
   "teesheets",
@@ -174,11 +208,12 @@ export const timeBlocks = createTable(
   {
     id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
     clerkOrgId: varchar("clerk_org_id", { length: 50 }).notNull(),
-    teesheetId: integer("teesheet_id")
-      .references(() => teesheets.id, { onDelete: "cascade" })
-      .notNull(),
+    teesheetId: integer("teesheet_id").notNull(),
     startTime: varchar("start_time", { length: 5 }).notNull(),
     endTime: varchar("end_time", { length: 5 }).notNull(),
+    maxMembers: integer("max_members").notNull().default(4),
+    displayName: varchar("display_name", { length: 100 }),
+    sortOrder: integer("sort_order").notNull().default(0),
     notes: text("notes"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .default(sql`CURRENT_TIMESTAMP`)
@@ -188,9 +223,8 @@ export const timeBlocks = createTable(
     ),
   },
   (table) => [
-    index("blocks_org_id_idx").on(table.clerkOrgId),
-    index("blocks_teesheet_id_idx").on(table.teesheetId),
-    index("blocks_start_time_idx").on(table.startTime),
+    index("timeblocks_org_id_idx").on(table.clerkOrgId),
+    index("timeblocks_teesheet_id_idx").on(table.teesheetId),
   ],
 );
 

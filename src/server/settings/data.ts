@@ -5,15 +5,17 @@ import {
   teesheetConfigs,
   teesheetConfigRules,
   courseInfo,
+  templates,
 } from "~/server/db/schema";
-import type {
-  TeesheetConfig,
-} from "~/app/types/TeeSheetTypes";
+import type { TeesheetConfig } from "~/app/types/TeeSheetTypes";
+import { ConfigTypes } from "~/app/types/TeeSheetTypes";
 import { format } from "date-fns";
 
 function convertToTeesheetConfig(dbConfig: any): TeesheetConfig {
-  return {
+  const type = dbConfig.type.toUpperCase() as ConfigTypes;
+  const baseConfig = {
     ...dbConfig,
+    type,
     rules:
       dbConfig.rules?.map((rule: any) => ({
         ...rule,
@@ -21,6 +23,18 @@ function convertToTeesheetConfig(dbConfig: any): TeesheetConfig {
         endDate: rule.endDate ? new Date(rule.endDate) : null,
       })) || [],
   };
+
+  if (type === ConfigTypes.REGULAR) {
+    return {
+      ...baseConfig,
+      startTime: dbConfig.startTime,
+      endTime: dbConfig.endTime,
+      interval: dbConfig.interval,
+      maxMembersPerBlock: dbConfig.maxMembersPerBlock,
+    };
+  }
+
+  return baseConfig;
 }
 
 export { convertToTeesheetConfig };
@@ -144,6 +158,9 @@ export async function getConfigForDate(date: Date): Promise<TeesheetConfig> {
     });
 
     if (!config) {
+      console.error(
+        "[getConfigForDate] Configuration not found for specific date rule",
+      );
       throw new Error("Configuration not found");
     }
 
@@ -182,6 +199,9 @@ export async function getConfigForDate(date: Date): Promise<TeesheetConfig> {
     });
 
     if (!config) {
+      console.error(
+        "[getConfigForDate] Configuration not found for recurring rule",
+      );
       throw new Error("Configuration not found");
     }
 
@@ -201,6 +221,7 @@ export async function getConfigForDate(date: Date): Promise<TeesheetConfig> {
   });
 
   if (systemConfigs.length === 0) {
+    console.error("[getConfigForDate] No system configurations found");
     throw new Error("No system configurations found");
   }
 
@@ -210,29 +231,35 @@ export async function getConfigForDate(date: Date): Promise<TeesheetConfig> {
   );
 
   if (!weekdayConfig) {
+    console.error(
+      "[getConfigForDate] No matching system configuration found for day:",
+      dayOfWeek,
+    );
     throw new Error("No matching system configuration found");
   }
 
   return convertToTeesheetConfig(weekdayConfig);
 }
 
-export async function getTeesheetConfigs() {
-  const orgId = await getOrganizationId();
+export async function getTeesheetConfigs(): Promise<TeesheetConfig[]> {
+  try {
+    const orgId = await getOrganizationId();
 
-  if (!orgId) {
-    return { success: false, error: "No organization selected" };
-  }
-
-  const configs = await db.query.teesheetConfigs.findMany({
-    where: eq(teesheetConfigs.clerkOrgId, orgId),
-    with: {
-      rules: {
-        where: eq(teesheetConfigRules.clerkOrgId, orgId),
+    const configs = await db.query.teesheetConfigs.findMany({
+      where: eq(teesheetConfigs.clerkOrgId, orgId),
+      with: {
+        rules: {
+          where: eq(teesheetConfigRules.clerkOrgId, orgId),
+        },
       },
-    },
-  });
+      orderBy: (teesheetConfigs, { asc }) => [asc(teesheetConfigs.name)],
+    });
 
-  return configs.map(convertToTeesheetConfig);
+    return configs.map(convertToTeesheetConfig);
+  } catch (error) {
+    console.error("Error fetching teesheet configs:", error);
+    return [];
+  }
 }
 
 export async function getTeesheetConfig(id: number) {
@@ -278,5 +305,25 @@ export async function getCourseInfo() {
   } catch (error) {
     console.error("Error fetching course info:", error);
     return { success: false, error: "Error fetching course info" };
+  }
+}
+
+export async function getTemplates() {
+  const orgId = await getOrganizationId();
+
+  if (!orgId) {
+    return { success: false, error: "No organization selected" };
+  }
+
+  try {
+    const templateList = await db.query.templates.findMany({
+      where: eq(templates.clerkOrgId, orgId),
+      orderBy: desc(templates.updatedAt),
+    });
+
+    return templateList;
+  } catch (error) {
+    console.error("Error fetching templates:", error);
+    return [];
   }
 }

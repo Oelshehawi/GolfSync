@@ -7,6 +7,7 @@ import {
   timeBlockGuests,
   guests,
   timeBlockFills,
+  templates,
 } from "~/server/db/schema";
 import { eq, and, inArray, sql } from "drizzle-orm";
 import { getOrganizationId } from "~/lib/auth";
@@ -14,7 +15,11 @@ import type {
   TeeSheet,
   TimeBlockWithMembers,
   TeesheetConfig,
+  FillType,
+  Template,
+  TemplateBlock,
 } from "~/app/types/TeeSheetTypes";
+import { ConfigTypes } from "~/app/types/TeeSheetTypes";
 import { getConfigForDate } from "~/server/settings/data";
 import { generateTimeBlocks, formatDateToYYYYMMDD } from "~/lib/utils";
 
@@ -24,9 +29,6 @@ export async function createTimeBlocksForTeesheet(
   teesheetDate?: string,
 ) {
   const clerkOrgId = await getOrganizationId();
-
-  // Generate time blocks as string times
-  const timeSlots = generateTimeBlocks(config);
 
   // If no teesheet date provided, fetch it from the database
   let dateStr = teesheetDate;
@@ -40,30 +42,96 @@ export async function createTimeBlocksForTeesheet(
 
     if (teesheet) {
       dateStr = teesheet.date;
+    } else {
+      console.error("[createTimeBlocksForTeesheet] No teesheet found");
+      return;
     }
   }
 
-  // Create time blocks for each time slot
-  const blocks = [];
-  for (let i = 0; i < timeSlots.length - 1; i++) {
-    const startTime = timeSlots[i];
-    const endTime = timeSlots[i + 1];
+  // Delete existing time blocks for this teesheet
+  await db
+    .delete(timeBlocks)
+    .where(
+      and(
+        eq(timeBlocks.teesheetId, teesheetId),
+        eq(timeBlocks.clerkOrgId, clerkOrgId),
+      ),
+    );
 
-    // Ensure both times are valid before adding to blocks
-    if (startTime && endTime) {
-      blocks.push({
+  // For custom configurations, fetch the template and create blocks based on it
+  if (config.type === ConfigTypes.CUSTOM) {
+    // Fetch the template
+    const template = await db.query.templates.findFirst({
+      where: and(
+        eq(templates.id, config.templateId),
+        eq(templates.clerkOrgId, clerkOrgId),
+      ),
+    });
+
+    if (!template) {
+      console.error(
+        "[createTimeBlocksForTeesheet] No template found for id:",
+        config.templateId,
+      );
+      return;
+    }
+
+    if (!template.blocks) {
+      console.error(
+        "[createTimeBlocksForTeesheet] Template has no blocks:",
+        template.id,
+      );
+      return;
+    }
+
+    // Create blocks based on template
+    try {
+      const templateBlocks = template.blocks as TemplateBlock[];
+
+      // Create blocks based on template
+      const blocks = templateBlocks.map((block, index) => ({
         clerkOrgId,
         teesheetId,
-        startTime,
-        endTime,
-      });
+        startTime: block.startTime,
+        endTime: block.startTime, // For template blocks, end time is same as start time
+        maxMembers: block.maxPlayers,
+        displayName: block.displayName,
+        sortOrder: index, // Use the index to maintain order
+      }));
+
+      if (blocks.length > 0) {
+        await db.insert(timeBlocks).values(blocks);
+      }
+    } catch (error) {
+      console.error(
+        "[createTimeBlocksForTeesheet] Error creating blocks:",
+        error,
+      );
+      return;
+    }
+  } else {
+    // For regular configurations, generate blocks based on start time, end time, and interval
+    const timeBlocksArray = generateTimeBlocks({
+      startTime: config.startTime,
+      endTime: config.endTime,
+      interval: config.interval,
+    });
+
+    const blocks = timeBlocksArray.map((time, index) => ({
+      clerkOrgId,
+      teesheetId,
+      startTime: time,
+      endTime: time, // For regular blocks, end time is same as start time
+      maxMembers: config.maxMembersPerBlock,
+      sortOrder: index,
+    }));
+
+    if (blocks.length > 0) {
+      await db.insert(timeBlocks).values(blocks);
     }
   }
 
-  // Insert all blocks in a single query
-  if (blocks.length > 0) {
-    await db.insert(timeBlocks).values(blocks);
-  }
+  return await getTimeBlocksForTeesheet(teesheetId);
 }
 
 export async function getOrCreateTeesheet(
@@ -94,7 +162,7 @@ export async function getOrCreateTeesheet(
     .insert(teesheets)
     .values({
       clerkOrgId,
-      date: formattedDate, // Always store as YYYY-MM-DD string
+      date: formattedDate,
       configId: config.id,
     })
     .returning()
@@ -135,6 +203,9 @@ export async function getTimeBlocksForTeesheet(
       startTime: timeBlocks.startTime,
       endTime: timeBlocks.endTime,
       notes: timeBlocks.notes,
+      displayName: timeBlocks.displayName,
+      maxMembers: timeBlocks.maxMembers,
+      sortOrder: timeBlocks.sortOrder,
       createdAt: timeBlocks.createdAt,
       updatedAt: timeBlocks.updatedAt,
       members: {
@@ -156,7 +227,8 @@ export async function getTimeBlocksForTeesheet(
         eq(timeBlocks.clerkOrgId, clerkOrgId),
         eq(timeBlocks.teesheetId, teesheetId),
       ),
-    );
+    )
+    .orderBy(timeBlocks.sortOrder, timeBlocks.startTime);
 
   if (!result || result.length === 0) {
     return [];
@@ -175,11 +247,15 @@ export async function getTimeBlocksForTeesheet(
         startTime: row.startTime,
         endTime: row.endTime,
         notes: row.notes,
+        displayName: row.displayName || undefined,
         createdAt: row.createdAt,
         updatedAt: row.updatedAt,
         members: [],
         guests: [],
         fills: [],
+        maxMembers: row.maxMembers || 4, // Use the value from database or default to 4
+        sortOrder: row.sortOrder || 0, // Use the value from database or default to 0
+        type: ConfigTypes.REGULAR, // Default type
       });
     }
 
@@ -275,7 +351,7 @@ export async function getTimeBlocksForTeesheet(
       timeBlock.fills.push({
         id: fill.id,
         timeBlockId: fill.timeBlockId,
-        fillType: fill.fillType,
+        fillType: fill.fillType as FillType,
         customName: fill.customName,
         clerkOrgId: fill.clerkOrgId,
         createdAt: fill.createdAt || new Date(),
@@ -319,6 +395,9 @@ export async function getTimeBlockWithMembers(
       startTime: timeBlocks.startTime,
       endTime: timeBlocks.endTime,
       notes: timeBlocks.notes,
+      displayName: timeBlocks.displayName,
+      maxMembers: timeBlocks.maxMembers,
+      sortOrder: timeBlocks.sortOrder,
       createdAt: timeBlocks.createdAt,
       updatedAt: timeBlocks.updatedAt,
       members: {
@@ -359,6 +438,9 @@ export async function getTimeBlockWithMembers(
     startTime: firstRow.startTime,
     endTime: firstRow.endTime,
     notes: firstRow.notes,
+    displayName: firstRow.displayName || undefined,
+    maxMembers: firstRow.maxMembers || 4,
+    sortOrder: firstRow.sortOrder || 0,
     createdAt: firstRow.createdAt,
     updatedAt: firstRow.updatedAt,
   };
@@ -445,19 +527,22 @@ export async function getTimeBlockWithMembers(
     startTime: timeBlock.startTime,
     endTime: timeBlock.endTime,
     notes: timeBlock.notes,
+    displayName: timeBlock.displayName || undefined,
     createdAt: timeBlock.createdAt,
     updatedAt: timeBlock.updatedAt,
     date: teesheet?.date,
     members: blockMembers || [],
     guests: blockGuests || [],
-    fills:
-      fillsResult.map((fill) => ({
-        id: fill.id,
-        timeBlockId: fill.timeBlockId,
-        fillType: fill.fillType,
-        customName: fill.customName,
-        clerkOrgId: fill.clerkOrgId,
-        createdAt: fill.createdAt || new Date(),
-      })) || [],
+    fills: fillsResult.map((fill) => ({
+      id: fill.id,
+      timeBlockId: fill.timeBlockId,
+      fillType: fill.fillType as FillType,
+      customName: fill.customName,
+      clerkOrgId: fill.clerkOrgId,
+      createdAt: fill.createdAt || new Date(),
+    })),
+    maxMembers: timeBlock.maxMembers || 4, // Use value from database or default
+    sortOrder: timeBlock.sortOrder || 0, // Use value from database or default
+    type: ConfigTypes.REGULAR, // Default type
   };
 }

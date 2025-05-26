@@ -240,13 +240,15 @@ export function TimeBlock({
   if (viewMode === "vertical") {
     return (
       <tr className="hover:bg-gray-50">
-        <td className="px-3 py-3 text-lg font-semibold whitespace-nowrap text-gray-900">
-          <Link
-            href={`/admin/timeblock/${timeBlock.id}`}
-            className="hover:text-blue-600 hover:underline"
-          >
-            {formatTo12Hour(timeBlock.startTime)}
-          </Link>
+        <td className="px-3 py-3">
+          <div className="flex flex-col">
+            {timeBlock.displayName && (
+              <span className="text-sm font-medium text-gray-600">
+                {timeBlock.displayName}
+              </span>
+            )}
+            <span className="font-semibold">{formattedTime}</span>
+          </div>
         </td>
 
         {/* Status Column */}
@@ -538,12 +540,19 @@ export function TimeBlock({
   return (
     <div className="rounded-lg border p-3 hover:border-blue-500 hover:bg-blue-50 hover:shadow-md">
       <div className="mb-2 flex items-center justify-between">
-        <Link
-          href={`/admin/timeblock/${timeBlock.id}`}
-          className="text-base font-semibold text-gray-800"
-        >
-          {formattedTime}
-        </Link>
+        <div className="flex flex-col">
+          {timeBlock.displayName && (
+            <span className="text-sm font-medium text-gray-600">
+              {timeBlock.displayName}
+            </span>
+          )}
+          <Link
+            href={`/admin/timeblock/${timeBlock.id}`}
+            className="text-base font-semibold text-gray-800"
+          >
+            {formattedTime}
+          </Link>
+        </div>
         <div className="flex items-center gap-2">
           <span className="text-xs text-gray-500">{totalPeople}/4 spots</span>
           {paceOfPlay?.status && (

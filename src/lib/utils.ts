@@ -2,6 +2,7 @@ import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { format, parse, addMinutes, parseISO } from "date-fns";
 import type { TeesheetConfig } from "~/app/types/TeeSheetTypes";
+import { ConfigTypes } from "~/app/types/TeeSheetTypes";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -281,42 +282,27 @@ export function getMemberClassStyling(className?: string | null) {
   return classMap[classUpper] || defaultStyle;
 }
 
-/**
- * Generates an array of time strings in "HH:MM" format based on config
- */
-export function generateTimeBlocks(config: TeesheetConfig): string[] {
-  if (!config.startTime || !config.endTime || !config.interval) {
-    throw new Error("Invalid configuration: missing required time parameters");
+interface TimeBlockGeneratorParams {
+  startTime: string;
+  endTime: string;
+  interval: number;
+}
+
+export function generateTimeBlocks({
+  startTime,
+  endTime,
+  interval,
+}: TimeBlockGeneratorParams): string[] {
+  const blocks: string[] = [];
+  let currentTime = new Date(`2000-01-01T${startTime}`);
+  const endDateTime = new Date(`2000-01-01T${endTime}`);
+
+  while (currentTime <= endDateTime) {
+    blocks.push(currentTime.toTimeString().slice(0, 5));
+    currentTime = new Date(currentTime.getTime() + interval * 60000);
   }
 
-  const times: string[] = [];
-  const baseDate = new Date(); // Just a base date to use for time parsing
-
-  // Parse start and end times
-  const startTime = parse(config.startTime, "HH:mm", baseDate);
-  const endTime = parse(config.endTime, "HH:mm", baseDate);
-  const interval = config.interval || 15; // Default to 15 if interval is somehow undefined
-
-  if (startTime >= endTime) {
-    throw new Error(
-      "Invalid configuration: start time must be before end time",
-    );
-  }
-
-  // Generate all time slots
-  let time = startTime;
-  while (time < endTime) {
-    times.push(format(time, "HH:mm"));
-    time = addMinutes(time, interval);
-  }
-
-  // Ensure the end time is included if it's not already
-  const lastTime = times.length > 0 ? times[times.length - 1] : "";
-  if (lastTime !== config.endTime) {
-    times.push(config.endTime);
-  }
-
-  return times;
+  return blocks;
 }
 
 /**

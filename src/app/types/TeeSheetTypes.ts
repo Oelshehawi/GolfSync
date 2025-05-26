@@ -8,6 +8,14 @@ export const FillTypes = {
 
 export type FillType = (typeof FillTypes)[keyof typeof FillTypes];
 
+// New Config Types
+export enum ConfigTypes {
+  REGULAR = "REGULAR",
+  CUSTOM = "CUSTOM",
+}
+
+export type ConfigType = (typeof ConfigTypes)[keyof typeof ConfigTypes];
+
 export interface TimeBlockFill {
   id: number;
   timeBlockId: number;
@@ -33,8 +41,15 @@ export interface TimeBlock {
   teesheetId: number;
   startTime: string;
   endTime: string;
+  displayName?: string | null; // For custom display ("Hole 1 - 9:00 AM")
+  templateId?: number; // Reference to template if using one
+  maxMembers: number;
+  sortOrder: number;
   createdAt: Date;
   updatedAt: Date | null;
+  type: ConfigTypes;
+  notes?: string | null;
+  date?: string;
 }
 
 export interface TimeBlockMemberView {
@@ -56,6 +71,43 @@ export interface TimeBlockWithMembers extends TimeBlock {
   date?: string;
 }
 
+// Add new template types
+export interface TemplateBlock {
+  displayName: string | null;
+  startTime: string;
+  maxPlayers: number;
+}
+
+export interface TimeBlockTemplate {
+  id: number;
+  clerkOrgId: string;
+  name: string;
+  startTime: string;
+  endTime: string;
+  displayName: string;
+  maxMembers: number;
+  sortOrder: number;
+  configId: number;
+  createdAt?: Date;
+  updatedAt?: Date | null;
+}
+
+export interface Template {
+  id: number;
+  clerkOrgId: string;
+  name: string;
+  type: ConfigTypes;
+  // For REGULAR templates
+  startTime?: string;
+  endTime?: string;
+  interval?: number;
+  maxMembersPerBlock?: number;
+  // For CUSTOM templates
+  blocks?: TemplateBlock[];
+  createdAt?: Date;
+  updatedAt?: Date | null;
+}
+
 export interface TeesheetConfigRuleInput {
   daysOfWeek: number[] | null;
   startDate: string | null;
@@ -75,24 +127,48 @@ export interface TeesheetConfigRule
   updatedAt: Date | null;
 }
 
-export interface TeesheetConfigInput {
-  name: string;
-  startTime: string;
-  endTime: string;
-  interval: number;
-  maxMembersPerBlock: number;
-  isActive: boolean;
-  isSystemConfig?: boolean;
-  rules: TeesheetConfigRuleInput[];
-}
-
-export interface TeesheetConfig extends Omit<TeesheetConfigInput, "rules"> {
+// Base config interface
+interface BaseConfig {
   id: number;
   clerkOrgId: string;
+  name: string;
+  type: ConfigTypes;
+  isActive: boolean;
   isSystemConfig: boolean;
   createdAt: Date;
   updatedAt: Date | null;
   rules: TeesheetConfigRule[];
+}
+
+// Regular sequential tee times config
+export interface RegularConfig extends BaseConfig {
+  type: ConfigTypes.REGULAR;
+  startTime: string;
+  endTime: string;
+  interval: number;
+  maxMembersPerBlock: number;
+}
+
+// Custom block configuration
+export interface CustomConfig extends BaseConfig {
+  type: ConfigTypes.CUSTOM;
+  templateId: number;
+}
+
+export type TeesheetConfig = RegularConfig | CustomConfig;
+
+export interface TeesheetConfigInput {
+  name: string;
+  type: ConfigTypes;
+  startTime?: string;
+  endTime?: string;
+  interval?: number;
+  maxMembersPerBlock?: number;
+  templateId?: number;
+  blocks?: TemplateBlock[];
+  isActive: boolean;
+  isSystemConfig?: boolean;
+  rules: TeesheetConfigRuleInput[];
 }
 
 export interface Rule {

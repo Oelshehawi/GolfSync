@@ -18,6 +18,7 @@ alwaysApply: true
 
 ## Date and Timezone Handling
 - Always use utility functions in @utils.ts for date manipulation and formatting
+- Drizzle manages createdat and updatedat
 - When passing dates between server and client components, use string format (YYYY-MM-DD) instead of Date objects to avoid timezone inconsistencies
 - Server-rendered dates may be interpreted differently when hydrated on the client due to timezone differences
 - Use `preserveDate()` when you need a Date object that preserves the intended date regardless of timezone

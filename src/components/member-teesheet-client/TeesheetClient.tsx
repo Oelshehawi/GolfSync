@@ -148,10 +148,16 @@ export default function TeesheetClient({
 
   // Use a sorted version of the timeBlocks without extra state management
   const sortedTimeBlocks = useMemo(() => {
-    return [...initialTimeBlocks].sort((a, b) => {
-      // Simple string comparison for HH:MM format
+    const sorted = [...initialTimeBlocks].sort((a, b) => {
+      // First sort by sortOrder
+      const orderDiff = (a.sortOrder || 0) - (b.sortOrder || 0);
+      if (orderDiff !== 0) return orderDiff;
+
+      // If sortOrder is the same, use startTime as fallback
       return a.startTime.localeCompare(b.startTime);
     });
+
+    return sorted;
   }, [initialTimeBlocks]);
 
   // Create a ref for the time blocks container to enable scrolling
@@ -333,7 +339,9 @@ export default function TeesheetClient({
     (timeBlock: ClientTimeBlock) => {
       if (!timeBlock?.members) return true;
       const maxMembers = config?.maxMembersPerBlock || 4;
-      return timeBlock.members.length < maxMembers;
+      const totalPeople =
+        timeBlock.members.length + (timeBlock.fills?.length || 0);
+      return totalPeople < maxMembers;
     },
     [config],
   );

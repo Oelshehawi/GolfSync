@@ -5,7 +5,7 @@ import { Button } from "~/components/ui/button";
 import { Badge } from "~/components/ui/badge";
 import { UserIcon, Users, Ban, AlertCircle, CheckCircle } from "lucide-react";
 import { formatDisplayTime } from "~/lib/utils";
-import { TimeBlockMemberView } from "~/app/types/TeeSheetTypes";
+import { TimeBlockMemberView, TimeBlockFill } from "~/app/types/TeeSheetTypes";
 import { Member } from "~/app/types/MemberTypes";
 
 // Define ClientTimeBlock for client-side usage to avoid type conflicts
@@ -14,6 +14,7 @@ type ClientTimeBlock = {
   startTime: string;
   endTime: string;
   members: TimeBlockMemberView[];
+  fills: TimeBlockFill[];
   [key: string]: any;
 };
 
@@ -47,6 +48,9 @@ export function TimeBlockItem({
   // Format the start time for display using our proper date utility function
   const startTimeDisplay = formatDisplayTime(timeBlock.startTime).toUpperCase();
 
+  // Calculate total people including fills
+  const totalPeople = timeBlock.members.length + (timeBlock.fills?.length || 0);
+
   // Determine if the button should be disabled (either by prop, past, or restricted)
   const isButtonDisabled = disabled || isPast || isRestricted;
 
@@ -77,7 +81,7 @@ export function TimeBlockItem({
           <span className="text-lg font-semibold">{startTimeDisplay}</span>
           <div className="mt-1 flex flex-wrap items-center gap-1">
             <span className="text-sm text-gray-600">
-              {timeBlock.members.length} / 4 Players
+              {totalPeople} / 4 Players
             </span>
             {isBooked && (
               <Badge className="ml-2 bg-green-500 hover:bg-green-600">
@@ -151,7 +155,7 @@ export function TimeBlockItem({
       )}
 
       {/* Player list - now more prominent */}
-      {timeBlock.members.length > 0 && (
+      {(timeBlock.members.length > 0 || timeBlock.fills?.length > 0) && (
         <div
           className={`mt-2 rounded p-2 ${allMembersCheckedIn ? "bg-green-50" : "bg-gray-50"}`}
         >
@@ -177,6 +181,24 @@ export function TimeBlockItem({
                 >
                   {member.firstName} {member.lastName}
                   {member.checkedIn && <span className="ml-1 text-xs">✓</span>}
+                </span>
+              </li>
+            ))}
+            {timeBlock.fills?.map((fill, idx) => (
+              <li
+                key={`fill-${idx}`}
+                className="flex items-center text-sm text-gray-700"
+              >
+                <UserIcon className="mr-1 h-3 w-3 text-gray-400" />
+                <span className="font-medium">
+                  {fill.fillType === "custom_fill"
+                    ? fill.customName || "Custom Fill"
+                    : fill.fillType === "guest_fill"
+                      ? "Guest Fill"
+                      : "Reciprocal Fill"}
+                  <Badge variant="secondary" className="ml-1 text-xs">
+                    Fill
+                  </Badge>
                 </span>
               </li>
             ))}

@@ -5,7 +5,11 @@ import type {
   TeeSheet,
   TimeBlockWithMembers,
   TeesheetConfig,
+  TemplateBlock,
+  CustomConfig,
+  Template,
 } from "~/app/types/TeeSheetTypes";
+import { ConfigTypes } from "~/app/types/TeeSheetTypes";
 import { RestrictionViolation } from "~/app/types/RestrictionTypes";
 import { TimeBlock as TimeBlockComponent } from "../timeblock/TimeBlock";
 import { RestrictionViolationAlert } from "~/components/settings/timeblock-restrictions/RestrictionViolationAlert";
@@ -25,6 +29,7 @@ interface ViewProps {
   teesheet: TeeSheet;
   timeBlocks: TimeBlockWithMembers[];
   availableConfigs: TeesheetConfig[];
+  templates?: Template[];
   paceOfPlayMap: Map<number, any>;
   isAdmin?: boolean;
   onRestrictionViolation: (violations: RestrictionViolation[]) => void;
@@ -57,6 +62,7 @@ export function VerticalTeesheetView(props: ViewProps) {
     teesheet,
     timeBlocks,
     availableConfigs,
+    templates,
     paceOfPlayMap,
     isAdmin = true,
     onRestrictionViolation,
@@ -136,7 +142,7 @@ export function VerticalTeesheetView(props: ViewProps) {
       <TeesheetGeneralNotes key={`notes-${teesheet.id}`} teesheet={teesheet} />
 
       {/* Traditional Vertical Teesheet View */}
-      <div className="rounded-lg border shadow">
+      <div className="rounded-lg border p-1 shadow">
         <table className="w-full table-auto">
           <thead className="bg-gray-100 text-xs font-semibold text-gray-600 uppercase">
             <tr>
@@ -151,81 +157,106 @@ export function VerticalTeesheetView(props: ViewProps) {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
-            {timeBlocks.map((block) => (
-              <React.Fragment key={`block-${block.id}`}>
-                <TimeBlockComponent
-                  key={`timeblock-${block.id}`}
-                  timeBlock={{
-                    ...block,
-                    startTime: block.startTime,
-                    endTime: block.endTime,
-                    date: block.date || teesheet.date,
-                    members: block.members || [],
-                    guests: block.guests || [],
-                  }}
-                  onRestrictionViolation={onRestrictionViolation}
-                  setPendingAction={setPendingAction}
-                  paceOfPlay={paceOfPlayMap.get(block.id) || null}
-                  showMemberClass={true}
-                  onRemoveMember={(memberId: number) =>
-                    onRemoveMember(block.id, memberId)
-                  }
-                  onRemoveGuest={(guestId: number) =>
-                    onRemoveGuest(block.id, guestId)
-                  }
-                  onRemoveFill={(fillId: number) =>
-                    onRemoveFill(block.id, fillId)
-                  }
-                  onCheckInMember={(memberId: number, isCheckedIn: boolean) =>
-                    onCheckInMember(block.id, memberId, isCheckedIn)
-                  }
-                  onCheckInGuest={(guestId: number, isCheckedIn: boolean) =>
-                    onCheckInGuest(block.id, guestId, isCheckedIn)
-                  }
-                  onCheckInAll={() => onCheckInAll(block.id)}
-                  onSaveNotes={(notes: string) => onSaveNotes(block.id, notes)}
-                  viewMode="vertical"
-                />
+            {timeBlocks.map((block) => {
+              // Get the template block if this is a custom config
+              const config = availableConfigs.find(
+                (c) => c.id === teesheet.configId,
+              );
+              let templateBlock: TemplateBlock | null = null;
 
-                {/* Display existing notes if any */}
-                {block.notes && block.notes.trim() !== "" && (
-                  <tr>
-                    <td
-                      colSpan={4}
-                      className="border-b border-[var(--org-primary-light)] p-0"
-                    >
-                      <TimeBlockNote
-                        notes={block.notes}
-                        onEditClick={() => toggleTimeBlockNoteEdit(block.id)}
-                        timeBlockId={block.id}
-                        onSaveNotes={onSaveNotes}
-                      />
+              if (config?.type === ConfigTypes.CUSTOM) {
+                const customConfig = config as CustomConfig;
+                const template = templates?.find(
+                  (t) => t.id === customConfig.templateId,
+                );
+                if (template?.blocks) {
+                  templateBlock =
+                    template.blocks.find(
+                      (tb) => block.startTime === tb.startTime,
+                    ) || null;
+                }
+              }
+
+              return (
+                <React.Fragment key={`block-${block.id}`}>
+                  <TimeBlockComponent
+                    key={`timeblock-${block.id}`}
+                    timeBlock={{
+                      ...block,
+                      startTime: block.startTime,
+                      endTime: block.endTime,
+                      date: block.date || teesheet.date,
+                      members: block.members || [],
+                      guests: block.guests || [],
+                      displayName:
+                        block.displayName || templateBlock?.displayName,
+                    }}
+                    onRestrictionViolation={onRestrictionViolation}
+                    setPendingAction={setPendingAction}
+                    paceOfPlay={paceOfPlayMap.get(block.id) || null}
+                    showMemberClass={true}
+                    onRemoveMember={(memberId: number) =>
+                      onRemoveMember(block.id, memberId)
+                    }
+                    onRemoveGuest={(guestId: number) =>
+                      onRemoveGuest(block.id, guestId)
+                    }
+                    onRemoveFill={(fillId: number) =>
+                      onRemoveFill(block.id, fillId)
+                    }
+                    onCheckInMember={(memberId: number, isCheckedIn: boolean) =>
+                      onCheckInMember(block.id, memberId, isCheckedIn)
+                    }
+                    onCheckInGuest={(guestId: number, isCheckedIn: boolean) =>
+                      onCheckInGuest(block.id, guestId, isCheckedIn)
+                    }
+                    onCheckInAll={() => onCheckInAll(block.id)}
+                    onSaveNotes={(notes: string) =>
+                      onSaveNotes(block.id, notes)
+                    }
+                    viewMode="vertical"
+                  />
+
+                  {/* Display existing notes if any */}
+                  {block.notes && block.notes.trim() !== "" && (
+                    <tr>
+                      <td
+                        colSpan={4}
+                        className="border-b border-[var(--org-primary-light)] p-0"
+                      >
+                        <TimeBlockNote
+                          notes={block.notes}
+                          onEditClick={() => toggleTimeBlockNoteEdit(block.id)}
+                          timeBlockId={block.id}
+                          onSaveNotes={onSaveNotes}
+                        />
+                      </td>
+                    </tr>
+                  )}
+
+                  {/* Add note indicator or editor after timeblock */}
+                  <tr className="hover:bg-gray-50">
+                    <td colSpan={4} className="h-2 p-0">
+                      {editingTimeBlockNote === block.id ? (
+                        <TimeBlockNoteEditor
+                          timeBlockId={block.id}
+                          initialNote={block.notes || ""}
+                          onSaveNotes={(timeBlockId, notes) => {
+                            toggleTimeBlockNoteEdit(null);
+                            return onSaveNotes(timeBlockId, notes);
+                          }}
+                          onCancel={() => toggleTimeBlockNoteEdit(null)}
+                        />
+                      ) : (
+                        <TimeBlockNoteAddIndicator
+                          onClick={() => toggleTimeBlockNoteEdit(block.id)}
+                        />
+                      )}
                     </td>
                   </tr>
-                )}
-
-                {/* Add note indicator or editor after timeblock */}
-                <tr className="hover:bg-gray-50">
-                  <td colSpan={4} className="h-2 p-0">
-                    {editingTimeBlockNote === block.id ? (
-                      <TimeBlockNoteEditor
-                        timeBlockId={block.id}
-                        initialNote={block.notes || ""}
-                        onSaveNotes={(timeBlockId, notes) => {
-                          toggleTimeBlockNoteEdit(null);
-                          return onSaveNotes(timeBlockId, notes);
-                        }}
-                        onCancel={() => toggleTimeBlockNoteEdit(null)}
-                      />
-                    ) : (
-                      <TimeBlockNoteAddIndicator
-                        onClick={() => toggleTimeBlockNoteEdit(block.id)}
-                      />
-                    )}
-                  </td>
-                </tr>
-              </React.Fragment>
-            ))}
+                </React.Fragment>
+              );
+            })}
           </tbody>
         </table>
       </div>

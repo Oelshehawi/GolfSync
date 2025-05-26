@@ -14,23 +14,10 @@ import { revalidatePath } from "next/cache";
 import { createTimeBlocksForTeesheet } from "~/server/teesheet/data";
 import { convertToTeesheetConfig } from "./data";
 import { auth } from "@clerk/nextjs/server";
+import type { TeesheetConfigInput } from "~/app/types/TeeSheetTypes";
+import { ConfigTypes } from "~/app/types/TeeSheetTypes";
 
-export async function createTeesheetConfig(data: {
-  name: string;
-  startTime: string;
-  endTime: string;
-  interval: number;
-  maxMembersPerBlock: number;
-  isActive?: boolean;
-  isSystemConfig?: boolean;
-  rules: {
-    daysOfWeek: number[] | null;
-    startDate: string | null;
-    endDate: string | null;
-    priority: number;
-    isActive: boolean;
-  }[];
-}) {
+export async function createTeesheetConfig(data: TeesheetConfigInput) {
   const orgId = await getOrganizationId();
 
   if (!orgId) {
@@ -43,10 +30,13 @@ export async function createTeesheetConfig(data: {
       .insert(teesheetConfigs)
       .values({
         name: data.name,
-        startTime: data.startTime,
-        endTime: data.endTime,
-        interval: data.interval,
-        maxMembersPerBlock: data.maxMembersPerBlock,
+        type: data.type.toLowerCase(), // Store as lowercase in DB
+        startTime: data.type === ConfigTypes.REGULAR ? data.startTime : null,
+        endTime: data.type === ConfigTypes.REGULAR ? data.endTime : null,
+        interval: data.type === ConfigTypes.REGULAR ? data.interval : null,
+        maxMembersPerBlock:
+          data.type === ConfigTypes.REGULAR ? data.maxMembersPerBlock : null,
+        templateId: data.type === ConfigTypes.CUSTOM ? data.templateId : null,
         isActive: data.isActive ?? true,
         isSystemConfig: data.isSystemConfig ?? false,
         clerkOrgId: orgId,
@@ -91,22 +81,7 @@ export async function createTeesheetConfig(data: {
 
 export async function updateTeesheetConfig(
   id: number,
-  data: {
-    name?: string;
-    startTime?: string;
-    endTime?: string;
-    interval?: number;
-    maxMembersPerBlock?: number;
-    isActive?: boolean;
-    isSystemConfig?: boolean;
-    rules?: {
-      daysOfWeek: number[] | null;
-      startDate: string | null;
-      endDate: string | null;
-      priority: number;
-      isActive: boolean;
-    }[];
-  },
+  data: TeesheetConfigInput,
 ) {
   const orgId = await getOrganizationId();
 
@@ -120,10 +95,13 @@ export async function updateTeesheetConfig(
       .update(teesheetConfigs)
       .set({
         name: data.name,
-        startTime: data.startTime,
-        endTime: data.endTime,
-        interval: data.interval,
-        maxMembersPerBlock: data.maxMembersPerBlock,
+        type: data.type.toLowerCase(), // Store as lowercase in DB
+        startTime: data.type === ConfigTypes.REGULAR ? data.startTime : null,
+        endTime: data.type === ConfigTypes.REGULAR ? data.endTime : null,
+        interval: data.type === ConfigTypes.REGULAR ? data.interval : null,
+        maxMembersPerBlock:
+          data.type === ConfigTypes.REGULAR ? data.maxMembersPerBlock : null,
+        templateId: data.type === ConfigTypes.CUSTOM ? data.templateId : null,
         isActive: data.isActive,
         isSystemConfig: data.isSystemConfig,
       })
@@ -192,23 +170,24 @@ export async function updateTeesheetConfig(
   }
 }
 
-export async function deleteTeesheetConfig(id: number) {
-  const orgId = await getOrganizationId();
-
-  if (!orgId) {
-    return { success: false, error: "No organization selected" };
-  }
-
+export async function deleteTeesheetConfig(
+  configId: number,
+): Promise<{ success: boolean; error?: string }> {
   try {
-    const [deletedConfig] = await db
+    const orgId = await getOrganizationId();
+
+    await db
       .delete(teesheetConfigs)
       .where(
-        and(eq(teesheetConfigs.id, id), eq(teesheetConfigs.clerkOrgId, orgId)),
-      )
-      .returning();
+        and(
+          eq(teesheetConfigs.id, configId),
+          eq(teesheetConfigs.clerkOrgId, orgId),
+        ),
+      );
 
-    revalidatePath("/settings");
-    return { success: true, data: deletedConfig };
+    revalidatePath("/settings/teesheet");
+    revalidatePath("/settings/teesheet/configuration");
+    return { success: true };
   } catch (error) {
     console.error("Error deleting teesheet config:", error);
     return { success: false, error: "Failed to delete configuration" };

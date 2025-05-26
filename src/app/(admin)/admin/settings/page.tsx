@@ -4,7 +4,7 @@ import {
   CardHeader,
   CardTitle,
 } from "~/components/ui/card";
-import { getTeesheetConfigs } from "~/server/settings/data";
+import { getTeesheetConfigs, getTemplates } from "~/server/settings/data";
 import { TeesheetSettings } from "~/components/settings/teesheet/TeesheetSettings";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import {
@@ -29,6 +29,8 @@ type CourseInfoType = {
 export default async function SettingsPage() {
   const teesheetResult = await getTeesheetConfigs();
   const teesheetConfigs = "success" in teesheetResult ? [] : teesheetResult;
+
+  const templates = await getTemplates();
 
   const memberClassesResult = await getMemberClasses();
   const memberClasses =
@@ -89,7 +91,10 @@ export default async function SettingsPage() {
 
         <TabsContent value="teesheet" className="mt-4">
           {/* Teesheet Settings */}
-          <TeesheetSettings initialConfigs={teesheetConfigs} />
+          <TeesheetSettings
+            initialConfigs={teesheetConfigs}
+            templates={templates}
+          />
         </TabsContent>
 
         <TabsContent value="restrictions" className="mt-4">

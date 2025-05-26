@@ -160,10 +160,8 @@ export async function getMemberTeesheetDataWithRestrictions(
       memberClass: member.class,
     });
 
-
     if (Array.isArray(batchResults)) {
       // Map the results back to the timeBlocks
-
       timeBlocksWithRestrictions = timeBlocks.map((timeBlock) => {
         const restrictionResult = batchResults.find(
           (r: {
@@ -202,7 +200,6 @@ export async function getMemberTeesheetDataWithRestrictions(
       });
     }
   } catch (error) {
-    console.error("Error checking batch timeblock restrictions:", error);
     // Return timeblocks without restriction data in case of error
     timeBlocksWithRestrictions = timeBlocks.map((timeBlock) => ({
       ...timeBlock,

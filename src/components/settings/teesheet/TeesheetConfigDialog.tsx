@@ -14,456 +14,539 @@ import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { Switch } from "~/components/ui/switch";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
-import { Checkbox } from "~/components/ui/checkbox";
 import type {
   TeesheetConfig,
   TeesheetConfigInput,
-  TeesheetConfigRuleInput,
+  TimeBlock,
+  RegularConfig,
+  Template,
+  TemplateBlock,
 } from "~/app/types/TeeSheetTypes";
-import { format } from "date-fns";
-import { toast } from "react-hot-toast";
+import { ConfigTypes } from "~/app/types/TeeSheetTypes";
+import { TimeBlockPreviewPanel } from "./TimeBlockPreviewPanel";
+import { generateTimeBlocks } from "~/lib/utils";
+import { ManageTemplatesDialog } from "./ManageTemplatesDialog";
 
 interface TeesheetConfigDialogProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (config: TeesheetConfigInput) => void;
   existingConfig?: TeesheetConfig;
+  templates?: Template[];
 }
 
-const DAYS_OF_WEEK = [
-  { value: 0, label: "Sunday" },
-  { value: 1, label: "Monday" },
-  { value: 2, label: "Tuesday" },
-  { value: 3, label: "Wednesday" },
-  { value: 4, label: "Thursday" },
-  { value: 5, label: "Friday" },
-  { value: 6, label: "Saturday" },
-];
+// Add blocks to TeesheetConfigInput type
+interface ExtendedTeesheetConfigInput extends TeesheetConfigInput {
+  blocks?: TemplateBlock[];
+  hasScheduleRules?: boolean;
+  templateId?: number;
+}
 
 export function TeesheetConfigDialog({
   isOpen,
   onClose,
   onSave,
   existingConfig,
+  templates = [],
 }: TeesheetConfigDialogProps) {
-  const { register, handleSubmit, reset, setValue, watch } =
-    useForm<TeesheetConfigInput>({
-      defaultValues: {
-        name: "",
-        startTime: "",
-        endTime: "",
-        interval: 15,
-        maxMembersPerBlock: 4,
-        isActive: true,
-        rules: [
-          {
-            daysOfWeek: [],
-            startDate: null,
-            endDate: null,
-            priority: 1,
-            isActive: true,
-          },
-        ],
-      },
-    });
-
-  const [scheduleType, setScheduleType] = useState<
-    "weekdays" | "specific-dates"
-  >("weekdays");
-  const [selectedDays, setSelectedDays] = useState<number[]>([]);
-  const [dateRange, setDateRange] = useState<{ start: string; end: string }>({
-    start: "",
-    end: "",
-  });
-  const [priority, setPriority] = useState<number>(
-    existingConfig?.rules?.[0]?.priority || 1,
+  const [previewBlocks, setPreviewBlocks] = useState<TimeBlock[]>([]);
+  const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(
+    null,
   );
+  const [isManageTemplatesOpen, setIsManageTemplatesOpen] = useState(false);
+  const [localTemplates, setLocalTemplates] = useState<Template[]>(templates);
 
-  const currentValues = watch();
-  const isSystemConfig = existingConfig?.isSystemConfig;
+  const defaultValues = {
+    name: "",
+    type: ConfigTypes.REGULAR,
+    startTime: "07:00",
+    endTime: "19:00",
+    interval: 15,
+    maxMembersPerBlock: 4,
+    isActive: true,
+    hasScheduleRules: false,
+    templateId: undefined,
+    rules: [
+      {
+        daysOfWeek: [],
+        startDate: null,
+        endDate: null,
+        priority: 1,
+        isActive: true,
+      },
+    ],
+  };
+
+  const form = useForm<ExtendedTeesheetConfigInput>({
+    defaultValues,
+  });
+
+  const { handleSubmit, reset, watch, setValue, register } = form;
+  const configType = watch("type");
+  const startTime = watch("startTime");
+  const endTime = watch("endTime");
+  const interval = watch("interval");
+  const hasScheduleRules = watch("hasScheduleRules");
 
   // Reset form when existingConfig changes
   useEffect(() => {
     if (existingConfig) {
-      reset({
-        name: existingConfig.name,
-        startTime: existingConfig.startTime,
-        endTime: existingConfig.endTime,
-        interval: existingConfig.interval,
-        maxMembersPerBlock: existingConfig.maxMembersPerBlock,
-        isActive: existingConfig.isActive,
-        rules: existingConfig.rules?.map((rule) => ({
-          daysOfWeek: rule.daysOfWeek || [],
-          startDate: rule.startDate
-            ? format(rule.startDate, "yyyy-MM-dd")
-            : null,
-          endDate: rule.endDate ? format(rule.endDate, "yyyy-MM-dd") : null,
-          priority: rule.priority,
-          isActive: rule.isActive,
-        })) || [
-          {
-            daysOfWeek: [],
-            startDate: null,
-            endDate: null,
-            priority: 1,
-            isActive: true,
-          },
-        ],
-      });
+      const isRegularConfig = existingConfig.type === ConfigTypes.REGULAR;
 
-      // Set schedule type and selected days based on rules
-      const rule = existingConfig.rules?.[0];
-      if (rule) {
-        if (rule.startDate && rule.endDate) {
-          setScheduleType("specific-dates");
-          setDateRange({
-            start: format(rule.startDate, "yyyy-MM-dd"),
-            end: format(rule.endDate, "yyyy-MM-dd"),
-          });
-        } else if (rule.daysOfWeek) {
-          setScheduleType("weekdays");
-          setSelectedDays(rule.daysOfWeek);
+      // If it's a custom config, find the associated template
+      if (!isRegularConfig && existingConfig.templateId) {
+        const template = templates.find(
+          (t) => t.id === existingConfig.templateId,
+        );
+        if (template) {
+          setSelectedTemplate(template);
         }
-        setPriority(rule.priority);
       }
-    } else {
-      reset({
-        name: "",
-        startTime: "",
-        endTime: "",
-        interval: 15,
-        maxMembersPerBlock: 4,
-        isActive: true,
-        rules: [
-          {
-            daysOfWeek: [],
-            startDate: null,
-            endDate: null,
-            priority: 1,
-            isActive: true,
-          },
-        ],
-      });
-      setScheduleType("weekdays");
-      setSelectedDays([]);
-      setDateRange({ start: "", end: "" });
-      setPriority(1);
-    }
-  }, [existingConfig, reset]);
 
-  const hasChanges = () => {
-    if (!existingConfig) {
-      return (
-        currentValues.name !== "" ||
-        currentValues.startTime !== "" ||
-        currentValues.endTime !== "" ||
-        currentValues.interval !== 15 ||
-        currentValues.maxMembersPerBlock !== 4 ||
-        currentValues.isActive !== true ||
-        selectedDays.length > 0
+      const formData = {
+        name: existingConfig.name,
+        type: existingConfig.type,
+        startTime: isRegularConfig
+          ? (existingConfig as RegularConfig).startTime
+          : undefined,
+        endTime: isRegularConfig
+          ? (existingConfig as RegularConfig).endTime
+          : undefined,
+        interval: isRegularConfig
+          ? (existingConfig as RegularConfig).interval
+          : undefined,
+        maxMembersPerBlock: isRegularConfig
+          ? (existingConfig as RegularConfig).maxMembersPerBlock
+          : undefined,
+        isActive: existingConfig.isActive,
+        hasScheduleRules: existingConfig.rules?.length > 0,
+        templateId: !isRegularConfig ? existingConfig.templateId : undefined,
+        rules:
+          existingConfig.rules?.map((rule) => ({
+            daysOfWeek: rule.daysOfWeek || [],
+            startDate: rule.startDate
+              ? new Date(rule.startDate).toISOString().split("T")[0]
+              : null,
+            endDate: rule.endDate
+              ? new Date(rule.endDate).toISOString().split("T")[0]
+              : null,
+            priority: rule.priority,
+            isActive: rule.isActive,
+          })) || [],
+      };
+
+      reset(formData);
+    } else {
+      // If no existingConfig, reset to default values
+      reset(defaultValues);
+      setSelectedTemplate(null);
+      setPreviewBlocks([]);
+    }
+  }, [existingConfig, reset, templates]);
+
+  // Update preview blocks whenever relevant fields change or template is selected
+  useEffect(() => {
+    if (
+      configType === ConfigTypes.REGULAR &&
+      startTime &&
+      endTime &&
+      interval
+    ) {
+      const blocks = generateTimeBlocks({
+        startTime,
+        endTime,
+        interval,
+      });
+      setPreviewBlocks(
+        blocks.map((time, index) => ({
+          id: index,
+          clerkOrgId: "",
+          teesheetId: 0,
+          startTime: time,
+          endTime: blocks[index + 1] || endTime,
+          maxMembers: watch("maxMembersPerBlock") || 4,
+          sortOrder: index,
+          type: ConfigTypes.REGULAR,
+          createdAt: new Date(),
+          updatedAt: null,
+        })),
+      );
+    } else if (configType === ConfigTypes.CUSTOM && selectedTemplate?.blocks) {
+
+      setPreviewBlocks(
+        selectedTemplate.blocks.map((block, index) => ({
+          id: index,
+          clerkOrgId: "",
+          teesheetId: 0,
+          startTime: block.startTime,
+          endTime: block.startTime,
+          maxMembers: block.maxPlayers,
+          displayName: block.displayName,
+          sortOrder: index,
+          type: ConfigTypes.CUSTOM,
+          createdAt: new Date(),
+          updatedAt: null,
+        })),
       );
     }
+  }, [configType, startTime, endTime, interval, selectedTemplate, watch]);
 
-    const initialDays = existingConfig.rules?.[0]?.daysOfWeek || [];
-    const hasFormChanges =
-      JSON.stringify(currentValues) !== JSON.stringify(existingConfig);
-    const hasScheduleChanges =
-      scheduleType === "weekdays"
-        ? JSON.stringify(selectedDays.sort()) !==
-          JSON.stringify(initialDays.sort())
-        : dateRange.start !==
-            format(
-              existingConfig.rules?.[0]?.startDate || new Date(),
-              "yyyy-MM-dd",
-            ) ||
-          dateRange.end !==
-            format(
-              existingConfig.rules?.[0]?.endDate || new Date(),
-              "yyyy-MM-dd",
-            );
-    const hasPriorityChanges = priority !== existingConfig.rules?.[0]?.priority;
+  // Update localTemplates when parent templates change
+  useEffect(() => {
+    setLocalTemplates(templates);
+  }, [templates]);
 
-    return hasFormChanges || hasScheduleChanges || hasPriorityChanges;
+  const handleTemplateSelect = (templateId: number) => {
+    const template = localTemplates.find((t) => t.id === templateId);
+    if (template) {
+      setSelectedTemplate(template);
+      // Update form values when template is selected
+      setValue("type", ConfigTypes.CUSTOM); // Ensure type is set to CUSTOM
+      setValue("templateId", template.id);
+      setValue("blocks", template.blocks);
+
+      // Log current form values after update
+      const currentValues = form.getValues();
+    }
   };
 
-  const onSubmit = handleSubmit((data: TeesheetConfigInput) => {
-    // Validate schedule
-    if (scheduleType === "weekdays" && selectedDays.length === 0) {
-      toast.error("Please select at least one day of the week");
-      return;
+  const handleTemplatesChange = (updatedTemplates: Template[]) => {
+    setLocalTemplates(updatedTemplates);
+    // If the selected template was updated, update it
+    if (selectedTemplate) {
+      const updated = updatedTemplates.find(
+        (t) => t.id === selectedTemplate.id,
+      );
+      if (updated) {
+        setSelectedTemplate(updated);
+      }
+    }
+  };
+
+  const handleClose = () => {
+    // Reset form to default values
+    reset(defaultValues);
+    // Clear selected template
+    setSelectedTemplate(null);
+    // Reset preview blocks
+    setPreviewBlocks([]);
+    // Call the parent's onClose
+    onClose();
+  };
+
+  const onSubmit = (data: ExtendedTeesheetConfigInput) => {
+    const formData = { ...data };
+
+    // Ensure templateId is included for custom configs
+    if (configType === ConfigTypes.CUSTOM) {
+      // Use the selected template if available, otherwise keep existing templateId
+      formData.templateId = selectedTemplate?.id || formData.templateId;
+      formData.blocks = selectedTemplate?.blocks || formData.blocks;
+ 
+    } else {
+      // Clear template-related fields for regular configs
+      formData.templateId = undefined;
+      formData.blocks = undefined;
     }
 
-    if (
-      scheduleType === "specific-dates" &&
-      (!dateRange.start || !dateRange.end)
-    ) {
-      toast.error("Please select both start and end dates");
-      return;
+    // Only include rules if hasScheduleRules is true
+    if (!formData.hasScheduleRules) {
+      formData.rules = [];
+    } else {
+      // Ensure each rule has priority set to 1 if not specified
+      formData.rules = formData.rules.map((rule) => ({
+        ...rule,
+        priority: rule.priority || 1,
+      }));
     }
 
-    if (!data.startTime || !data.endTime) {
-      toast.error("Please set start and end times");
-      return;
-    }
-
-    // Prepare rule data
-    const ruleInput: TeesheetConfigRuleInput = {
-      daysOfWeek: scheduleType === "weekdays" ? selectedDays : null,
-      startDate: scheduleType === "specific-dates" ? dateRange.start : null,
-      endDate: scheduleType === "specific-dates" ? dateRange.end : null,
-      priority,
-      isActive: true,
-    };
-
-    // Update form and save
-    setValue("rules", [ruleInput]);
-    onSave({
-      ...data,
-      rules: [ruleInput],
-    });
-  });
+    onSave(formData as TeesheetConfigInput);
+    onClose();
+  };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[600px]">
-        <DialogHeader>
-          <DialogTitle className="text-xl">
-            {existingConfig
-              ? "Edit Teesheet Configuration"
-              : "Create New Configuration"}
-          </DialogTitle>
-          <DialogDescription>
-            {isSystemConfig
-              ? "This is a system configuration. You can view its settings but cannot modify them."
-              : "Configure when and how tee times are scheduled"}
-          </DialogDescription>
-        </DialogHeader>
+    <>
+      <Dialog open={isOpen} onOpenChange={handleClose}>
+        <DialogContent className="max-w-5xl p-0">
+          <DialogHeader className="p-6 pb-0">
+            <DialogTitle className="text-xl font-semibold">
+              {existingConfig
+                ? "Edit Teesheet Configuration"
+                : "Create New Configuration"}
+            </DialogTitle>
+            <DialogDescription className="text-gray-500">
+              Configure tee time settings and preview the generated time blocks
+            </DialogDescription>
+          </DialogHeader>
 
-        <form onSubmit={onSubmit}>
-          <Tabs defaultValue="schedule" className="w-full space-y-6">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="schedule">Schedule</TabsTrigger>
-              <TabsTrigger value="settings">Settings</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="schedule" className="space-y-6">
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Configuration Name</Label>
-                  <Input
-                    id="name"
-                    {...register("name", { required: true })}
-                    placeholder="e.g., Weekday Morning Schedule"
-                    disabled={isSystemConfig}
-                  />
-                </div>
-
+          <form onSubmit={handleSubmit(onSubmit)} className="p-6 pt-4">
+            <div className="grid grid-cols-2 gap-8">
+              {/* Left Panel - Configuration */}
+              <div className="space-y-6">
                 <div className="space-y-4">
-                  <Label>When does this configuration apply?</Label>
-                  <div className="grid grid-cols-2 gap-4">
-                    <Button
-                      type="button"
-                      variant={
-                        scheduleType === "weekdays" ? "default" : "outline"
-                      }
-                      onClick={() => setScheduleType("weekdays")}
-                      disabled={isSystemConfig}
-                    >
-                      Specific Days
-                    </Button>
-                    <Button
-                      type="button"
-                      variant={
-                        scheduleType === "specific-dates"
-                          ? "default"
-                          : "outline"
-                      }
-                      onClick={() => setScheduleType("specific-dates")}
-                      disabled={isSystemConfig}
-                    >
-                      Date Range
-                    </Button>
+                  {/* Basic Info */}
+                  <div className="space-y-2">
+                    <Label htmlFor="name">Configuration Name</Label>
+                    <Input
+                      id="name"
+                      {...register("name", { required: true })}
+                      placeholder="e.g., Morning Shotgun"
+                      className="w-full"
+                    />
                   </div>
 
-                  {scheduleType === "weekdays" ? (
+                  {/* Configuration Type */}
+                  <div className="space-y-2">
+                    <Label>Configuration Type</Label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button
+                        type="button"
+                        variant={
+                          configType === ConfigTypes.REGULAR
+                            ? "default"
+                            : "outline"
+                        }
+                        onClick={() => setValue("type", ConfigTypes.REGULAR)}
+                        className={
+                          configType === ConfigTypes.REGULAR
+                            ? "w-full bg-[#1e3a5f] text-white hover:bg-[#1e3a5f]/90"
+                            : "w-full"
+                        }
+                      >
+                        Regular Intervals
+                      </Button>
+                      <Button
+                        type="button"
+                        variant={
+                          configType === ConfigTypes.CUSTOM
+                            ? "default"
+                            : "outline"
+                        }
+                        onClick={() => setValue("type", ConfigTypes.CUSTOM)}
+                        className={
+                          configType === ConfigTypes.CUSTOM
+                            ? "w-full bg-[#1e3a5f] text-white hover:bg-[#1e3a5f]/90"
+                            : "w-full"
+                        }
+                      >
+                        Custom Blocks
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Type-specific Settings */}
+                  {configType === ConfigTypes.REGULAR ? (
                     <div className="space-y-4">
-                      <Label>Select Days</Label>
-                      <div className="grid grid-cols-2 gap-2">
-                        {DAYS_OF_WEEK.map((day) => (
-                          <div
-                            key={day.value}
-                            className="flex items-center space-x-2"
-                          >
-                            <Checkbox
-                              id={`day-${day.value}`}
-                              checked={selectedDays.includes(day.value)}
-                              onCheckedChange={(checked: boolean) => {
-                                if (checked) {
-                                  setSelectedDays([...selectedDays, day.value]);
-                                } else {
-                                  setSelectedDays(
-                                    selectedDays.filter((d) => d !== day.value),
-                                  );
-                                }
-                              }}
-                              disabled={isSystemConfig}
-                            />
-                            <Label htmlFor={`day-${day.value}`}>
-                              {day.label}
-                            </Label>
-                          </div>
-                        ))}
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="startTime">Start Time</Label>
+                          <Input
+                            id="startTime"
+                            type="time"
+                            {...register("startTime")}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="endTime">End Time</Label>
+                          <Input
+                            id="endTime"
+                            type="time"
+                            {...register("endTime")}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="interval">Interval (minutes)</Label>
+                          <Input
+                            id="interval"
+                            type="number"
+                            min={5}
+                            max={60}
+                            step={5}
+                            {...register("interval")}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="maxMembers">
+                            Max Players per Time
+                          </Label>
+                          <Input
+                            id="maxMembers"
+                            type="number"
+                            min={1}
+                            max={8}
+                            {...register("maxMembersPerBlock")}
+                          />
+                        </div>
                       </div>
                     </div>
                   ) : (
                     <div className="space-y-4">
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="flex items-center justify-between">
+                        <Label>Template Selection</Label>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setIsManageTemplatesOpen(true)}
+                        >
+                          Manage Templates
+                        </Button>
+                      </div>
+                      {configType === ConfigTypes.CUSTOM ? (
                         <div className="space-y-2">
-                          <Label htmlFor="startDate">Start Date</Label>
-                          <Input
-                            id="startDate"
-                            type="date"
-                            value={dateRange.start}
-                            onChange={(e) =>
-                              setDateRange({
-                                ...dateRange,
-                                start: e.target.value,
-                              })
-                            }
-                            disabled={isSystemConfig}
-                          />
+                          {localTemplates.map((template) => (
+                            <div
+                              key={template.id}
+                              className={`cursor-pointer rounded-lg border-2 p-3 transition-colors hover:bg-gray-50 ${
+                                selectedTemplate?.id === template.id
+                                  ? "border-[var(--org-primary)] bg-[var(--org-primary)]/5"
+                                  : "border-gray-200"
+                              }`}
+                              onClick={() => handleTemplateSelect(template.id)}
+                            >
+                              <div className="font-medium">{template.name}</div>
+                              <div className="text-sm text-gray-500">
+                                {template.blocks?.length || 0} blocks
+                              </div>
+                            </div>
+                          ))}
+
+                          {localTemplates.length === 0 && (
+                            <div className="rounded-lg border border-dashed p-4 text-center text-sm text-gray-500">
+                              No templates available. Click 'Manage Templates'
+                              to create one.
+                            </div>
+                          )}
                         </div>
+                      ) : (
+                        <div className="rounded-lg border border-dashed p-4">
+                          <p className="text-sm text-gray-500">
+                            Template selection is only available for custom
+                            block configurations.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Schedule Rules Toggle */}
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      id="hasScheduleRules"
+                      checked={hasScheduleRules}
+                      onCheckedChange={(checked) =>
+                        setValue("hasScheduleRules", checked)
+                      }
+                    />
+                    <Label htmlFor="hasScheduleRules">
+                      Enable Schedule Rules
+                    </Label>
+                  </div>
+
+                  {/* Schedule Rules */}
+                  {hasScheduleRules && (
+                    <div className="space-y-2">
+                      <Label>Schedule Rules</Label>
+                      <div className="space-y-4 rounded-lg border p-4">
                         <div className="space-y-2">
-                          <Label htmlFor="endDate">End Date</Label>
+                          <Label>Days of Week</Label>
+                          <div className="grid grid-cols-4 gap-2">
+                            {[
+                              "Sun",
+                              "Mon",
+                              "Tue",
+                              "Wed",
+                              "Thu",
+                              "Fri",
+                              "Sat",
+                            ].map((day, index) => (
+                              <Button
+                                key={day}
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className={`w-full ${watch("rules.0.daysOfWeek")?.includes(index) ? "bg-[#1e3a5f] text-white" : ""}`}
+                                onClick={() => {
+                                  const currentDays =
+                                    watch("rules.0.daysOfWeek") || [];
+                                  if (currentDays.includes(index)) {
+                                    setValue(
+                                      "rules.0.daysOfWeek",
+                                      currentDays.filter((d) => d !== index),
+                                    );
+                                  } else {
+                                    setValue("rules.0.daysOfWeek", [
+                                      ...currentDays,
+                                      index,
+                                    ]);
+                                  }
+                                }}
+                              >
+                                {day}
+                              </Button>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label>Priority (1-10)</Label>
                           <Input
-                            id="endDate"
-                            type="date"
-                            value={dateRange.end}
-                            onChange={(e) =>
-                              setDateRange({
-                                ...dateRange,
-                                end: e.target.value,
-                              })
-                            }
-                            disabled={isSystemConfig}
+                            type="number"
+                            min={1}
+                            max={10}
+                            {...register("rules.0.priority")}
+                            className="w-24"
                           />
+                          <p className="text-sm text-gray-500">
+                            Higher priority configurations override lower
+                            priority ones
+                          </p>
                         </div>
                       </div>
                     </div>
                   )}
 
-                  <div className="space-y-2">
-                    <Label htmlFor="priority">Priority (1-10)</Label>
-                    <Input
-                      id="priority"
-                      type="number"
-                      min={1}
-                      max={10}
-                      value={priority}
-                      onChange={(e) => setPriority(Number(e.target.value))}
-                      disabled={isSystemConfig}
+                  <div className="flex items-center space-x-2 pt-2">
+                    <Switch
+                      id="isActive"
+                      checked={watch("isActive")}
+                      onCheckedChange={(checked) =>
+                        setValue("isActive", checked)
+                      }
                     />
-                    <p className="text-sm text-gray-500">
-                      Higher priority configurations will override lower
-                      priority ones for the same days
-                    </p>
+                    <Label htmlFor="isActive">Active</Label>
                   </div>
                 </div>
               </div>
-            </TabsContent>
 
-            <TabsContent value="settings" className="space-y-6">
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="startTime">Start Time</Label>
-                    <Input
-                      id="startTime"
-                      type="time"
-                      {...register("startTime", { required: true })}
-                      disabled={isSystemConfig}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="endTime">End Time</Label>
-                    <Input
-                      id="endTime"
-                      type="time"
-                      {...register("endTime", { required: true })}
-                      disabled={isSystemConfig}
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="interval">Interval (minutes)</Label>
-                    <Input
-                      id="interval"
-                      type="number"
-                      min={5}
-                      max={60}
-                      step={5}
-                      {...register("interval", {
-                        required: true,
-                        min: 5,
-                        max: 60,
-                      })}
-                      disabled={isSystemConfig}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="maxMembers">Max Players per Tee Time</Label>
-                    <Input
-                      id="maxMembers"
-                      type="number"
-                      min={1}
-                      max={8}
-                      {...register("maxMembersPerBlock", {
-                        required: true,
-                        min: 1,
-                        max: 8,
-                      })}
-                      disabled={isSystemConfig}
-                    />
-                  </div>
-                </div>
-
-                <div className="flex items-center space-x-2">
-                  <Switch
-                    id="isActive"
-                    checked={watch("isActive")}
-                    onCheckedChange={(checked) => setValue("isActive", checked)}
-                    disabled={isSystemConfig}
-                  />
-                  <Label htmlFor="isActive">Active</Label>
-                </div>
+              {/* Right Panel - Preview */}
+              <div>
+                <h3 className="mb-4 text-base font-semibold">Preview</h3>
+                <TimeBlockPreviewPanel blocks={previewBlocks} />
               </div>
-            </TabsContent>
-          </Tabs>
+            </div>
 
-          <DialogFooter className="mt-6">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onClose}
-              className="w-full sm:w-auto"
-            >
-              Cancel
-            </Button>
-            {!isSystemConfig && (
-              <Button
-                type="submit"
-                className="w-full sm:w-auto"
-                disabled={!hasChanges()}
-              >
-                Save Changes
+            <DialogFooter className="mt-6 flex-row justify-end gap-2">
+              <Button type="button" variant="outline" onClick={handleClose}>
+                Cancel
               </Button>
-            )}
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+              <Button type="submit">Save Changes</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <ManageTemplatesDialog
+        isOpen={isManageTemplatesOpen}
+        onClose={() => setIsManageTemplatesOpen(false)}
+        templates={localTemplates}
+        onSave={handleTemplatesChange}
+        selectedTemplateId={selectedTemplate?.id}
+        onTemplateSelect={handleTemplateSelect}
+      />
+    </>
   );
 }

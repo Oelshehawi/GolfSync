@@ -32,11 +32,11 @@ export default async function MemberTeesheetPage({ searchParams }: PageProps) {
     userId as string,
   );
 
-
   // Split out the data for more explicit prop passing
   const { teesheet, config, member } = teesheetData;
-  const timeBlocks = teesheetData.timeBlocks || [];
-
+  const timeBlocks = (teesheetData.timeBlocks || []).sort((a, b) => {
+    return (a.sortOrder || 0) - (b.sortOrder || 0);
+  });
 
   return (
     <TeesheetClient

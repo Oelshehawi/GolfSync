@@ -83,10 +83,10 @@ export function TeesheetView({
     (() => Promise<void>) | null
   >(null);
 
-  // Sort time blocks by start time (string comparison for HH:MM format)
+  // Sort time blocks by sortOrder
   const sortedTimeBlocks = useMemo(() => {
-    return [...timeBlocks].sort((a, b) =>
-      a.startTime.localeCompare(b.startTime),
+    return [...timeBlocks].sort(
+      (a, b) => (a.sortOrder || 0) - (b.sortOrder || 0),
     );
   }, [timeBlocks]);
 
