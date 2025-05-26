@@ -12,6 +12,11 @@ import { RestrictionViolationAlert } from "~/components/settings/timeblock-restr
 import type { TimeBlockWithPaceOfPlay } from "~/server/pace-of-play/data";
 import { TeesheetControlPanel } from "./TeesheetControlPanel";
 import { TeesheetGeneralNotes } from "./TeesheetGeneralNotes";
+import {
+  TimeBlockNote,
+  TimeBlockNoteEditor,
+  TimeBlockNoteAddIndicator,
+} from "../timeblock/TimeBlockNotes";
 import { AddPlayerModal } from "../timeblock/AddPlayerModal";
 import { useTeesheetPolling } from "~/hooks/useTeesheetPolling";
 import { useRestrictionHandling } from "~/hooks/useRestrictionHandling";
@@ -72,11 +77,19 @@ export function VerticalTeesheetView(props: ViewProps) {
   const [selectedTimeBlock, setSelectedTimeBlock] =
     useState<TimeBlockWithMembers | null>(null);
   const [addPlayerModalOpen, setAddPlayerModalOpen] = useState(false);
+  const [editingTimeBlockNote, setEditingTimeBlockNote] = useState<
+    number | null
+  >(null);
 
   // Use shared hooks
   useTeesheetPolling(isAdmin);
   const { handleOverrideContinue, handleRestrictionCancel } =
     useRestrictionHandling();
+
+  // Toggle timeblock note editing
+  const toggleTimeBlockNoteEdit = (timeBlockId: number | null) => {
+    setEditingTimeBlockNote(timeBlockId);
+  };
 
   // Add event listener for opening the add player modal
   useEffect(() => {
@@ -139,39 +152,79 @@ export function VerticalTeesheetView(props: ViewProps) {
           </thead>
           <tbody className="divide-y divide-gray-200">
             {timeBlocks.map((block) => (
-              <TimeBlockComponent
-                key={`timeblock-${block.id}`}
-                timeBlock={{
-                  ...block,
-                  startTime: block.startTime,
-                  endTime: block.endTime,
-                  date: block.date || teesheet.date,
-                  members: block.members || [],
-                  guests: block.guests || [],
-                }}
-                onRestrictionViolation={onRestrictionViolation}
-                setPendingAction={setPendingAction}
-                paceOfPlay={paceOfPlayMap.get(block.id) || null}
-                showMemberClass={true}
-                onRemoveMember={(memberId: number) =>
-                  onRemoveMember(block.id, memberId)
-                }
-                onRemoveGuest={(guestId: number) =>
-                  onRemoveGuest(block.id, guestId)
-                }
-                onRemoveFill={(fillId: number) =>
-                  onRemoveFill(block.id, fillId)
-                }
-                onCheckInMember={(memberId: number, isCheckedIn: boolean) =>
-                  onCheckInMember(block.id, memberId, isCheckedIn)
-                }
-                onCheckInGuest={(guestId: number, isCheckedIn: boolean) =>
-                  onCheckInGuest(block.id, guestId, isCheckedIn)
-                }
-                onCheckInAll={() => onCheckInAll(block.id)}
-                onSaveNotes={(notes: string) => onSaveNotes(block.id, notes)}
-                viewMode="vertical"
-              />
+              <React.Fragment key={`block-${block.id}`}>
+                <TimeBlockComponent
+                  key={`timeblock-${block.id}`}
+                  timeBlock={{
+                    ...block,
+                    startTime: block.startTime,
+                    endTime: block.endTime,
+                    date: block.date || teesheet.date,
+                    members: block.members || [],
+                    guests: block.guests || [],
+                  }}
+                  onRestrictionViolation={onRestrictionViolation}
+                  setPendingAction={setPendingAction}
+                  paceOfPlay={paceOfPlayMap.get(block.id) || null}
+                  showMemberClass={true}
+                  onRemoveMember={(memberId: number) =>
+                    onRemoveMember(block.id, memberId)
+                  }
+                  onRemoveGuest={(guestId: number) =>
+                    onRemoveGuest(block.id, guestId)
+                  }
+                  onRemoveFill={(fillId: number) =>
+                    onRemoveFill(block.id, fillId)
+                  }
+                  onCheckInMember={(memberId: number, isCheckedIn: boolean) =>
+                    onCheckInMember(block.id, memberId, isCheckedIn)
+                  }
+                  onCheckInGuest={(guestId: number, isCheckedIn: boolean) =>
+                    onCheckInGuest(block.id, guestId, isCheckedIn)
+                  }
+                  onCheckInAll={() => onCheckInAll(block.id)}
+                  onSaveNotes={(notes: string) => onSaveNotes(block.id, notes)}
+                  viewMode="vertical"
+                />
+
+                {/* Display existing notes if any */}
+                {block.notes && block.notes.trim() !== "" && (
+                  <tr>
+                    <td
+                      colSpan={4}
+                      className="border-b border-[var(--org-primary-light)] p-0"
+                    >
+                      <TimeBlockNote
+                        notes={block.notes}
+                        onEditClick={() => toggleTimeBlockNoteEdit(block.id)}
+                        timeBlockId={block.id}
+                        onSaveNotes={onSaveNotes}
+                      />
+                    </td>
+                  </tr>
+                )}
+
+                {/* Add note indicator or editor after timeblock */}
+                <tr className="hover:bg-gray-50">
+                  <td colSpan={4} className="h-2 p-0">
+                    {editingTimeBlockNote === block.id ? (
+                      <TimeBlockNoteEditor
+                        timeBlockId={block.id}
+                        initialNote={block.notes || ""}
+                        onSaveNotes={(timeBlockId, notes) => {
+                          toggleTimeBlockNoteEdit(null);
+                          return onSaveNotes(timeBlockId, notes);
+                        }}
+                        onCancel={() => toggleTimeBlockNoteEdit(null)}
+                      />
+                    ) : (
+                      <TimeBlockNoteAddIndicator
+                        onClick={() => toggleTimeBlockNoteEdit(block.id)}
+                      />
+                    )}
+                  </td>
+                </tr>
+              </React.Fragment>
             ))}
           </tbody>
         </table>
