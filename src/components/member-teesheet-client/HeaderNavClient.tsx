@@ -43,8 +43,6 @@ export const HeaderNavClient = ({ member }: HeaderNavClientProps) => {
     return false;
   };
 
-  console.log(member);
-
   return (
     <>
       <div className="mx-auto flex h-14 items-center justify-between px-6">

@@ -568,6 +568,7 @@ export const events = createTable(
     requiresApproval: boolean("requires_approval").default(false),
     registrationDeadline: varchar("registration_deadline"),
     isActive: boolean("is_active").default(true),
+    memberClasses: varchar("member_classes", { length: 50 }).array(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .default(sql`CURRENT_TIMESTAMP`)
       .notNull(),
@@ -669,18 +670,28 @@ export const eventDetailsRelations = relations(eventDetails, ({ one }) => ({
   }),
 }));
 
-export const timeBlockFills = pgTable("timeblock_fills", {
-  id: serial("id").primaryKey(),
-  timeBlockId: integer("time_block_id")
-    .notNull()
-    .references(() => timeBlocks.id, { onDelete: "cascade" }),
-  fillType: text("fill_type", {
-    enum: ["guest_fill", "reciprocal_fill", "custom_fill"] as const,
-  }).notNull(),
-  customName: text("custom_name"),
-  clerkOrgId: text("clerk_org_id").notNull(),
-  createdAt: timestamp("created_at").defaultNow(),
-});
+export const timeBlockFills = createTable(
+  "timeblock_fills",
+  {
+    id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+    timeBlockId: integer("time_block_id")
+      .notNull()
+      .references(() => timeBlocks.id, { onDelete: "cascade" }),
+    fillType: varchar("fill_type", { length: 20 }).notNull(),
+    customName: text("custom_name"),
+    clerkOrgId: varchar("clerk_org_id", { length: 50 }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).$onUpdate(
+      () => new Date(),
+    ),
+  },
+  (table) => [
+    index("timeblock_fills_org_id_idx").on(table.clerkOrgId),
+    index("timeblock_fills_time_block_id_idx").on(table.timeBlockId),
+  ],
+);
 
 export const timeBlockFillsRelations = relations(timeBlockFills, ({ one }) => ({
   timeBlock: one(timeBlocks, {

@@ -68,11 +68,16 @@ export function EventCard({
   isRegistered = false,
   registrations = [],
   registrationStatus,
-}: EventCardProps) {
+  variant = "default",
+}: EventCardProps & { variant?: "default" | "compact" }) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [registrationsDialogOpen, setRegistrationsDialogOpen] = useState(false);
   const isMobile = useMediaQuery("(max-width: 640px)");
-  const { label, variant, icon: Icon } = getEventTypeBadge(event.eventType);
+  const {
+    label,
+    variant: badgeVariant,
+    icon: Icon,
+  } = getEventTypeBadge(event.eventType);
 
   // Ensure we have proper Date objects using the utility function
   const startDate = preserveDate(event.startDate) || new Date();
@@ -85,8 +90,9 @@ export function EventCard({
 
   // Create a truncated description
   const truncatedDescription =
-    event.description.length > (isMobile ? 80 : 120)
-      ? `${event.description.substring(0, isMobile ? 80 : 120)}...`
+    event.description.length >
+    (variant === "compact" ? 60 : isMobile ? 80 : 120)
+      ? `${event.description.substring(0, variant === "compact" ? 60 : isMobile ? 80 : 120)}...`
       : event.description;
 
   // Format event times
@@ -151,6 +157,248 @@ export function EventCard({
     }
   };
 
+  // Render compact variant for member view
+  if (variant === "compact") {
+    return (
+      <>
+        <Card className={cn("w-full", className)}>
+          <CardHeader className="pb-2">
+            <div className="flex items-start justify-between">
+              <div>
+                <CardTitle className="text-lg">{event.name}</CardTitle>
+                <div className="mt-1 flex items-center gap-2 text-sm">
+                  <Calendar className="h-4 w-4 text-[var(--org-primary)]" />
+                  <span>{dateDisplay}</span>
+                  {timeDisplay && (
+                    <>
+                      <span className="text-muted-foreground">•</span>
+                      <span>{timeDisplay}</span>
+                    </>
+                  )}
+                </div>
+              </div>
+              <Badge
+                variant={badgeVariant as any}
+                className="flex items-center gap-1"
+              >
+                <Icon className="h-3 w-3" />
+                <span>{label}</span>
+              </Badge>
+            </div>
+          </CardHeader>
+
+          <CardFooter className="flex justify-between gap-2 pt-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setDialogOpen(true)}
+              className="flex-1"
+            >
+              <Eye className="mr-2 h-4 w-4" />
+              View Details
+            </Button>
+            {isMember && !isRegistered && memberId && (
+              <RegisterForEventButton
+                eventId={event.id}
+                memberId={memberId}
+                disabled={!event.isActive || isRegistrationClosed}
+                requiresApproval={event.requiresApproval}
+                className="flex-1"
+              />
+            )}
+            {isRegistered && registrationStatus && (
+              <Badge
+                variant={
+                  getRegistrationStatusBadge(registrationStatus).variant as any
+                }
+                className={cn(
+                  "px-2 py-1 text-xs font-medium",
+                  getRegistrationStatusBadge(registrationStatus).className,
+                )}
+              >
+                {getRegistrationStatusText(registrationStatus)}
+              </Badge>
+            )}
+          </CardFooter>
+        </Card>
+
+        {/* Event Detail Dialog */}
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <DialogContent className="max-h-[90vh] max-w-4xl overflow-y-auto">
+            <DialogHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <DialogTitle className="text-2xl">{event.name}</DialogTitle>
+                  <DialogDescription>Event Details</DialogDescription>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Badge variant={badgeVariant as any}>{event.eventType}</Badge>
+                  {!event.isActive && <Badge variant="outline">Inactive</Badge>}
+                  {isRegistered && registrationStatus && (
+                    <Badge
+                      variant={
+                        getRegistrationStatusBadge(registrationStatus)
+                          .variant as any
+                      }
+                      className={
+                        getRegistrationStatusBadge(registrationStatus).className
+                      }
+                    >
+                      {getRegistrationStatusText(registrationStatus)}
+                    </Badge>
+                  )}
+                </div>
+              </div>
+            </DialogHeader>
+
+            <div className="space-y-6 pt-4">
+              {/* Mobile-optimized event info card */}
+              <div className="rounded-lg border bg-gray-50/50 p-4">
+                <div className="grid grid-cols-1 gap-3">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-5 w-5 shrink-0 text-[var(--org-primary)]" />
+                    <div>
+                      <span className="text-xs font-medium text-gray-600">
+                        Date
+                      </span>
+                      <p className="font-medium">{dateDisplay}</p>
+                    </div>
+                  </div>
+
+                  {timeDisplay && (
+                    <div className="flex items-center gap-2">
+                      <Clock className="h-5 w-5 shrink-0 text-[var(--org-primary)]" />
+                      <div>
+                        <span className="text-xs font-medium text-gray-600">
+                          Time
+                        </span>
+                        <p className="font-medium">{timeDisplay}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {event.location && (
+                    <div className="flex items-center gap-2">
+                      <MapPin className="h-5 w-5 shrink-0 text-[var(--org-primary)]" />
+                      <div>
+                        <span className="text-xs font-medium text-gray-600">
+                          Location
+                        </span>
+                        <p className="font-medium">{event.location}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {event.capacity && (
+                    <div className="flex items-center gap-2">
+                      <Users className="h-5 w-5 shrink-0 text-[var(--org-primary)]" />
+                      <div>
+                        <span className="text-xs font-medium text-gray-600">
+                          Capacity
+                        </span>
+                        <p className="font-medium">
+                          {event.registrationsCount || 0} / {event.capacity}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <h3 className="text-sm font-medium">Description</h3>
+                  <p className="text-muted-foreground mt-1 text-sm whitespace-pre-line">
+                    {event.description}
+                  </p>
+                </div>
+
+                {event.details &&
+                  Object.values(event.details).some((val) => val !== null) && (
+                    <>
+                      <Separator />
+                      <div className="mt-4">
+                        <h3 className="mb-2 text-sm font-medium">
+                          Additional Details
+                        </h3>
+
+                        {event.details.format && (
+                          <div className="mb-2">
+                            <h4 className="text-xs font-medium text-gray-600">
+                              Format
+                            </h4>
+                            <p className="text-sm">{event.details.format}</p>
+                          </div>
+                        )}
+
+                        {event.details.rules && (
+                          <div className="mb-2">
+                            <h4 className="text-xs font-medium text-gray-600">
+                              Rules
+                            </h4>
+                            <p className="text-sm whitespace-pre-line">
+                              {event.details.rules}
+                            </p>
+                          </div>
+                        )}
+
+                        {event.details.prizes && (
+                          <div className="mb-2">
+                            <h4 className="text-xs font-medium text-gray-600">
+                              Prizes
+                            </h4>
+                            <p className="text-sm whitespace-pre-line">
+                              {event.details.prizes}
+                            </p>
+                          </div>
+                        )}
+
+                        {event.details.entryFee !== null &&
+                          event.details.entryFee !== undefined && (
+                            <div className="mb-2">
+                              <h4 className="text-xs font-medium text-gray-600">
+                                Entry Fee
+                              </h4>
+                              <p className="text-sm">
+                                ${event.details.entryFee.toFixed(2)}
+                              </p>
+                            </div>
+                          )}
+
+                        {event.details.additionalInfo && (
+                          <div className="mb-2">
+                            <h4 className="text-xs font-medium text-gray-600">
+                              Additional Information
+                            </h4>
+                            <p className="text-sm whitespace-pre-line">
+                              {event.details.additionalInfo}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  )}
+              </div>
+            </div>
+
+            <div className="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-between">
+              {isMember && !isRegistered && memberId && (
+                <RegisterForEventButton
+                  eventId={event.id}
+                  memberId={memberId}
+                  disabled={!event.isActive || isRegistrationClosed}
+                  requiresApproval={event.requiresApproval}
+                  className="w-full"
+                />
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
+      </>
+    );
+  }
+
+  // Return the original card for admin view
   return (
     <>
       <Card className={cn("w-full", className)}>
@@ -160,7 +408,7 @@ export function EventCard({
               <div className="flex items-start justify-between sm:hidden">
                 <CardTitle className="text-lg">{event.name}</CardTitle>
                 <Badge
-                  variant={variant as any}
+                  variant={badgeVariant as any}
                   className="ml-2 flex items-center gap-1 self-start"
                 >
                   <Icon className="h-3 w-3" />
@@ -191,7 +439,7 @@ export function EventCard({
             </div>
             <div className="flex flex-col items-end gap-2">
               <Badge
-                variant={variant as any}
+                variant={badgeVariant as any}
                 className="mt-2 hidden items-center gap-1 sm:flex"
               >
                 <Icon className="h-3 w-3" />
@@ -205,6 +453,12 @@ export function EventCard({
                 >
                   <Bell className="h-3 w-3" />
                   <span>{event.pendingRegistrationsCount} Pending</span>
+                </Badge>
+              )}
+
+              {event.memberClasses && event.memberClasses.length > 0 && (
+                <Badge variant="outline" className="text-xs">
+                  {event.memberClasses.join(", ")}
                 </Badge>
               )}
             </div>
@@ -307,7 +561,7 @@ export function EventCard({
                 <DialogDescription>Event Details</DialogDescription>
               </div>
               <div className="flex items-center gap-3">
-                <Badge variant={variant as any}>{event.eventType}</Badge>
+                <Badge variant={badgeVariant as any}>{event.eventType}</Badge>
                 {!event.isActive && <Badge variant="outline">Inactive</Badge>}
                 {isRegistered && registrationStatus && (
                   <Badge

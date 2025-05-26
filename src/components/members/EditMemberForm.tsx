@@ -1,7 +1,7 @@
-import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import * as z from "zod";
-import { Button } from "~/components/ui/button";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { memberFormSchema } from "./memberFormSchema";
+import type { MemberFormValues } from "./memberFormSchema";
 import {
   Form,
   FormControl,
@@ -11,15 +11,10 @@ import {
   FormMessage,
 } from "~/components/ui/form";
 import { Input } from "~/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "~/components/ui/select";
-import { Check, ChevronsUpDown } from "lucide-react";
+import { Button } from "~/components/ui/button";
+import { Member } from "~/app/types/MemberTypes";
 import { cn } from "~/lib/utils";
+import { Check, ChevronsUpDown } from "lucide-react";
 import {
   Command,
   CommandEmpty,
@@ -32,10 +27,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "~/components/ui/popover";
-import { memberFormSchema } from "./memberFormSchema";
-import type { Member } from "~/app/types/MemberTypes";
-
-type MemberFormValues = z.infer<typeof memberFormSchema>;
+import { MEMBER_CLASSES } from "~/lib/constants/memberClasses";
 
 interface EditMemberFormProps {
   member: Member;
@@ -43,42 +35,13 @@ interface EditMemberFormProps {
   onCancel: () => void;
 }
 
-// Member class options
-const memberClasses = [
-  { label: "Unlimited Play Male", value: "UNLIMITED PLAY MALE" },
-  { label: "Unlimited Play Female", value: "UNLIMITED PLAY FEMALE" },
-  { label: "Full Play Male", value: "FULL PLAY MALE" },
-  { label: "Full Play Female", value: "FULL PLAY FEMALE" },
-  { label: "Social Male", value: "SOCIAL MALE" },
-  { label: "Social Female", value: "SOCIAL FEMALE" },
-  { label: "Intermediate Male", value: "INTERMEDIATE MALE" },
-  { label: "Intermediate Female", value: "INTERMEDIATE FEMALE" },
-  { label: "Jr Intermediate Male", value: "JR INTERMEDIATE MALE" },
-  { label: "Jr Intermediate Female", value: "JR INTERMEDIATE FEMALE" },
-  { label: "Junior Boy", value: "JUNIOR BOY" },
-  { label: "Junior Girl", value: "JUNIOR GIRL" },
-  { label: "Weekday Play Male", value: "WEEKDAY PLAY MALE" },
-  { label: "Weekday Play Female", value: "WEEKDAY PLAY FEMALE" },
-  { label: "Non-Resident Male", value: "NON-RESIDENT MALE" },
-  { label: "Non-Resident Female", value: "NON-RESIDENT FEMALE" },
-  { label: "Staff Play", value: "STAFF PLAY" },
-  { label: "Management/Pro", value: "MGMT / PRO" },
-  { label: "Dining", value: "DINING" },
-  { label: "Privileged Male", value: "PRIVILEGED MALE" },
-  { label: "Privileged Female", value: "PRIVILEGED FEMALE" },
-  { label: "Senior Retired Male", value: "SENIOR RETIRED MALE" },
-  { label: "Senior Retired Female", value: "SENIOR RETIRED FEMALE" },
-  { label: "Honorary Male", value: "HONORARY MALE" },
-  { label: "Honorary Female", value: "HONORARY FEMALE" },
-];
-
 export function EditMemberForm({
   member,
   onSubmit,
   onCancel,
 }: EditMemberFormProps) {
   const form = useForm<MemberFormValues>({
-    resolver: zodResolver(memberFormSchema),
+    resolver: zodResolver(memberFormSchema) as any,
     defaultValues: {
       memberNumber: member.memberNumber,
       firstName: member.firstName,
@@ -101,20 +64,19 @@ export function EditMemberForm({
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+      <form
+        onSubmit={form.handleSubmit(handleSubmit as any)}
+        className="space-y-4"
+      >
         <div className="grid grid-cols-2 gap-4">
           <FormField
-            control={form.control}
+            control={form.control as any}
             name="memberNumber"
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Member Number</FormLabel>
                 <FormControl>
-                  <Input
-                    
-                    placeholder="Enter member number"
-                    {...field}
-                  />
+                  <Input placeholder="Enter member number" {...field} />
                 </FormControl>
                 <FormMessage className="text-red-500" />
               </FormItem>
@@ -122,7 +84,7 @@ export function EditMemberForm({
           />
 
           <FormField
-            control={form.control}
+            control={form.control as any}
             name="class"
             render={({ field }) => (
               <FormItem className="flex flex-col">
@@ -137,10 +99,9 @@ export function EditMemberForm({
                           "w-full justify-between",
                           !field.value && "text-muted-foreground",
                         )}
-                        
                       >
                         {field.value
-                          ? memberClasses.find(
+                          ? MEMBER_CLASSES.find(
                               (memberClass) =>
                                 memberClass.value === field.value,
                             )?.label
@@ -149,25 +110,24 @@ export function EditMemberForm({
                       </Button>
                     </FormControl>
                   </PopoverTrigger>
-                  <PopoverContent className="p-0" >
-                    <Command >
+                  <PopoverContent className="w-[200px] p-0">
+                    <Command>
                       <CommandInput placeholder="Search for class..." />
                       <CommandEmpty>No class found.</CommandEmpty>
                       <CommandGroup className="max-h-64 overflow-y-auto">
-                        {memberClasses.map((memberClass) => (
+                        {MEMBER_CLASSES.map((memberClass) => (
                           <CommandItem
                             key={memberClass.value}
                             value={memberClass.value}
                             onSelect={(value) => {
                               field.onChange(
-                                memberClasses.find(
+                                MEMBER_CLASSES.find(
                                   (item) =>
                                     item.value.toLowerCase() ===
                                     value.toLowerCase(),
                                 )?.value,
                               );
                             }}
-                            
                           >
                             <Check
                               className={cn(
@@ -192,17 +152,13 @@ export function EditMemberForm({
 
         <div className="grid grid-cols-2 gap-4">
           <FormField
-            control={form.control}
+            control={form.control as any}
             name="firstName"
             render={({ field }) => (
               <FormItem>
                 <FormLabel>First Name</FormLabel>
                 <FormControl>
-                  <Input
-                    
-                    placeholder="Enter first name"
-                    {...field}
-                  />
+                  <Input placeholder="Enter first name" {...field} />
                 </FormControl>
                 <FormMessage className="text-red-500" />
               </FormItem>
@@ -210,17 +166,13 @@ export function EditMemberForm({
           />
 
           <FormField
-            control={form.control}
+            control={form.control as any}
             name="lastName"
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Last Name</FormLabel>
                 <FormControl>
-                  <Input
-                    
-                    placeholder="Enter last name"
-                    {...field}
-                  />
+                  <Input placeholder="Enter last name" {...field} />
                 </FormControl>
                 <FormMessage className="text-red-500" />
               </FormItem>
@@ -230,17 +182,13 @@ export function EditMemberForm({
 
         <div className="grid grid-cols-2 gap-4">
           <FormField
-            control={form.control}
+            control={form.control as any}
             name="username"
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Username</FormLabel>
                 <FormControl>
-                  <Input
-                    
-                    placeholder="Enter username"
-                    {...field}
-                  />
+                  <Input placeholder="Enter username" {...field} />
                 </FormControl>
                 <FormMessage className="text-red-500" />
               </FormItem>
@@ -248,16 +196,15 @@ export function EditMemberForm({
           />
 
           <FormField
-            control={form.control}
+            control={form.control as any}
             name="email"
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Email</FormLabel>
                 <FormControl>
                   <Input
-                    
                     type="email"
-                    placeholder="Enter email"
+                    placeholder="Enter email address"
                     {...field}
                   />
                 </FormControl>
@@ -269,47 +216,27 @@ export function EditMemberForm({
 
         <div className="grid grid-cols-2 gap-4">
           <FormField
-            control={form.control}
+            control={form.control as any}
             name="gender"
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Gender</FormLabel>
-                <Select
-                  onValueChange={field.onChange}
-                  defaultValue={field.value}
-                >
-                  <FormControl>
-                    <SelectTrigger >
-                      <SelectValue placeholder="Select gender" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent >
-                    <SelectItem value="M" >
-                      Male
-                    </SelectItem>
-                    <SelectItem value="F" >
-                      Female
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
+                <FormControl>
+                  <Input placeholder="Enter gender" {...field} />
+                </FormControl>
                 <FormMessage className="text-red-500" />
               </FormItem>
             )}
           />
 
           <FormField
-            control={form.control}
+            control={form.control as any}
             name="dateOfBirth"
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Date of Birth</FormLabel>
                 <FormControl>
-                  <Input
-                    type="date"
-                    {...field}
-                    className="cursor-pointer focus:border-[var(--org-primary)] focus:ring-2 focus:ring-[var(--org-primary)]"
-                    
-                  />
+                  <Input type="date" {...field} />
                 </FormControl>
                 <FormMessage className="text-red-500" />
               </FormItem>
@@ -319,17 +246,13 @@ export function EditMemberForm({
 
         <div className="grid grid-cols-2 gap-4">
           <FormField
-            control={form.control}
+            control={form.control as any}
             name="handicap"
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Handicap</FormLabel>
                 <FormControl>
-                  <Input
-                    
-                    placeholder="Enter handicap"
-                    {...field}
-                  />
+                  <Input placeholder="Enter handicap" {...field} />
                 </FormControl>
                 <FormMessage className="text-red-500" />
               </FormItem>
@@ -337,17 +260,13 @@ export function EditMemberForm({
           />
 
           <FormField
-            control={form.control}
+            control={form.control as any}
             name="bagNumber"
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Bag Number</FormLabel>
                 <FormControl>
-                  <Input
-                    
-                    placeholder="Enter bag number"
-                    {...field}
-                  />
+                  <Input placeholder="Enter bag number" {...field} />
                 </FormControl>
                 <FormMessage className="text-red-500" />
               </FormItem>
@@ -355,11 +274,11 @@ export function EditMemberForm({
           />
         </div>
 
-        <div className="flex justify-end space-x-4">
-          <Button variant="outline" onClick={onCancel}>
+        <div className="flex justify-end gap-2">
+          <Button type="button" variant="outline" onClick={onCancel}>
             Cancel
           </Button>
-          <Button type="submit">Update Member</Button>
+          <Button type="submit">Save Changes</Button>
         </div>
       </form>
     </Form>

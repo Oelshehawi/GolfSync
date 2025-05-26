@@ -1,23 +1,42 @@
 import { db } from "~/server/db";
-import { events, eventRegistrations } from "~/server/db/schema";
-import { eq, sql, and, desc, asc } from "drizzle-orm";
+import { events, eventRegistrations, eventDetails } from "~/server/db/schema";
+import {
+  eq,
+  sql,
+  and,
+  desc,
+  asc,
+  gte,
+  inArray,
+  or,
+  isNull,
+  type SQL,
+} from "drizzle-orm";
 import { getOrganizationId } from "~/lib/auth";
+import {
+  Event,
+  EventRegistration,
+  EventType,
+  EventWithRegistrations,
+} from "~/app/types/events";
 
-// Helper type for event results
-export type EventWithDetails = {
+// Database event type
+type DbEvent = {
   id: number;
+  clerkOrgId: string;
   name: string;
   description: string;
   eventType: string;
-  startDate: Date;
-  endDate: Date;
-  startTime?: string | null | undefined;
+  startDate: string;
+  endDate: string;
+  startTime?: string | null;
   endTime?: string | null;
   location?: string | null;
   capacity?: number | null;
   requiresApproval: boolean;
-  registrationDeadline?: Date | null;
+  registrationDeadline?: string | null;
   isActive: boolean;
+  memberClasses: string[];
   createdAt: Date;
   updatedAt?: Date | null;
   details?: {
@@ -27,41 +46,21 @@ export type EventWithDetails = {
     entryFee?: number | null;
     additionalInfo?: string | null;
   } | null;
-  registrationsCount?: number;
-  pendingRegistrationsCount?: number;
-  registrations?: any[]; // Registration data for admin use
-};
-
-// Type for database event registration
-type EventRegistration = {
-  id: number;
-  eventId: number;
-  memberId: number;
-  status: string;
-  notes?: string;
-  createdAt: Date;
-  member: {
-    id: number;
-    firstName: string;
-    lastName: string;
-    memberNumber: string;
-    [key: string]: any;
-  };
 };
 
 // Get all events
 export async function getEvents(options?: {
   includeRegistrations?: boolean;
-}): Promise<EventWithDetails[]> {
+}): Promise<EventWithRegistrations[]> {
   const orgId = await getOrganizationId();
 
-  const rows = await db.query.events.findMany({
+  const rows = (await db.query.events.findMany({
     where: eq(events.clerkOrgId, orgId),
     with: {
       details: true,
     },
     orderBy: [desc(events.startDate)],
-  });
+  })) as DbEvent[];
 
   // Get registration counts for each event
   const results = await Promise.all(
@@ -97,20 +96,15 @@ export async function getEvents(options?: {
         eventRegistrationsData = await getEventRegistrations(event.id);
       }
 
-      // Convert date strings to Date objects
       return {
         ...event,
-        startDate: new Date(event.startDate),
-        endDate: new Date(event.endDate),
-        registrationDeadline: event.registrationDeadline
-          ? new Date(event.registrationDeadline)
-          : event.registrationDeadline,
+        eventType: event.eventType as EventType,
         registrationsCount,
         pendingRegistrationsCount,
         registrations: options?.includeRegistrations
           ? eventRegistrationsData
           : undefined,
-      } as EventWithDetails;
+      } as EventWithRegistrations;
     }),
   );
 
@@ -120,25 +114,25 @@ export async function getEvents(options?: {
 // Get upcoming events
 export async function getUpcomingEvents(
   limit: number = 5,
-): Promise<EventWithDetails[]> {
+  memberClass?: string,
+): Promise<Event[]> {
   const orgId = await getOrganizationId();
-  const today = new Date();
+  const today = new Date().toISOString().split("T")[0];
 
-  // SQL comparison works with an ISO date string without the time component
-  const todayString = today.toISOString().split("T")[0]; // Format as YYYY-MM-DD
+  const memberClassCondition = memberClass
+    ? sql`AND (member_classes IS NULL OR ${memberClass} = ANY(member_classes))`
+    : sql``;
 
-  const rows = await db.query.events.findMany({
-    where: and(
-      eq(events.clerkOrgId, orgId),
-      eq(events.isActive, true),
-      sql`${events.startDate} >= ${todayString}`, // Using SQL template for date comparison
-    ),
+  const whereClause = sql`clerk_org_id = ${orgId} AND start_date >= ${today} ${memberClassCondition}`;
+
+  const rows = (await db.query.events.findMany({
+    where: whereClause,
+    orderBy: [desc(events.startDate)],
     with: {
       details: true,
     },
-    orderBy: [asc(events.startDate)],
     limit,
-  });
+  })) as DbEvent[];
 
   // Get registration counts for each event
   const results = await Promise.all(
@@ -154,16 +148,11 @@ export async function getUpcomingEvents(
         )
         .then((res) => res[0]?.count || 0);
 
-      // Convert date strings to Date objects
       return {
         ...event,
-        startDate: new Date(event.startDate),
-        endDate: new Date(event.endDate),
-        registrationDeadline: event.registrationDeadline
-          ? new Date(event.registrationDeadline)
-          : event.registrationDeadline,
+        eventType: event.eventType as EventType,
         registrationsCount,
-      } as EventWithDetails;
+      } as Event;
     }),
   );
 
@@ -171,17 +160,15 @@ export async function getUpcomingEvents(
 }
 
 // Get a single event by ID
-export async function getEventById(
-  eventId: number,
-): Promise<EventWithDetails | null> {
+export async function getEventById(eventId: number): Promise<Event | null> {
   const orgId = await getOrganizationId();
 
-  const event = await db.query.events.findFirst({
+  const event = (await db.query.events.findFirst({
     where: and(eq(events.id, eventId), eq(events.clerkOrgId, orgId)),
     with: {
       details: true,
     },
-  });
+  })) as DbEvent | null;
 
   if (!event) return null;
 
@@ -197,16 +184,11 @@ export async function getEventById(
     )
     .then((res) => res[0]?.count || 0);
 
-  // Convert date strings to Date objects
   return {
     ...event,
-    startDate: new Date(event.startDate),
-    endDate: new Date(event.endDate),
-    registrationDeadline: event.registrationDeadline
-      ? new Date(event.registrationDeadline)
-      : event.registrationDeadline,
+    eventType: event.eventType as EventType,
     registrationsCount,
-  } as EventWithDetails;
+  } as Event;
 }
 
 // Get event registrations
@@ -263,4 +245,23 @@ export async function getMemberEventRegistrations(memberId: number) {
   });
 
   return registrations;
+}
+
+export async function getEventsForClass(memberClass: string) {
+  const orgId = await getOrganizationId();
+
+  const whereClause = sql`clerk_org_id = ${orgId} AND (member_classes IS NULL OR ${memberClass} = ANY(member_classes))`;
+
+  const dbEvents = (await db.query.events.findMany({
+    where: whereClause,
+    orderBy: [desc(events.startDate)],
+    with: {
+      details: true,
+    },
+  })) as DbEvent[];
+
+  return dbEvents.map((event) => ({
+    ...event,
+    eventType: event.eventType as EventType,
+  })) as Event[];
 }

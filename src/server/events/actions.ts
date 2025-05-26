@@ -13,15 +13,16 @@ const eventSchema = z.object({
   name: z.string().min(1, "Name is required"),
   description: z.string().min(1, "Description is required"),
   eventType: z.string().min(1, "Event type is required"),
-  startDate: z.coerce.date(),
-  endDate: z.coerce.date(),
+  startDate: z.string().min(1, "Start date is required"),
+  endDate: z.string().min(1, "End date is required"),
   startTime: z.string().optional().nullable(),
   endTime: z.string().optional().nullable(),
   location: z.string().optional().nullable(),
   capacity: z.number().int().positive().optional().nullable(),
   requiresApproval: z.boolean().default(false),
-  registrationDeadline: z.coerce.date().optional().nullable(),
+  registrationDeadline: z.string().optional().nullable(),
   isActive: z.boolean().default(true),
+  memberClasses: z.array(z.string()).default([]),
 });
 
 // Validation schema for event details
@@ -38,15 +39,16 @@ export async function createEvent(formData: {
   name: string;
   description: string;
   eventType: string;
-  startDate: Date | string;
-  endDate: Date | string;
+  startDate: string;
+  endDate: string;
   startTime?: string;
   endTime?: string;
   location?: string;
   capacity?: number;
   requiresApproval?: boolean;
-  registrationDeadline?: Date | string;
+  registrationDeadline?: string;
   isActive?: boolean;
+  memberClasses?: string[];
   // Event details
   format?: string;
   rules?: string;
@@ -71,6 +73,7 @@ export async function createEvent(formData: {
       requiresApproval: formData.requiresApproval || false,
       registrationDeadline: formData.registrationDeadline || null,
       isActive: formData.isActive ?? true,
+      memberClasses: formData.memberClasses || [],
     });
 
     // Insert event
@@ -92,6 +95,7 @@ export async function createEvent(formData: {
           ? eventData.registrationDeadline
           : undefined,
         isActive: eventData.isActive,
+        memberClasses: eventData.memberClasses,
       })
       .returning();
 
@@ -143,15 +147,16 @@ export async function updateEvent(
     name: string;
     description: string;
     eventType: string;
-    startDate: Date | string;
-    endDate: Date | string;
+    startDate: string;
+    endDate: string;
     startTime?: string;
     endTime?: string;
     location?: string;
     capacity?: number;
     requiresApproval?: boolean;
-    registrationDeadline?: Date | string;
+    registrationDeadline?: string;
     isActive?: boolean;
+    memberClasses?: string[];
     // Event details
     format?: string;
     rules?: string;
@@ -177,6 +182,7 @@ export async function updateEvent(
       requiresApproval: formData.requiresApproval || false,
       registrationDeadline: formData.registrationDeadline || null,
       isActive: formData.isActive ?? true,
+      memberClasses: formData.memberClasses || [],
     });
 
     // Update event
@@ -186,17 +192,16 @@ export async function updateEvent(
         name: eventData.name,
         description: eventData.description,
         eventType: eventData.eventType,
-        startDate: eventData.startDate as unknown as string,
-        endDate: eventData.endDate as unknown as string,
+        startDate: eventData.startDate,
+        endDate: eventData.endDate,
         startTime: eventData.startTime || undefined,
         endTime: eventData.endTime || undefined,
         location: eventData.location || undefined,
         capacity: eventData.capacity || undefined,
         requiresApproval: eventData.requiresApproval,
-        registrationDeadline: eventData.registrationDeadline
-          ? (eventData.registrationDeadline as unknown as string)
-          : undefined,
+        registrationDeadline: eventData.registrationDeadline || undefined,
         isActive: eventData.isActive,
+        memberClasses: eventData.memberClasses,
       })
       .where(and(eq(events.id, eventId), eq(events.clerkOrgId, orgId)));
 

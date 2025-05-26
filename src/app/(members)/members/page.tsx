@@ -13,6 +13,7 @@ import { UpcomingTeeTimes } from "~/components/member-teesheet-client/UpcomingTe
 import { Member } from "~/app/types/MemberTypes";
 import { EventCard } from "~/components/events/EventCard";
 import { EventType } from "~/app/types/events";
+import Link from "next/link";
 
 export default async function MembersHome() {
   const { sessionClaims } = await auth();
@@ -25,7 +26,8 @@ export default async function MembersHome() {
   // Get upcoming tee times
   const upcomingTeeTimes = await getUpcomingTeeTimes(member as Member);
 
-  const upcomingEvents = await getUpcomingEvents(3);
+  // Get upcoming events for member's class
+  const upcomingEvents = await getUpcomingEvents(3, member?.class);
 
   // Get member registrations for these events
   const memberRegistrations = member?.id
@@ -52,23 +54,38 @@ export default async function MembersHome() {
         </div>
 
         <div className="rounded-lg bg-white p-6 shadow-md">
-          <h3 className="mb-4 text-lg font-medium">Upcoming Events</h3>
+          <div className="mb-4 flex items-center justify-between">
+            <h3 className="text-lg font-medium">Upcoming Events</h3>
+            <Link
+              href="/events"
+              className="text-sm text-blue-600 hover:text-blue-800"
+            >
+              View All Events
+            </Link>
+          </div>
           {upcomingEvents.length > 0 ? (
             <div className="space-y-4">
               {upcomingEvents.map((event) => (
                 <EventCard
                   key={event.id}
                   event={{
-                    ...event,
+                    id: event.id,
+                    clerkOrgId: event.clerkOrgId,
+                    name: event.name,
+                    description: event.description,
                     eventType: event.eventType as EventType,
-                    // Convert all nullable fields to undefined for the component
-                    startTime: event.startTime ?? undefined,
-                    endTime: event.endTime ?? undefined,
-                    location: event.location ?? undefined,
-                    capacity: event.capacity ?? undefined,
-                    registrationDeadline:
-                      event.registrationDeadline ?? undefined,
-                    updatedAt: event.updatedAt ?? undefined,
+                    startDate: event.startDate,
+                    endDate: event.endDate,
+                    startTime: event.startTime,
+                    endTime: event.endTime,
+                    location: event.location,
+                    capacity: event.capacity,
+                    requiresApproval: event.requiresApproval,
+                    registrationDeadline: event.registrationDeadline,
+                    isActive: event.isActive,
+                    memberClasses: event.memberClasses,
+                    createdAt: event.createdAt,
+                    updatedAt: event.updatedAt,
                     details: event.details
                       ? {
                           format: event.details.format ?? undefined,
@@ -78,13 +95,16 @@ export default async function MembersHome() {
                           additionalInfo:
                             event.details.additionalInfo ?? undefined,
                         }
-                      : undefined,
+                      : null,
+                    registrationsCount: event.registrationsCount,
+                    pendingRegistrationsCount: event.pendingRegistrationsCount,
                   }}
                   className="border-0 shadow-none"
                   isMember={true}
                   memberId={member?.id}
                   isRegistered={registrationMap.has(event.id)}
                   registrationStatus={registrationMap.get(event.id)}
+                  variant="compact"
                 />
               ))}
             </div>

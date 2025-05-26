@@ -41,6 +41,7 @@ import {
 import toast from "react-hot-toast";
 import { preserveDate } from "~/lib/utils";
 import { MultiSelect, type OptionType } from "~/components/ui/multi-select";
+import { MEMBER_CLASSES } from "~/lib/constants/memberClasses";
 
 // Define the form schema based on the TimeblockRestriction type
 const formSchema = z.object({
@@ -54,8 +55,8 @@ const formSchema = z.object({
   canOverride: z.boolean().default(true),
 
   // Time restriction fields
-  startTime: z.string().optional(),
-  endTime: z.string().optional(),
+  startTime: z.string().min(1, "Start time is required"),
+  endTime: z.string().min(1, "End time is required"),
   daysOfWeek: z.array(z.number()).default([]),
 
   // Date range fields
@@ -104,10 +105,9 @@ export function TimeblockRestrictionDialog({
   const [submitAttempts, setSubmitAttempts] = useState(0);
 
   // Convert memberClasses to options for MultiSelect
-  const memberClassOptions: OptionType[] = memberClasses.map((className) => ({
-    value: className,
-    label: className,
-  }));
+  const memberClassOptions = MEMBER_CLASSES.filter((option) =>
+    memberClasses.includes(option.value),
+  );
 
   // Determine default restriction type based on category
   const getDefaultRestrictionType = () => {
@@ -139,8 +139,8 @@ export function TimeblockRestrictionDialog({
         isActive: existingRestriction.isActive ?? true,
         priority: existingRestriction.priority ?? 0,
         canOverride: existingRestriction.canOverride ?? true,
-        startTime: existingRestriction.startTime || "",
-        endTime: existingRestriction.endTime || "",
+        startTime: existingRestriction.startTime || "06:00",
+        endTime: existingRestriction.endTime || "18:00",
         daysOfWeek: existingRestriction.daysOfWeek || [],
         startDate: existingRestriction.startDate || null,
         endDate: existingRestriction.endDate || null,
@@ -171,8 +171,8 @@ export function TimeblockRestrictionDialog({
         daysOfWeek: [],
         applyCharge: false,
         isFullDay: false,
-        startTime: "",
-        endTime: "",
+        startTime: "06:00",
+        endTime: "18:00",
         startDate: null,
         endDate: null,
         maxCount: null,
@@ -222,8 +222,8 @@ export function TimeblockRestrictionDialog({
 
       // Handle isFullDay logic: if true, clear time fields
       if (formData.isFullDay) {
-        formData.startTime = "";
-        formData.endTime = "";
+        formData.startTime = "06:00";
+        formData.endTime = "18:00";
       }
 
       // Handle dates properly using the preserveDate function

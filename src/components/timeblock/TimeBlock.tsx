@@ -72,21 +72,27 @@ export function TimeBlock({
   }, [timeBlock.notes, notes, isEditingNotes]);
 
   // Map members, guests, and fills with their index as key for stable ordering
-  const members = timeBlock.members.map((member, index) => ({
-    ...member,
-    key: `${member.id}-${index}`,
-  }));
+  const members = timeBlock.members
+    .sort((a, b) => a.id - b.id) // Sort by ID for stable order
+    .map((member) => ({
+      ...member,
+      key: `member-${member.id}`, // Use member ID instead of index
+    }));
 
-  const guests = timeBlock.guests.map((guest, index) => ({
-    ...guest,
-    key: `${guest.id}-${index}`,
-  }));
+  const guests = timeBlock.guests
+    .sort((a, b) => a.id - b.id) // Sort by ID for stable order
+    .map((guest) => ({
+      ...guest,
+      key: `guest-${guest.id}`, // Use guest ID instead of index
+    }));
 
   // Expand fills into individual entries
-  const fills = (timeBlock.fills || []).map((fill) => ({
-    ...fill,
-    key: `${fill.id}`,
-  }));
+  const fills = (timeBlock.fills || [])
+    .sort((a, b) => a.id - b.id) // Sort by ID for stable order
+    .map((fill) => ({
+      ...fill,
+      key: `fill-${fill.id}`, // Use fill ID instead of index
+    }));
 
   const handleRemoveMember = async (memberId: number) => {
     try {
@@ -233,9 +239,12 @@ export function TimeBlock({
   // Vertical view layout (for table row)
   if (viewMode === "vertical") {
     return (
-      <tr className="cursor-pointer transition-colors hover:bg-gray-50">
+      <tr className="hover:bg-gray-50">
         <td className="px-3 py-3 text-lg font-semibold whitespace-nowrap text-gray-900">
-          <Link href={`/admin/timeblock/${timeBlock.id}`}>
+          <Link
+            href={`/admin/timeblock/${timeBlock.id}`}
+            className="hover:text-blue-600 hover:underline"
+          >
             {formatTo12Hour(timeBlock.startTime)}
           </Link>
         </td>

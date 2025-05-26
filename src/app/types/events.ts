@@ -1,11 +1,13 @@
 export type EventType =
   | "TOURNAMENT"
-  | "DINNER"
   | "SOCIAL"
+  | "DINNER"
   | "MEETING"
   | "OTHER";
 
 export interface EventDetails {
+  id?: number;
+  eventId?: number;
   format?: string | null;
   rules?: string | null;
   prizes?: string | null;
@@ -13,25 +15,50 @@ export interface EventDetails {
   additionalInfo?: string | null;
 }
 
+// Base event interface with string dates for component use
 export interface Event {
   id: number;
+  clerkOrgId: string;
   name: string;
   description: string;
   eventType: EventType;
-  startDate: Date | string;
-  endDate: Date | string;
+  startDate: string;
+  endDate: string;
   startTime?: string | null;
   endTime?: string | null;
   location?: string | null;
   capacity?: number | null;
   requiresApproval: boolean;
-  registrationDeadline?: Date | string | null;
+  registrationDeadline?: string | null;
   isActive: boolean;
-  details?: EventDetails;
-  createdAt?: Date | string;
-  updatedAt?: Date | string;
+  memberClasses: string[];
+  createdAt: Date;
+  updatedAt?: Date | null;
+  details?: EventDetails | null;
   registrationsCount?: number;
   pendingRegistrationsCount?: number;
+}
+
+// Event with registrations data for admin use
+export interface EventWithRegistrations extends Event {
+  registrations?: EventRegistration[];
+}
+
+// Database event registration type
+export interface EventRegistration {
+  id: number;
+  eventId: number;
+  memberId: number;
+  status: string;
+  notes?: string;
+  createdAt: Date;
+  member: {
+    id: number;
+    firstName: string;
+    lastName: string;
+    memberNumber: string;
+    [key: string]: any;
+  };
 }
 
 export interface EventCardProps {
@@ -42,17 +69,17 @@ export interface EventCardProps {
   isMember?: boolean;
   memberId?: number;
   isRegistered?: boolean;
-  registrations?: any[];
+  registrations?: EventRegistration[];
   registrationStatus?: string;
+  variant?: "default" | "compact";
 }
-
-export type EventWithRegistrations = Event & { registrations?: any[] };
 
 export interface RegisterForEventButtonProps {
   eventId: number;
   memberId: number;
   disabled?: boolean;
   requiresApproval?: boolean;
+  className?: string;
 }
 
 export interface EventFormProps {

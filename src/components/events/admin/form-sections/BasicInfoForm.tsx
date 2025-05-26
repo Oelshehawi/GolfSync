@@ -7,6 +7,7 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
+  FormDescription,
 } from "~/components/ui/form";
 import { Input } from "~/components/ui/input";
 import { Textarea } from "~/components/ui/textarea";
@@ -20,6 +21,8 @@ import {
 import { DatePicker } from "~/components/ui/date-picker";
 import { EventFormValues } from "../EventForm";
 import { preserveDate } from "~/lib/utils";
+import { MultiSelect } from "~/components/ui/multi-select";
+import { MEMBER_CLASSES } from "~/lib/constants/memberClasses";
 
 // Event types
 const EVENT_TYPES = [
@@ -36,7 +39,7 @@ interface BasicInfoFormProps {
 
 export function BasicInfoForm({ form }: BasicInfoFormProps) {
   return (
-    <>
+    <div className="space-y-4">
       <FormField
         control={form.control}
         name="name"
@@ -60,7 +63,7 @@ export function BasicInfoForm({ form }: BasicInfoFormProps) {
             <FormControl>
               <Textarea
                 placeholder="Enter event description"
-                className="min-h-32"
+                className="min-h-[100px]"
                 {...field}
               />
             </FormControl>
@@ -75,11 +78,7 @@ export function BasicInfoForm({ form }: BasicInfoFormProps) {
         render={({ field }) => (
           <FormItem>
             <FormLabel>Event Type</FormLabel>
-            <Select
-              onValueChange={field.onChange}
-              defaultValue={field.value}
-              value={field.value}
-            >
+            <Select onValueChange={field.onChange} defaultValue={field.value}>
               <FormControl>
                 <SelectTrigger>
                   <SelectValue placeholder="Select event type" />
@@ -103,11 +102,11 @@ export function BasicInfoForm({ form }: BasicInfoFormProps) {
           control={form.control}
           name="startDate"
           render={({ field }) => (
-            <FormItem>
+            <FormItem className="flex flex-col">
               <FormLabel>Start Date</FormLabel>
               <DatePicker
                 date={field.value}
-                setDate={(date) => field.onChange(preserveDate(date))}
+                setDate={(date) => field.onChange(date || new Date())}
               />
               <FormMessage />
             </FormItem>
@@ -118,27 +117,25 @@ export function BasicInfoForm({ form }: BasicInfoFormProps) {
           control={form.control}
           name="endDate"
           render={({ field }) => (
-            <FormItem>
+            <FormItem className="flex flex-col">
               <FormLabel>End Date</FormLabel>
               <DatePicker
                 date={field.value}
-                setDate={(date) => field.onChange(preserveDate(date))}
+                setDate={(date) => field.onChange(date || new Date())}
               />
               <FormMessage />
             </FormItem>
           )}
         />
-      </div>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <FormField
           control={form.control}
           name="startTime"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Start Time</FormLabel>
+              <FormLabel>Start Time (optional)</FormLabel>
               <FormControl>
-                <Input type="time" {...field} value={field.value || ""} />
+                <Input type="time" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -150,9 +147,9 @@ export function BasicInfoForm({ form }: BasicInfoFormProps) {
           name="endTime"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>End Time</FormLabel>
+              <FormLabel>End Time (optional)</FormLabel>
               <FormControl>
-                <Input type="time" {...field} value={field.value || ""} />
+                <Input type="time" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -165,18 +162,36 @@ export function BasicInfoForm({ form }: BasicInfoFormProps) {
         name="location"
         render={({ field }) => (
           <FormItem>
-            <FormLabel>Location</FormLabel>
+            <FormLabel>Location (optional)</FormLabel>
             <FormControl>
-              <Input
-                placeholder="Event location"
-                {...field}
-                value={field.value || ""}
-              />
+              <Input placeholder="Enter event location" {...field} />
             </FormControl>
             <FormMessage />
           </FormItem>
         )}
       />
-    </>
+
+      <FormField
+        control={form.control}
+        name="memberClasses"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Member Classes</FormLabel>
+            <FormControl>
+              <MultiSelect
+                selected={field.value}
+                options={MEMBER_CLASSES}
+                onChange={field.onChange}
+                placeholder="Select member classes"
+              />
+            </FormControl>
+            <FormDescription>
+              Leave empty to make this event available to all member classes
+            </FormDescription>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+    </div>
   );
 }

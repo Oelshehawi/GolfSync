@@ -10,7 +10,7 @@ import { Button } from "~/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { createEvent, updateEvent } from "~/server/events/actions";
 import toast from "react-hot-toast";
-import { Event, EventType, EventFormProps } from "~/app/types/events";
+import { EventFormProps } from "~/app/types/events";
 import { BasicInfoForm } from "./form-sections/BasicInfoForm";
 import { EventDetailsForm } from "./form-sections/EventDetailsForm";
 import { EventSettingsForm } from "./form-sections/EventSettingsForm";
@@ -30,15 +30,16 @@ const formSchema = z.object({
   name: z.string().min(1, "Name is required"),
   description: z.string().min(1, "Description is required"),
   eventType: z.string().min(1, "Event type is required"),
-  startDate: z.date({ required_error: "Start date is required" }),
-  endDate: z.date({ required_error: "End date is required" }),
+  startDate: z.string().min(1, "Start date is required"),
+  endDate: z.string().min(1, "End date is required"),
   startTime: z.string().optional(),
   endTime: z.string().optional(),
   location: z.string().optional(),
   capacity: z.coerce.number().int().positive().optional(),
   requiresApproval: z.boolean(),
-  registrationDeadline: z.date().optional(),
+  registrationDeadline: z.string().optional(),
   isActive: z.boolean(),
+  memberClasses: z.array(z.string()),
   // Tournament/event details
   format: z.string().optional(),
   rules: z.string().optional(),
@@ -53,41 +54,35 @@ export function EventForm({ existingEvent, onSuccess }: EventFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const router = useRouter();
 
-  // Define form with explicit typing
   const form = useForm<EventFormValues>({
-    resolver: zodResolver(formSchema),
     defaultValues: {
       name: existingEvent?.name || "",
       description: existingEvent?.description || "",
       eventType: existingEvent?.eventType || "TOURNAMENT",
-      startDate: existingEvent?.startDate
-        ? preserveDate(existingEvent.startDate) || new Date()
-        : new Date(),
-      endDate: existingEvent?.endDate
-        ? preserveDate(existingEvent.endDate) || new Date()
-        : new Date(),
+      startDate:
+        existingEvent?.startDate || new Date().toISOString().split("T")[0],
+      endDate: existingEvent?.endDate || new Date().toISOString().split("T")[0],
       startTime: existingEvent?.startTime || "",
       endTime: existingEvent?.endTime || "",
       location: existingEvent?.location || "",
       capacity: existingEvent?.capacity || undefined,
       requiresApproval: existingEvent?.requiresApproval ?? false,
-      registrationDeadline: existingEvent?.registrationDeadline
-        ? preserveDate(existingEvent.registrationDeadline)
-        : undefined,
+      registrationDeadline: existingEvent?.registrationDeadline || undefined,
       isActive: existingEvent?.isActive ?? true,
+      memberClasses: existingEvent?.memberClasses || [],
       format: existingEvent?.details?.format || "",
       rules: existingEvent?.details?.rules || "",
       prizes: existingEvent?.details?.prizes || "",
       entryFee: existingEvent?.details?.entryFee || undefined,
       additionalInfo: existingEvent?.details?.additionalInfo || "",
     },
+    resolver: zodResolver(formSchema),
   });
 
   // Watch event type to conditionally render fields
   const watchEventType = form.watch("eventType");
 
-  // Form submission handler
-  const onSubmit = form.handleSubmit(async (data: EventFormValues) => {
+  const handleSubmit = form.handleSubmit(async (data: EventFormValues) => {
     setIsSubmitting(true);
     try {
       if (existingEvent) {
@@ -128,7 +123,7 @@ export function EventForm({ existingEvent, onSuccess }: EventFormProps) {
 
   return (
     <Form {...form}>
-      <form onSubmit={onSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit} className="space-y-6">
         <Tabs defaultValue="basic" className="w-full">
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="basic">Basic Information</TabsTrigger>
