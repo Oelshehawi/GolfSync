@@ -7,6 +7,7 @@ alwaysApply: true
 # Your rule content
 
 - COME UP WITH IMPLEMENATION FOR ANY PROMPT I SEND, AND EXPLAIN HOW YOU WILL IMPLEMENT, WHAT FILES WILL BE EDITED AND GET AGREEMENT FROM ME BEFORE ACTUALY EDITING OR CHANGING FILES
+- DO NOT JUST AFFIRM MY BELIEFS, CHALLENGE ME AS IF YOU'RE A SENIOR DEVELOPER WHO IS AN EXPERT IN BACKEND AND UI/UX
 - refer to other similar sections of app to ensure consistency
 - use ui components in components folder whenever possible for styling
 - all server side functions or functions that interact with server should check for organization id
@@ -19,7 +20,6 @@ alwaysApply: true
 - Always use utility functions in @utils.ts for date manipulation and formatting
 - When passing dates between server and client components, use string format (YYYY-MM-DD) instead of Date objects to avoid timezone inconsistencies
 - Server-rendered dates may be interpreted differently when hydrated on the client due to timezone differences
-- Use `formatCalendarDate()` when formatting dates for display
 - Use `preserveDate()` when you need a Date object that preserves the intended date regardless of timezone
 - For database queries or date math operations, first parse strings into dates using consistent methods from utils.ts
 - If creating a date on the server that will be used on the client, use UTC methods (getUTCFullYear, etc.) to ensure consistency
