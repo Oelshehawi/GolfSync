@@ -11,34 +11,6 @@ import type { TeesheetConfig } from "~/app/types/TeeSheetTypes";
 import { ConfigTypes } from "~/app/types/TeeSheetTypes";
 import { format } from "date-fns";
 
-function convertToTeesheetConfig(dbConfig: any): TeesheetConfig {
-  const type = dbConfig.type.toUpperCase() as ConfigTypes;
-  const baseConfig = {
-    ...dbConfig,
-    type,
-    rules:
-      dbConfig.rules?.map((rule: any) => ({
-        ...rule,
-        startDate: rule.startDate ? new Date(rule.startDate) : null,
-        endDate: rule.endDate ? new Date(rule.endDate) : null,
-      })) || [],
-  };
-
-  if (type === ConfigTypes.REGULAR) {
-    return {
-      ...baseConfig,
-      startTime: dbConfig.startTime,
-      endTime: dbConfig.endTime,
-      interval: dbConfig.interval,
-      maxMembersPerBlock: dbConfig.maxMembersPerBlock,
-    };
-  }
-
-  return baseConfig;
-}
-
-export { convertToTeesheetConfig };
-
 export async function initializeDefaultConfigs() {
   try {
     const clerkOrgId = await getOrganizationId();
@@ -53,11 +25,12 @@ export async function initializeDefaultConfigs() {
     }
 
     // Create default weekday config (Mon-Fri)
-    const weekdayConfig = await db
+    const [weekdayConfigDb] = await db
       .insert(teesheetConfigs)
       .values({
         clerkOrgId,
         name: "Weekday (Mon-Fri)",
+        type: ConfigTypes.REGULAR,
         startTime: "07:00",
         endTime: "19:00",
         interval: 15,
@@ -65,19 +38,21 @@ export async function initializeDefaultConfigs() {
         isActive: true,
         isSystemConfig: true,
       })
-      .returning()
-      .then((result) => convertToTeesheetConfig(result[0]));
+      .returning();
 
-    if (!weekdayConfig) {
+    if (!weekdayConfigDb) {
       throw new Error("Failed to create weekday config");
     }
 
+    const weekdayConfig = { ...weekdayConfigDb, rules: [] } as TeesheetConfig;
+
     // Create default weekend config (Sat-Sun)
-    const weekendConfig = await db
+    const [weekendConfigDb] = await db
       .insert(teesheetConfigs)
       .values({
         clerkOrgId,
         name: "Weekend (Sat-Sun)",
+        type: ConfigTypes.REGULAR,
         startTime: "07:00",
         endTime: "19:00",
         interval: 20,
@@ -85,12 +60,13 @@ export async function initializeDefaultConfigs() {
         isActive: true,
         isSystemConfig: true,
       })
-      .returning()
-      .then((result) => convertToTeesheetConfig(result[0]));
+      .returning();
 
-    if (!weekendConfig) {
+    if (!weekendConfigDb) {
       throw new Error("Failed to create weekend config");
     }
+
+    const weekendConfig = { ...weekendConfigDb, rules: [] } as TeesheetConfig;
 
     // Create rules with lowest priority (0)
     await db.insert(teesheetConfigRules).values([
@@ -164,7 +140,14 @@ export async function getConfigForDate(date: Date): Promise<TeesheetConfig> {
       throw new Error("Configuration not found");
     }
 
-    return convertToTeesheetConfig(config);
+    return {
+      ...config,
+      rules: config.rules.map((rule) => ({
+        ...rule,
+        startDate: rule.startDate ? new Date(rule.startDate) : null,
+        endDate: rule.endDate ? new Date(rule.endDate) : null,
+      })),
+    } as TeesheetConfig;
   }
 
   // Then check for recurring day rules
@@ -205,7 +188,14 @@ export async function getConfigForDate(date: Date): Promise<TeesheetConfig> {
       throw new Error("Configuration not found");
     }
 
-    return convertToTeesheetConfig(config);
+    return {
+      ...config,
+      rules: config.rules.map((rule) => ({
+        ...rule,
+        startDate: rule.startDate ? new Date(rule.startDate) : null,
+        endDate: rule.endDate ? new Date(rule.endDate) : null,
+      })),
+    } as TeesheetConfig;
   }
 
   // If no specific or recurring rules found, fall back to system configs
@@ -238,7 +228,14 @@ export async function getConfigForDate(date: Date): Promise<TeesheetConfig> {
     throw new Error("No matching system configuration found");
   }
 
-  return convertToTeesheetConfig(weekdayConfig);
+  return {
+    ...weekdayConfig,
+    rules: weekdayConfig.rules.map((rule) => ({
+      ...rule,
+      startDate: rule.startDate ? new Date(rule.startDate) : null,
+      endDate: rule.endDate ? new Date(rule.endDate) : null,
+    })),
+  } as TeesheetConfig;
 }
 
 export async function getTeesheetConfigs(): Promise<TeesheetConfig[]> {
@@ -255,7 +252,14 @@ export async function getTeesheetConfigs(): Promise<TeesheetConfig[]> {
       orderBy: (teesheetConfigs, { asc }) => [asc(teesheetConfigs.name)],
     });
 
-    return configs.map(convertToTeesheetConfig);
+    return configs.map((config) => ({
+      ...config,
+      rules: config.rules.map((rule) => ({
+        ...rule,
+        startDate: rule.startDate ? new Date(rule.startDate) : null,
+        endDate: rule.endDate ? new Date(rule.endDate) : null,
+      })),
+    })) as TeesheetConfig[];
   } catch (error) {
     console.error("Error fetching teesheet configs:", error);
     return [];
@@ -285,7 +289,17 @@ export async function getTeesheetConfig(id: number) {
     return { success: false, error: "Config not found" };
   }
 
-  return { success: true, data: convertToTeesheetConfig(config) };
+  return {
+    success: true,
+    data: {
+      ...config,
+      rules: config.rules.map((rule) => ({
+        ...rule,
+        startDate: rule.startDate ? new Date(rule.startDate) : null,
+        endDate: rule.endDate ? new Date(rule.endDate) : null,
+      })),
+    } as TeesheetConfig,
+  };
 }
 
 // Get course info for the current organization

@@ -81,7 +81,7 @@ export function TimeBlockItem({
           <span className="text-lg font-semibold">{startTimeDisplay}</span>
           <div className="mt-1 flex flex-wrap items-center gap-1">
             <span className="text-sm text-gray-600">
-              {totalPeople} / 4 Players
+              {totalPeople} / {timeBlock.maxMembersPerBlock} Players
             </span>
             {isBooked && (
               <Badge className="ml-2 bg-green-500 hover:bg-green-600">
@@ -133,7 +133,7 @@ export function TimeBlockItem({
               variant="default"
               size="sm"
               onClick={onBook}
-              className="bg-[var(--org-primary)]"
+              className={`${disabled ? "bg-gray-300" : "bg-[var(--org-primary)]"}`}
               disabled={isButtonDisabled}
             >
               {isPast ? "Past" : "Book"}

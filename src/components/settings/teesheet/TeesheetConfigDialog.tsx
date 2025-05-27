@@ -66,6 +66,7 @@ export function TeesheetConfigDialog({
     isActive: true,
     hasScheduleRules: false,
     templateId: undefined,
+    disallowMemberBooking: false,
     rules: [
       {
         daysOfWeek: [],
@@ -121,6 +122,7 @@ export function TeesheetConfigDialog({
         isActive: existingConfig.isActive,
         hasScheduleRules: existingConfig.rules?.length > 0,
         templateId: !isRegularConfig ? existingConfig.templateId : undefined,
+        disallowMemberBooking: existingConfig.disallowMemberBooking ?? false,
         rules:
           existingConfig.rules?.map((rule) => ({
             daysOfWeek: rule.daysOfWeek || [],
@@ -172,7 +174,6 @@ export function TeesheetConfigDialog({
         })),
       );
     } else if (configType === ConfigTypes.CUSTOM && selectedTemplate?.blocks) {
-
       setPreviewBlocks(
         selectedTemplate.blocks.map((block, index) => ({
           id: index,
@@ -242,7 +243,6 @@ export function TeesheetConfigDialog({
       // Use the selected template if available, otherwise keep existing templateId
       formData.templateId = selectedTemplate?.id || formData.templateId;
       formData.blocks = selectedTemplate?.blocks || formData.blocks;
- 
     } else {
       // Clear template-related fields for regular configs
       formData.templateId = undefined;
@@ -429,6 +429,29 @@ export function TeesheetConfigDialog({
                           </p>
                         </div>
                       )}
+                    </div>
+                  )}
+
+                  {configType === ConfigTypes.CUSTOM && (
+                    <div className="flex items-center space-x-2 pt-4">
+                      <Switch
+                        id="disallowMemberBooking"
+                        checked={watch("disallowMemberBooking")}
+                        onCheckedChange={(checked) =>
+                          setValue("disallowMemberBooking", checked)
+                        }
+                      />
+                      <Label
+                        htmlFor="disallowMemberBooking"
+                        className="text-sm text-gray-700"
+                      >
+                        Disable Member Booking
+                      </Label>
+                      <div className="ml-1">
+                        <span className="text-xs text-gray-500">
+                          (Members will not be able to book this teesheet)
+                        </span>
+                      </div>
                     </div>
                   )}
 

@@ -262,67 +262,71 @@ export default function TeesheetClient({
       // No restrictions, proceed with booking
       setBookingTimeBlockId(timeBlockId);
     },
-    [sortedTimeBlocks],
+    [sortedTimeBlocks, config],
   );
 
   // Booking functions
   const handleBookTeeTime = async () => {
-    if (!bookingTimeBlockId) return;
+    if (!bookingTimeBlockId || loading) return;
 
     setLoading(true);
     try {
       const result = await bookTeeTime(bookingTimeBlockId, member);
 
+      // Clear the booking ID before showing toast to prevent double renders
+      setBookingTimeBlockId(null);
+
       if (result.success) {
         toast.success("Tee time booked successfully", {
           icon: <CheckCircle className="h-5 w-5 text-green-500" />,
+          id: `book-${bookingTimeBlockId}`, // Add unique ID
         });
       } else {
-        if (result.violations && result.violations.length > 0) {
-          toast.error(result.error || "Failed to book tee time", {
-            icon: <X className="h-5 w-5 text-red-500" />,
-          });
-        } else {
-          toast.error(result.error || "Failed to book tee time", {
-            icon: <X className="h-5 w-5 text-red-500" />,
-          });
-        }
+        toast.error(result.error || "Failed to book tee time", {
+          icon: <X className="h-5 w-5 text-red-500" />,
+          id: `book-error-${bookingTimeBlockId}`, // Add unique ID
+        });
       }
     } catch (error) {
       console.error("Error booking tee time", error);
       toast.error("An unexpected error occurred", {
         icon: <AlertCircle className="h-5 w-5 text-red-500" />,
+        id: `book-error-unexpected-${bookingTimeBlockId}`, // Add unique ID
       });
     } finally {
       setLoading(false);
-      setBookingTimeBlockId(null);
     }
   };
 
   const handleCancelTeeTime = async () => {
-    if (!cancelTimeBlockId) return;
+    if (!cancelTimeBlockId || loading) return;
 
     setLoading(true);
     try {
       const result = await cancelTeeTime(cancelTimeBlockId, member);
 
+      // Clear the cancel ID before showing toast to prevent double renders
+      setCancelTimeBlockId(null);
+
       if (result.success) {
         toast.success("Tee time cancelled successfully", {
           icon: <CheckCircle className="h-5 w-5 text-green-500" />,
+          id: `cancel-${cancelTimeBlockId}`, // Add unique ID
         });
       } else {
         toast.error(result.error || "Failed to cancel tee time", {
           icon: <X className="h-5 w-5 text-red-500" />,
+          id: `cancel-error-${cancelTimeBlockId}`, // Add unique ID
         });
       }
     } catch (error) {
       console.error("Error cancelling tee time", error);
       toast.error("An unexpected error occurred", {
         icon: <AlertCircle className="h-5 w-5 text-red-500" />,
+        id: `cancel-error-unexpected-${cancelTimeBlockId}`, // Add unique ID
       });
     } finally {
       setLoading(false);
-      setCancelTimeBlockId(null);
     }
   };
 
@@ -407,6 +411,12 @@ export default function TeesheetClient({
             <ClockIcon className="h-5 w-5 text-[var(--org-primary)]" />
             Available Tee Times
           </h3>
+          {config?.disallowMemberBooking && (
+            <div className="mt-2 rounded-md border border-red-200 bg-red-50 p-2 text-sm text-red-700">
+              <AlertCircle className="mr-2 inline-block h-4 w-4" />
+              Member booking is not allowed for this teesheet
+            </div>
+          )}
         </div>
 
         <div
@@ -426,7 +436,7 @@ export default function TeesheetClient({
                 isPast={isTimeBlockInPast(timeBlock)}
                 onBook={() => checkBookingRestrictions(timeBlock.id)}
                 onCancel={() => setCancelTimeBlockId(timeBlock.id)}
-                disabled={loading}
+                disabled={loading || config?.disallowMemberBooking}
                 member={member}
                 id={`time-block-${timeBlock.id}`}
                 isRestricted={timeBlock.restriction?.isRestricted || false}

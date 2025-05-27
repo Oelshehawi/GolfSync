@@ -81,7 +81,7 @@ export const teesheetConfigs = createTable(
     id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
     clerkOrgId: varchar("clerk_org_id", { length: 50 }).notNull(),
     name: varchar("name", { length: 50 }).notNull(),
-    type: varchar("type", { length: 20 }).notNull().default("regular"),
+    type: varchar("type", { length: 20 }).notNull().default("REGULAR"),
     // Optional fields for REGULAR type
     startTime: varchar("start_time", { length: 5 }),
     endTime: varchar("end_time", { length: 5 }),
@@ -91,6 +91,9 @@ export const teesheetConfigs = createTable(
     templateId: integer("template_id").references(() => templates.id),
     isActive: boolean("is_active").notNull().default(true),
     isSystemConfig: boolean("is_system_config").notNull().default(false),
+    disallowMemberBooking: boolean("disallow_member_booking")
+      .notNull()
+      .default(false),
     createdAt: timestamp("created_at", { withTimezone: true })
       .default(sql`CURRENT_TIMESTAMP`)
       .notNull(),

@@ -8,8 +8,10 @@ import {
   guests,
   timeBlockFills,
   templates,
+  teesheetConfigs,
+  teesheetConfigRules,
 } from "~/server/db/schema";
-import { eq, and, inArray, sql } from "drizzle-orm";
+import { eq, and, inArray, sql, isNull, or, lte, gte, desc } from "drizzle-orm";
 import { getOrganizationId } from "~/lib/auth";
 import type {
   TeeSheet,
@@ -22,6 +24,7 @@ import type {
 import { ConfigTypes } from "~/app/types/TeeSheetTypes";
 import { getConfigForDate } from "~/server/settings/data";
 import { generateTimeBlocks, formatDateToYYYYMMDD } from "~/lib/utils";
+import { format } from "date-fns";
 
 export async function createTimeBlocksForTeesheet(
   teesheetId: number,
@@ -141,17 +144,27 @@ export async function getOrCreateTeesheet(
       eq(teesheets.clerkOrgId, clerkOrgId),
       eq(teesheets.date, formattedDate),
     ),
+    with: {
+      config: {
+        with: {
+          rules: true,
+        },
+      },
+    },
   });
 
-  // Get config for the date
-  const config = await getConfigForDate(date);
-
   let teesheet: TeeSheet;
+  let config: TeesheetConfig;
 
   if (existingTeesheet) {
+    // For existing teesheets, use the stored config
     teesheet = existingTeesheet;
+    config = existingTeesheet.config as TeesheetConfig; 
   } else {
-    // Create new teesheet with the date
+    // For new teesheets, determine the appropriate config using getConfigForDate
+    config = await getConfigForDate(date);
+
+    // Create new teesheet with the date and determined config
     const newTeesheet = await db
       .insert(teesheets)
       .values({

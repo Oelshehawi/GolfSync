@@ -135,6 +135,7 @@ interface BaseConfig {
   type: ConfigTypes;
   isActive: boolean;
   isSystemConfig: boolean;
+  disallowMemberBooking: boolean;
   createdAt: Date;
   updatedAt: Date | null;
   rules: TeesheetConfigRule[];
@@ -168,6 +169,7 @@ export interface TeesheetConfigInput {
   blocks?: TemplateBlock[];
   isActive: boolean;
   isSystemConfig?: boolean;
+  disallowMemberBooking?: boolean;
   rules: TeesheetConfigRuleInput[];
 }
 

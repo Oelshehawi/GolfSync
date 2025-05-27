@@ -1,7 +1,12 @@
 import { getOrCreateTeesheet } from "~/server/teesheet/data";
 import { getTimeBlocksForTeesheet } from "~/server/teesheet/data";
 import { db } from "~/server/db";
-import { timeBlockMembers, members, timeBlocks } from "~/server/db/schema";
+import {
+  timeBlockMembers,
+  members,
+  timeBlocks,
+  teesheetConfigs,
+} from "~/server/db/schema";
 import { and, eq, or, gt, asc, inArray, gte } from "drizzle-orm";
 import { auth } from "@clerk/nextjs/server";
 import { getOrganizationId } from "~/lib/auth";
@@ -140,6 +145,7 @@ export async function getMemberTeesheetDataWithRestrictions(
   }
 
   // Get or create teesheet for the date
+  // This now returns the full config with rules
   const { teesheet, config } = await getOrCreateTeesheet(date);
 
   // Get time blocks with all members

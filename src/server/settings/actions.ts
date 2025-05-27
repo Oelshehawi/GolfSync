@@ -12,9 +12,11 @@ import { eq, and } from "drizzle-orm";
 import { getOrganizationId } from "~/lib/auth";
 import { revalidatePath } from "next/cache";
 import { createTimeBlocksForTeesheet } from "~/server/teesheet/data";
-import { convertToTeesheetConfig } from "./data";
 import { auth } from "@clerk/nextjs/server";
-import type { TeesheetConfigInput } from "~/app/types/TeeSheetTypes";
+import type {
+  TeesheetConfigInput,
+  TeesheetConfig,
+} from "~/app/types/TeeSheetTypes";
 import { ConfigTypes } from "~/app/types/TeeSheetTypes";
 
 export async function createTeesheetConfig(data: TeesheetConfigInput) {
@@ -30,7 +32,7 @@ export async function createTeesheetConfig(data: TeesheetConfigInput) {
       .insert(teesheetConfigs)
       .values({
         name: data.name,
-        type: data.type.toLowerCase(), // Store as lowercase in DB
+        type: data.type, // Store as uppercase in DB to match enum
         startTime: data.type === ConfigTypes.REGULAR ? data.startTime : null,
         endTime: data.type === ConfigTypes.REGULAR ? data.endTime : null,
         interval: data.type === ConfigTypes.REGULAR ? data.interval : null,
@@ -39,6 +41,7 @@ export async function createTeesheetConfig(data: TeesheetConfigInput) {
         templateId: data.type === ConfigTypes.CUSTOM ? data.templateId : null,
         isActive: data.isActive ?? true,
         isSystemConfig: data.isSystemConfig ?? false,
+        disallowMemberBooking: data.disallowMemberBooking ?? false,
         clerkOrgId: orgId,
       })
       .returning();
@@ -95,7 +98,7 @@ export async function updateTeesheetConfig(
       .update(teesheetConfigs)
       .set({
         name: data.name,
-        type: data.type.toLowerCase(), // Store as lowercase in DB
+        type: data.type, // Store as uppercase in DB to match enum
         startTime: data.type === ConfigTypes.REGULAR ? data.startTime : null,
         endTime: data.type === ConfigTypes.REGULAR ? data.endTime : null,
         interval: data.type === ConfigTypes.REGULAR ? data.interval : null,
@@ -104,6 +107,7 @@ export async function updateTeesheetConfig(
         templateId: data.type === ConfigTypes.CUSTOM ? data.templateId : null,
         isActive: data.isActive,
         isSystemConfig: data.isSystemConfig,
+        disallowMemberBooking: data.disallowMemberBooking ?? false,
       })
       .where(
         and(eq(teesheetConfigs.id, id), eq(teesheetConfigs.clerkOrgId, orgId)),
@@ -348,7 +352,14 @@ export async function updateTeesheetConfigForDate(
       );
 
     // Create new time blocks with the new config
-    const fullConfig = convertToTeesheetConfig(config);
+    const fullConfig = {
+      ...config,
+      rules: config.rules.map((rule) => ({
+        ...rule,
+        startDate: rule.startDate ? new Date(rule.startDate) : null,
+        endDate: rule.endDate ? new Date(rule.endDate) : null,
+      })),
+    } as TeesheetConfig;
     await createTimeBlocksForTeesheet(teesheetId, fullConfig, teesheet.date);
 
     // Revalidate paths
