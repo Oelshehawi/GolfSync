@@ -16,8 +16,8 @@ import type {
   TimeBlockWithMembers,
   TeesheetConfig,
   FillType,
-  Template,
   TemplateBlock,
+  RegularConfig,
 } from "~/app/types/TeeSheetTypes";
 import { ConfigTypes } from "~/app/types/TeeSheetTypes";
 import { getConfigForDate } from "~/server/settings/data";
@@ -43,8 +43,7 @@ export async function createTimeBlocksForTeesheet(
     if (teesheet) {
       dateStr = teesheet.date;
     } else {
-      console.error("[createTimeBlocksForTeesheet] No teesheet found");
-      return;
+      throw new Error("No teesheet found");
     }
   }
 
@@ -69,19 +68,11 @@ export async function createTimeBlocksForTeesheet(
     });
 
     if (!template) {
-      console.error(
-        "[createTimeBlocksForTeesheet] No template found for id:",
-        config.templateId,
-      );
-      return;
+      throw new Error("Template not found");
     }
 
     if (!template.blocks) {
-      console.error(
-        "[createTimeBlocksForTeesheet] Template has no blocks:",
-        template.id,
-      );
-      return;
+      throw new Error("Template has no blocks");
     }
 
     // Create blocks based on template
@@ -103,18 +94,16 @@ export async function createTimeBlocksForTeesheet(
         await db.insert(timeBlocks).values(blocks);
       }
     } catch (error) {
-      console.error(
-        "[createTimeBlocksForTeesheet] Error creating blocks:",
-        error,
-      );
-      return;
+      throw new Error("Failed to create template blocks");
     }
   } else {
+    const regularConfig = config as RegularConfig;
+
     // For regular configurations, generate blocks based on start time, end time, and interval
     const timeBlocksArray = generateTimeBlocks({
-      startTime: config.startTime,
-      endTime: config.endTime,
-      interval: config.interval,
+      startTime: regularConfig.startTime,
+      endTime: regularConfig.endTime,
+      interval: regularConfig.interval,
     });
 
     const blocks = timeBlocksArray.map((time, index) => ({
@@ -122,12 +111,16 @@ export async function createTimeBlocksForTeesheet(
       teesheetId,
       startTime: time,
       endTime: time, // For regular blocks, end time is same as start time
-      maxMembers: config.maxMembersPerBlock,
+      maxMembers: regularConfig.maxMembersPerBlock,
       sortOrder: index,
     }));
 
     if (blocks.length > 0) {
-      await db.insert(timeBlocks).values(blocks);
+      try {
+        await db.insert(timeBlocks).values(blocks);
+      } catch (error) {
+        throw new Error("Failed to create regular blocks");
+      }
     }
   }
 
@@ -153,29 +146,48 @@ export async function getOrCreateTeesheet(
   // Get config for the date
   const config = await getConfigForDate(date);
 
+  let teesheet: TeeSheet;
+
   if (existingTeesheet) {
-    return { teesheet: existingTeesheet, config };
+    teesheet = existingTeesheet;
+  } else {
+    // Create new teesheet with the date
+    const newTeesheet = await db
+      .insert(teesheets)
+      .values({
+        clerkOrgId,
+        date: formattedDate,
+        configId: config.id,
+      })
+      .returning()
+      .then((result) => result[0]);
+
+    if (!newTeesheet) {
+      throw new Error("Failed to create teesheet");
+    }
+
+    teesheet = newTeesheet;
   }
 
-  // Create new teesheet with the date
-  const newTeesheet = await db
-    .insert(teesheets)
-    .values({
-      clerkOrgId,
-      date: formattedDate,
-      configId: config.id,
-    })
-    .returning()
-    .then((result) => result[0]);
+  // Check if the teesheet has any time blocks
+  const existingBlocks = await db.query.timeBlocks.findMany({
+    where: and(
+      eq(timeBlocks.teesheetId, teesheet.id),
+      eq(timeBlocks.clerkOrgId, clerkOrgId),
+    ),
+    limit: 1,
+  });
 
-  if (!newTeesheet) {
-    throw new Error("Failed to create teesheet");
+  // If no blocks exist, create them
+  if (existingBlocks.length === 0) {
+    try {
+      await createTimeBlocksForTeesheet(teesheet.id, config, formattedDate);
+    } catch (error) {
+      throw error;
+    }
   }
 
-  // Create time blocks for the new teesheet
-  await createTimeBlocksForTeesheet(newTeesheet.id, config, formattedDate);
-
-  return { teesheet: newTeesheet, config };
+  return { teesheet, config };
 }
 
 export async function getTimeBlocksForTeesheet(
