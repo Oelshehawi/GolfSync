@@ -1,9 +1,17 @@
 "use client";
 
-import { useEffect, useState, useRef, useMemo, useCallback } from "react";
+import {
+  useEffect,
+  useState,
+  useRef,
+  useMemo,
+  useCallback,
+  useReducer,
+} from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { Button } from "~/components/ui/button";
 import { addDays } from "date-fns";
+import { useDebounce } from "use-debounce";
 import {
   Dialog,
   DialogContent,
@@ -124,6 +132,53 @@ function scrollToClosestTime(
   }
 }
 
+type BookingState = {
+  loading: boolean;
+  bookingTimeBlockId: number | null;
+  cancelTimeBlockId: number | null;
+  showDatePicker: boolean;
+};
+
+type BookingAction =
+  | { type: "START_BOOKING"; payload: number }
+  | { type: "START_CANCELLING"; payload: number }
+  | { type: "SET_LOADING"; payload: boolean }
+  | { type: "CLEAR_BOOKING" }
+  | { type: "CLEAR_CANCELLING" }
+  | { type: "TOGGLE_DATE_PICKER"; payload?: boolean };
+
+const initialState: BookingState = {
+  loading: false,
+  bookingTimeBlockId: null,
+  cancelTimeBlockId: null,
+  showDatePicker: false,
+};
+
+function bookingReducer(
+  state: BookingState,
+  action: BookingAction,
+): BookingState {
+  switch (action.type) {
+    case "START_BOOKING":
+      return { ...state, bookingTimeBlockId: action.payload };
+    case "START_CANCELLING":
+      return { ...state, cancelTimeBlockId: action.payload };
+    case "SET_LOADING":
+      return { ...state, loading: action.payload };
+    case "CLEAR_BOOKING":
+      return { ...state, bookingTimeBlockId: null, loading: false };
+    case "CLEAR_CANCELLING":
+      return { ...state, cancelTimeBlockId: null, loading: false };
+    case "TOGGLE_DATE_PICKER":
+      return {
+        ...state,
+        showDatePicker: action.payload ?? !state.showDatePicker,
+      };
+    default:
+      return state;
+  }
+}
+
 // Client component to handle interactive elements
 export default function TeesheetClient({
   config,
@@ -137,38 +192,22 @@ export default function TeesheetClient({
   selectedDate: string | Date;
   member: Member;
 }) {
-  const [loading, setLoading] = useState<boolean>(false);
-  const [bookingTimeBlockId, setBookingTimeBlockId] = useState<number | null>(
-    null,
-  );
-  const [cancelTimeBlockId, setCancelTimeBlockId] = useState<number | null>(
-    null,
-  );
-  const [showDatePicker, setShowDatePicker] = useState<boolean>(false);
+  const [state, dispatch] = useReducer(bookingReducer, initialState);
+  const { loading, bookingTimeBlockId, cancelTimeBlockId, showDatePicker } =
+    state;
 
-  // Use a sorted version of the timeBlocks without extra state management
-  const sortedTimeBlocks = useMemo(() => {
-    const sorted = [...initialTimeBlocks].sort((a, b) => {
-      // First sort by sortOrder
-      const orderDiff = (a.sortOrder || 0) - (b.sortOrder || 0);
-      if (orderDiff !== 0) return orderDiff;
-
-      // If sortOrder is the same, use startTime as fallback
-      return a.startTime.localeCompare(b.startTime);
-    });
-
-    return sorted;
-  }, [initialTimeBlocks]);
+  // Use sorted timeBlocks from server
+  const timeBlocks = initialTimeBlocks;
 
   // Create a ref for the time blocks container to enable scrolling
   const timeBlocksContainerRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll to current time once when time blocks load
   useEffect(() => {
-    if (sortedTimeBlocks.length > 0) {
-      scrollToClosestTime(new Date(), selectedDate, sortedTimeBlocks);
+    if (timeBlocks.length > 0) {
+      scrollToClosestTime(new Date(), selectedDate, timeBlocks);
     }
-  }, [sortedTimeBlocks, selectedDate]);
+  }, [timeBlocks, selectedDate]);
 
   // Memoize date parsing to prevent unnecessary recalculations
   const date = useMemo(() => {
@@ -234,17 +273,89 @@ export default function TeesheetClient({
         0,
       );
       navigateToDate(adjustedDate);
-      setShowDatePicker(false);
+      dispatch({ type: "TOGGLE_DATE_PICKER", payload: false });
     },
     [navigateToDate],
   );
 
+  // Debounced handlers
+  const [debouncedBooking] = useDebounce(async (timeBlockId: number) => {
+    if (!timeBlockId) return;
+
+    dispatch({ type: "SET_LOADING", payload: true });
+    try {
+      const result = await bookTeeTime(timeBlockId, member);
+
+      if (result.success) {
+        toast.success("Tee time booked successfully", {
+          icon: <CheckCircle className="h-5 w-5 text-green-500" />,
+          id: `book-${timeBlockId}`,
+        });
+      } else {
+        toast.error(result.error || "Failed to book tee time", {
+          icon: <X className="h-5 w-5 text-red-500" />,
+          id: `book-error-${timeBlockId}`,
+        });
+      }
+    } catch (error) {
+      console.error("Error booking tee time", error);
+      toast.error("An unexpected error occurred", {
+        icon: <AlertCircle className="h-5 w-5 text-red-500" />,
+        id: `book-error-unexpected-${timeBlockId}`,
+      });
+    } finally {
+      dispatch({ type: "CLEAR_BOOKING" });
+    }
+  }, 300);
+
+  const [debouncedCancelling] = useDebounce(async (timeBlockId: number) => {
+    if (!timeBlockId) return;
+
+    dispatch({ type: "SET_LOADING", payload: true });
+    try {
+      const result = await cancelTeeTime(timeBlockId, member);
+
+      if (result.success) {
+        toast.success("Tee time cancelled successfully", {
+          icon: <CheckCircle className="h-5 w-5 text-green-500" />,
+          id: `cancel-${timeBlockId}`,
+        });
+      } else {
+        toast.error(result.error || "Failed to cancel tee time", {
+          icon: <X className="h-5 w-5 text-red-500" />,
+          id: `cancel-error-${timeBlockId}`,
+        });
+      }
+    } catch (error) {
+      console.error("Error cancelling tee time", error);
+      toast.error("An unexpected error occurred", {
+        icon: <AlertCircle className="h-5 w-5 text-red-500" />,
+        id: `cancel-error-unexpected-${timeBlockId}`,
+      });
+    } finally {
+      dispatch({ type: "CLEAR_CANCELLING" });
+    }
+  }, 300);
+
+  // Booking handlers
+  const handleBookTeeTime = useCallback(() => {
+    if (bookingTimeBlockId) {
+      debouncedBooking(bookingTimeBlockId);
+    }
+  }, [bookingTimeBlockId, debouncedBooking]);
+
+  const handleCancelTeeTime = useCallback(() => {
+    if (cancelTimeBlockId) {
+      debouncedCancelling(cancelTimeBlockId);
+    }
+  }, [cancelTimeBlockId, debouncedCancelling]);
+
   // Check for booking restrictions
   const checkBookingRestrictions = useCallback(
-    async (timeBlockId: number) => {
+    (timeBlockId: number) => {
       if (!timeBlockId) return;
 
-      const timeBlock = sortedTimeBlocks.find((tb) => tb.id === timeBlockId);
+      const timeBlock = timeBlocks.find((tb) => tb.id === timeBlockId);
       if (!timeBlock) return;
 
       // Check if the timeblock is restricted (pre-checked from server)
@@ -254,81 +365,17 @@ export default function TeesheetClient({
             "This timeblock is not available for booking",
           {
             icon: <AlertCircle className="h-5 w-5 text-red-500" />,
+            id: `restriction-${timeBlockId}`,
           },
         );
         return;
       }
 
       // No restrictions, proceed with booking
-      setBookingTimeBlockId(timeBlockId);
+      dispatch({ type: "START_BOOKING", payload: timeBlockId });
     },
-    [sortedTimeBlocks, config],
+    [timeBlocks],
   );
-
-  // Booking functions
-  const handleBookTeeTime = async () => {
-    if (!bookingTimeBlockId || loading) return;
-
-    setLoading(true);
-    try {
-      const result = await bookTeeTime(bookingTimeBlockId, member);
-
-      // Clear the booking ID before showing toast to prevent double renders
-      setBookingTimeBlockId(null);
-
-      if (result.success) {
-        toast.success("Tee time booked successfully", {
-          icon: <CheckCircle className="h-5 w-5 text-green-500" />,
-          id: `book-${bookingTimeBlockId}`, // Add unique ID
-        });
-      } else {
-        toast.error(result.error || "Failed to book tee time", {
-          icon: <X className="h-5 w-5 text-red-500" />,
-          id: `book-error-${bookingTimeBlockId}`, // Add unique ID
-        });
-      }
-    } catch (error) {
-      console.error("Error booking tee time", error);
-      toast.error("An unexpected error occurred", {
-        icon: <AlertCircle className="h-5 w-5 text-red-500" />,
-        id: `book-error-unexpected-${bookingTimeBlockId}`, // Add unique ID
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleCancelTeeTime = async () => {
-    if (!cancelTimeBlockId || loading) return;
-
-    setLoading(true);
-    try {
-      const result = await cancelTeeTime(cancelTimeBlockId, member);
-
-      // Clear the cancel ID before showing toast to prevent double renders
-      setCancelTimeBlockId(null);
-
-      if (result.success) {
-        toast.success("Tee time cancelled successfully", {
-          icon: <CheckCircle className="h-5 w-5 text-green-500" />,
-          id: `cancel-${cancelTimeBlockId}`, // Add unique ID
-        });
-      } else {
-        toast.error(result.error || "Failed to cancel tee time", {
-          icon: <X className="h-5 w-5 text-red-500" />,
-          id: `cancel-error-${cancelTimeBlockId}`, // Add unique ID
-        });
-      }
-    } catch (error) {
-      console.error("Error cancelling tee time", error);
-      toast.error("An unexpected error occurred", {
-        icon: <AlertCircle className="h-5 w-5 text-red-500" />,
-        id: `cancel-error-unexpected-${cancelTimeBlockId}`, // Add unique ID
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
 
   // Memoized utility functions
   const isTimeBlockBooked = useCallback(
@@ -359,7 +406,7 @@ export default function TeesheetClient({
     [selectedDate],
   );
 
-  const hasTimeBlocks = sortedTimeBlocks.length > 0;
+  const hasTimeBlocks = timeBlocks.length > 0;
 
   return (
     <div className="space-y-6 pt-20">
@@ -383,7 +430,7 @@ export default function TeesheetClient({
           <Button
             variant="outline"
             size="icon"
-            onClick={() => setShowDatePicker(true)}
+            onClick={() => dispatch({ type: "TOGGLE_DATE_PICKER" })}
             disabled={loading}
             className="hover:bg-[var(--org-primary)] hover:text-white"
             aria-label="Open date picker"
@@ -425,7 +472,7 @@ export default function TeesheetClient({
           aria-live="polite"
         >
           {hasTimeBlocks ? (
-            sortedTimeBlocks.map((timeBlock) => (
+            timeBlocks.map((timeBlock) => (
               <TimeBlockItem
                 key={timeBlock.id}
                 timeBlock={
@@ -435,7 +482,9 @@ export default function TeesheetClient({
                 isAvailable={isTimeBlockAvailable(timeBlock)}
                 isPast={isTimeBlockInPast(timeBlock)}
                 onBook={() => checkBookingRestrictions(timeBlock.id)}
-                onCancel={() => setCancelTimeBlockId(timeBlock.id)}
+                onCancel={() =>
+                  dispatch({ type: "START_CANCELLING", payload: timeBlock.id })
+                }
                 disabled={loading || config?.disallowMemberBooking}
                 member={member}
                 id={`time-block-${timeBlock.id}`}
@@ -459,7 +508,12 @@ export default function TeesheetClient({
 
       {/* Date Picker Dialog */}
       {showDatePicker && (
-        <Dialog open={showDatePicker} onOpenChange={setShowDatePicker}>
+        <Dialog
+          open={showDatePicker}
+          onOpenChange={(isOpen) =>
+            dispatch({ type: "TOGGLE_DATE_PICKER", payload: isOpen })
+          }
+        >
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
               <DialogTitle>Select Date</DialogTitle>
@@ -473,7 +527,7 @@ export default function TeesheetClient({
       <Dialog
         open={bookingTimeBlockId !== null}
         onOpenChange={(isOpen) => {
-          if (!isOpen) setBookingTimeBlockId(null);
+          if (!isOpen) dispatch({ type: "CLEAR_BOOKING" });
         }}
       >
         <DialogContent className="sm:max-w-md">
@@ -486,7 +540,7 @@ export default function TeesheetClient({
           <DialogFooter className="space-y-2 sm:space-x-4">
             <Button
               variant="outline"
-              onClick={() => setBookingTimeBlockId(null)}
+              onClick={() => dispatch({ type: "CLEAR_BOOKING" })}
               disabled={loading}
               className="w-full sm:w-auto"
             >
@@ -515,7 +569,7 @@ export default function TeesheetClient({
       <Dialog
         open={cancelTimeBlockId !== null}
         onOpenChange={(isOpen) => {
-          if (!isOpen) setCancelTimeBlockId(null);
+          if (!isOpen) dispatch({ type: "CLEAR_CANCELLING" });
         }}
       >
         <DialogContent className="sm:max-w-md">
@@ -528,7 +582,7 @@ export default function TeesheetClient({
           <DialogFooter className="space-y-2 sm:space-x-4">
             <Button
               variant="outline"
-              onClick={() => setCancelTimeBlockId(null)}
+              onClick={() => dispatch({ type: "CLEAR_CANCELLING" })}
               disabled={loading}
               className="w-full sm:w-auto"
             >
