@@ -410,7 +410,6 @@ export default function TeesheetClient({
 
   return (
     <div className="space-y-6 pt-20">
-      <Toaster position="top-right" />
 
       {/* Date navigation */}
       <div className="flex items-center justify-between rounded-lg bg-white p-3 shadow-sm">

@@ -23,7 +23,6 @@ export default function MembersLayout({
         <main className="container mx-auto flex-1 p-4">{children}</main>
         <Footer />
       </div>
-      <Toaster position="top-right" />
     </ClerkProvider>
   );
 }

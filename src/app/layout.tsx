@@ -4,6 +4,7 @@ import { GeistSans } from "geist/font/sans";
 import { type Metadata } from "next";
 import { ClerkProvider } from "@clerk/nextjs";
 import { ServerThemeProvider } from "~/components/ServerThemeProvider";
+import { Toaster } from "react-hot-toast";
 
 export const metadata: Metadata = {
   title: "GolfSync",
@@ -19,6 +20,7 @@ export default function RootLayout({
       <html lang="en" className={GeistSans.variable}>
         <body>
           <ServerThemeProvider>{children}</ServerThemeProvider>
+          <Toaster position="top-right" />
         </body>
       </html>
     </ClerkProvider>
