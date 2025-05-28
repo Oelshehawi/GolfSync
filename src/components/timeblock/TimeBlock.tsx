@@ -56,30 +56,43 @@ export function TimeBlock({
   viewMode = "grid",
 }: TimeBlockProps) {
   const formattedTime = formatDisplayTime(timeBlock.startTime);
-  const totalPeople =
-    timeBlock.members.length +
-    timeBlock.guests.length +
-    (timeBlock.fills || []).length;
-  const [notes, setNotes] = useState(timeBlock.notes || "");
   const [isEditingNotes, setIsEditingNotes] = useState(false);
-  const [isSavingNotes, setIsSavingNotes] = useState(false);
+  const [editedNotes, setEditedNotes] = useState(timeBlock.notes || "");
+
+  // Calculate members, guests, and fills
+  const members = timeBlock.members || [];
+  const guests = timeBlock.guests || [];
+  const fills = timeBlock.fills || [];
+  const totalPeople = members.length + guests.length + fills.length;
+
+  // Check if any members or guests are present
+  const hasParticipants = members.length > 0 || guests.length > 0;
+
+  // Check if all participants are checked in
+  const allCheckedIn =
+    hasParticipants &&
+    members.every((m) => m.checkedIn) &&
+    guests.every((g) => g.checkedIn);
+
+  // Disable check-in buttons if no participants
+  const checkInDisabled = !hasParticipants || allCheckedIn;
 
   // Reset notes if they change externally while not editing
   useEffect(() => {
-    if (!isEditingNotes && timeBlock.notes !== notes) {
-      setNotes(timeBlock.notes || "");
+    if (!isEditingNotes && timeBlock.notes !== editedNotes) {
+      setEditedNotes(timeBlock.notes || "");
     }
-  }, [timeBlock.notes, notes, isEditingNotes]);
+  }, [timeBlock.notes, editedNotes, isEditingNotes]);
 
   // Map members, guests, and fills with their index as key for stable ordering
-  const members = timeBlock.members
+  const membersSorted = members
     .sort((a, b) => a.id - b.id) // Sort by ID for stable order
     .map((member) => ({
       ...member,
       key: `member-${member.id}`, // Use member ID instead of index
     }));
 
-  const guests = timeBlock.guests
+  const guestsSorted = guests
     .sort((a, b) => a.id - b.id) // Sort by ID for stable order
     .map((guest) => ({
       ...guest,
@@ -87,7 +100,7 @@ export function TimeBlock({
     }));
 
   // Expand fills into individual entries
-  const fills = (timeBlock.fills || [])
+  const fillsSorted = fills
     .sort((a, b) => a.id - b.id) // Sort by ID for stable order
     .map((fill) => ({
       ...fill,
@@ -158,20 +171,18 @@ export function TimeBlock({
   };
 
   const handleSaveNotes = async () => {
-    setIsSavingNotes(true);
+    setIsEditingNotes(false);
     try {
       if (onSaveNotes) {
-        const success = await onSaveNotes(notes);
+        const success = await onSaveNotes(editedNotes);
         if (success) {
-          setIsEditingNotes(false);
+          setEditedNotes(timeBlock.notes || "");
         }
       } else {
         toast.error("Save notes function not provided");
       }
     } catch (error) {
       toast.error("An unexpected error occurred");
-    } finally {
-      setIsSavingNotes(false);
     }
   };
 
@@ -277,7 +288,7 @@ export function TimeBlock({
         <td className="px-3 py-3">
           {totalPeople > 0 ? (
             <div className="grid grid-cols-2 gap-2">
-              {members.map((member) => {
+              {membersSorted.map((member) => {
                 const memberStyle = getMemberClassStyling(member.class);
                 const { key, ...memberData } = member;
 
@@ -353,7 +364,7 @@ export function TimeBlock({
                 );
               })}
 
-              {guests.map((guest) => {
+              {guestsSorted.map((guest) => {
                 const guestStyle = getMemberClassStyling("GUEST");
                 const { key, ...guestData } = guest;
 
@@ -429,7 +440,7 @@ export function TimeBlock({
                 );
               })}
 
-              {fills.map((fill) => {
+              {fillsSorted.map((fill) => {
                 const fillStyle = {
                   bg: "bg-gray-50",
                   border: "border-gray-200",
@@ -517,17 +528,22 @@ export function TimeBlock({
 
         {/* Actions Column */}
         <td className="px-3 py-3">
-          <div className="flex gap-2">
+          <div className="flex items-center gap-2">
             <Button
               variant="outline"
               size="sm"
-              className="bg-green-50 px-2 py-1 text-xs shadow-sm hover:bg-green-100 hover:text-green-800"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleCheckInAll();
-              }}
+              onClick={() => onCheckInAll && onCheckInAll()}
+              disabled={checkInDisabled}
+              title={
+                !hasParticipants
+                  ? "No participants to check in"
+                  : allCheckedIn
+                    ? "All participants already checked in"
+                    : ""
+              }
+              className="h-8 px-2 py-1"
             >
-              <Users className="mr-1 h-3 w-3" />
+              <UserCheck className="mr-1 h-4 w-4" />
               Check In All
             </Button>
           </div>
@@ -567,7 +583,15 @@ export function TimeBlock({
             <Button
               variant="outline"
               size="sm"
-              onClick={() => handleCheckInAll()}
+              onClick={() => onCheckInAll && onCheckInAll()}
+              disabled={checkInDisabled}
+              title={
+                !hasParticipants
+                  ? "No participants to check in"
+                  : allCheckedIn
+                    ? "All participants already checked in"
+                    : ""
+              }
               className="h-7 rounded-md bg-green-50 px-2 text-xs text-green-600 hover:bg-green-100 hover:text-green-700"
             >
               <Users className="mr-1 h-3 w-3" />
@@ -582,11 +606,10 @@ export function TimeBlock({
         {isEditingNotes ? (
           <div className="flex flex-col space-y-2">
             <Textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
+              value={editedNotes}
+              onChange={(e) => setEditedNotes(e.target.value)}
               placeholder="Enter notes for this tee time..."
               className="min-h-[60px] text-xs"
-              disabled={isSavingNotes}
             />
             <div className="flex justify-end space-x-2">
               <Button
@@ -594,10 +617,9 @@ export function TimeBlock({
                 size="sm"
                 onClick={() => {
                   setIsEditingNotes(false);
-                  setNotes(timeBlock.notes || "");
+                  setEditedNotes(timeBlock.notes || "");
                 }}
                 className="h-7 text-xs"
-                disabled={isSavingNotes}
               >
                 Cancel
               </Button>
@@ -606,7 +628,6 @@ export function TimeBlock({
                 size="sm"
                 onClick={handleSaveNotes}
                 className="h-7 text-xs"
-                disabled={isSavingNotes}
               >
                 <Check className="mr-1 h-3 w-3" />
                 Save
@@ -644,9 +665,9 @@ export function TimeBlock({
 
       {totalPeople > 0 ? (
         <div className="space-y-1">
-          {members.length > 0 && (
+          {membersSorted.length > 0 && (
             <div className="grid grid-cols-1 gap-1">
-              {members.map((member) => {
+              {membersSorted.map((member) => {
                 const memberStyle = getMemberClassStyling(member.class);
                 const { key, ...memberData } = member;
 
@@ -718,9 +739,9 @@ export function TimeBlock({
             </div>
           )}
 
-          {guests.length > 0 && (
+          {guestsSorted.length > 0 && (
             <div className="grid grid-cols-1 gap-1">
-              {guests.map((guest) => {
+              {guestsSorted.map((guest) => {
                 const guestStyle = getMemberClassStyling("GUEST");
                 const { key, ...guestData } = guest;
 
@@ -792,7 +813,7 @@ export function TimeBlock({
             </div>
           )}
 
-          {fills.map((fill) => {
+          {fillsSorted.map((fill) => {
             const fillStyle = {
               bg: "bg-gray-50",
               border: "border-gray-200",

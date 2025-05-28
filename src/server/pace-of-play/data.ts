@@ -218,11 +218,25 @@ export async function getTimeBlocksAtTurn(date: Date) {
 }
 
 // Get active time blocks at the finish (have started, recorded turn time, but not finished)
-export async function getTimeBlocksAtFinish(date: Date) {
+export async function getTimeBlocksAtFinish(
+  date: Date,
+  includeMissedTurns = false,
+): Promise<{
+  regular: TimeBlockWithPaceOfPlay[];
+  missedTurns: TimeBlockWithPaceOfPlay[];
+}> {
   const orgId = await getOrganizationId();
   if (!orgId) throw new Error("Organization not found");
 
   const formattedDate = date.toISOString().split("T")[0];
+
+  // Base query conditions
+  const baseConditions = [
+    eq(timeBlocks.clerkOrgId, orgId),
+    sql`${teesheets.date} = ${formattedDate}`,
+    sql`${paceOfPlay.startTime} IS NOT NULL`,
+    sql`${paceOfPlay.finishTime} IS NULL`,
+  ];
 
   const result = await db
     .select({
@@ -238,25 +252,28 @@ export async function getTimeBlocksAtFinish(date: Date) {
     .leftJoin(members, eq(timeBlockMembers.memberId, members.id))
     .leftJoin(timeBlockGuests, eq(timeBlocks.id, timeBlockGuests.timeBlockId))
     .leftJoin(guests, eq(timeBlockGuests.guestId, guests.id))
-    .where(
-      and(
-        eq(timeBlocks.clerkOrgId, orgId),
-        sql`${teesheets.date} = ${formattedDate}`,
-        sql`${paceOfPlay.turn9Time} IS NOT NULL`,
-        sql`${paceOfPlay.finishTime} IS NULL`,
-      ),
-    )
+    .where(and(...baseConditions))
     .groupBy(timeBlocks.id, paceOfPlay.id)
     .orderBy(asc(timeBlocks.startTime));
 
-  return result.map((row) => ({
+  const timeBlocksWithPace = result.map((row) => ({
     id: row.timeBlock.id,
     startTime: row.timeBlock.startTime,
     teesheetId: row.timeBlock.teesheetId,
     paceOfPlay: row.paceOfPlay,
     playerNames: row.playerNames || "",
     numPlayers: row.numPlayers,
-  })) as TimeBlockWithPaceOfPlay[];
+    hasMissedTurn: !row.paceOfPlay.turn9Time,
+  })) as (TimeBlockWithPaceOfPlay & { hasMissedTurn: boolean })[];
+
+  // If including missed turns, separate them into two groups
+  const regular = timeBlocksWithPace.filter((tb) => !tb.hasMissedTurn);
+  const missedTurns = timeBlocksWithPace.filter((tb) => tb.hasMissedTurn);
+
+  return {
+    regular,
+    missedTurns,
+  };
 }
 
 // Get pace of play history for a specific member

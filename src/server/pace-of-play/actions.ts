@@ -214,6 +214,63 @@ export async function updateFinishTime(
   return { success: true };
 }
 
+// Update both turn and finish times together (for missed turn scenarios)
+export async function updateTurnAndFinishTime(
+  timeBlockId: number,
+  turnTime: Date,
+  finishTime: Date,
+  updatedBy: string,
+  notes?: string,
+): Promise<{ success: boolean; error?: string }> {
+  const orgId = await getOrganizationId();
+  if (!orgId) throw new Error("Organization not found");
+
+  const currentPace = await getPaceOfPlayByTimeBlockId(timeBlockId);
+  if (!currentPace) {
+    throw new Error("Pace of play record not found");
+  }
+
+  // Validate times
+  if (turnTime >= finishTime) {
+    return {
+      success: false,
+      error: "Turn time must be before finish time",
+    };
+  }
+
+  const startTime = new Date(currentPace.startTime!);
+  if (startTime >= turnTime) {
+    return {
+      success: false,
+      error: "Turn time must be after start time",
+    };
+  }
+
+  // Calculate status for both turn and finish
+  const turnStatus = determinePaceStatus(
+    turnTime,
+    new Date(currentPace.expectedTurn9Time),
+  );
+  const finishStatus = determinePaceStatus(
+    finishTime,
+    new Date(currentPace.expectedFinishTime),
+    true,
+  );
+
+  const paceData: Partial<PaceOfPlayInsert> = {
+    turn9Time: turnTime,
+    finishTime,
+    status: finishStatus,
+    lastUpdatedBy: updatedBy,
+    notes: notes || "Turn and finish times recorded together",
+  };
+
+  await upsertPaceOfPlay(timeBlockId, paceData);
+  revalidatePath("/admin/pace-of-play");
+  revalidatePath("/admin/pace-of-play/finish");
+  return { success: true };
+}
+
 // Get pace of play data for a specific timeblock
 export async function getPaceOfPlayData(
   timeBlockId: number,

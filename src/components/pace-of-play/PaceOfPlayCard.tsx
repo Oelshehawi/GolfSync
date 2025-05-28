@@ -11,23 +11,36 @@ import {
   type PaceOfPlayStatus as PaceOfPlayStatusType,
 } from "~/server/pace-of-play/data";
 import { Button } from "~/components/ui/button";
-import { CalendarClock, Clock, Users } from "lucide-react";
+import {
+  CalendarClock,
+  Clock,
+  Users,
+  PlayCircle,
+  Flag,
+  CheckCircle,
+} from "lucide-react";
 import { formatPaceOfPlayTimestamp, formatDisplayTime } from "~/lib/utils";
 
 interface PaceOfPlayCardProps {
   timeBlock: TimeBlockWithPaceOfPlay;
-  onUpdateTurn?: (timeBlockId: number) => void;
-  onUpdateFinish?: (timeBlockId: number) => void;
+  onUpdateStart?: () => void;
+  onUpdateTurn?: () => void;
+  onUpdateFinish?: () => void;
+  showStartButton?: boolean;
   showTurnButton?: boolean;
   showFinishButton?: boolean;
+  isMissedTurn?: boolean;
 }
 
 export function PaceOfPlayCard({
   timeBlock,
+  onUpdateStart,
   onUpdateTurn,
   onUpdateFinish,
+  showStartButton = false,
   showTurnButton = false,
   showFinishButton = false,
+  isMissedTurn = false,
 }: PaceOfPlayCardProps) {
   const { paceOfPlay, playerNames, numPlayers, startTime } = timeBlock;
 
@@ -58,6 +71,45 @@ export function PaceOfPlayCard({
               status={paceOfPlay.status as PaceOfPlayStatusType}
             />
           )}
+          <div className="flex items-center gap-2">
+            {showStartButton && !timeBlock.paceOfPlay?.startTime && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onUpdateStart}
+                className="h-8 px-2 py-1"
+              >
+                <PlayCircle className="mr-1 h-4 w-4" />
+                Start Round
+              </Button>
+            )}
+            {showTurnButton &&
+              timeBlock.paceOfPlay?.startTime &&
+              !timeBlock.paceOfPlay?.turn9Time && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={onUpdateTurn}
+                  className="h-8 px-2 py-1"
+                >
+                  <Flag className="mr-1 h-4 w-4" />
+                  Record Turn
+                </Button>
+              )}
+            {showFinishButton &&
+              timeBlock.paceOfPlay?.startTime &&
+              !timeBlock.paceOfPlay?.finishTime && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={onUpdateFinish}
+                  className="h-8 px-2 py-1"
+                >
+                  <CheckCircle className="mr-1 h-4 w-4" />
+                  {isMissedTurn ? "Record Turn & Finish" : "Record Finish"}
+                </Button>
+              )}
+          </div>
         </div>
       </CardHeader>
       <CardContent className="pb-2">
@@ -90,33 +142,6 @@ export function PaceOfPlayCard({
           </div>
         </div>
       </CardContent>
-      <CardFooter>
-        <div className="flex w-full gap-2">
-          {showTurnButton && onUpdateTurn && (
-            <Button
-              variant="outline"
-              className="flex-1"
-              onClick={() => onUpdateTurn(timeBlock.id)}
-              disabled={paceOfPlay?.turn9Time !== null}
-            >
-              Record Turn
-            </Button>
-          )}
-          {showFinishButton && onUpdateFinish && (
-            <Button
-              variant="outline"
-              className="flex-1"
-              onClick={() => onUpdateFinish(timeBlock.id)}
-              disabled={
-                paceOfPlay?.finishTime !== null ||
-                paceOfPlay?.turn9Time === null
-              }
-            >
-              Record Finish
-            </Button>
-          )}
-        </div>
-      </CardFooter>
     </Card>
   );
 }
