@@ -11,16 +11,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "~/components/ui/dialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "~/components/ui/alert-dialog";
 import type { Member } from "~/app/types/MemberTypes";
 import {
   createMember,
@@ -32,6 +22,7 @@ import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { AddMemberForm } from "./AddMemberForm";
 import { EditMemberForm } from "./EditMemberForm";
+import { DeleteConfirmationDialog } from "~/components/ui/delete-confirmation-dialog";
 
 interface MembersHandlerProps {
   initialMembers: Member[];
@@ -133,7 +124,6 @@ export function MembersHandler({ initialMembers }: MembersHandlerProps) {
           value={searchQuery}
           onChange={setSearchQuery}
           placeholder="Search members by name or number..."
-          
         />
 
         <MembersTable
@@ -170,34 +160,25 @@ export function MembersHandler({ initialMembers }: MembersHandlerProps) {
               member={selectedMember}
               onSubmit={handleUpdateMember}
               onCancel={resetForm}
-              
             />
           ) : (
-            <AddMemberForm onSubmit={handleCreateMember} onCancel={resetForm}  />
+            <AddMemberForm onSubmit={handleCreateMember} onCancel={resetForm} />
           )}
         </DialogContent>
       </Dialog>
 
-      <AlertDialog
+      <DeleteConfirmationDialog
         open={isDeleteDialogOpen}
         onOpenChange={setIsDeleteDialogOpen}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the
-              member and all associated data.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteMember}>
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        onConfirm={handleDeleteMember}
+        title="Delete Member"
+        description="This action cannot be undone and will permanently delete this member and all associated data."
+        itemName={
+          selectedMember
+            ? `${selectedMember.firstName} ${selectedMember.lastName}`
+            : undefined
+        }
+      />
     </div>
   );
 }

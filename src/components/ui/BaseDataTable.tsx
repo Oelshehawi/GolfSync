@@ -18,6 +18,7 @@ import {
 } from "~/components/ui/dropdown-menu";
 import { MoreHorizontal } from "lucide-react";
 import { SearchBar } from "~/components/ui/search-bar";
+import { Checkbox } from "~/components/ui/checkbox";
 
 export interface BaseDataItem {
   id: number;
@@ -49,6 +50,9 @@ interface BaseDataTableProps<T extends BaseDataItem> {
   totalPages?: number;
   onPageChange?: (page: number) => void;
   filterFunction?: (item: T, searchTerm: string) => boolean;
+  onRowSelection?: (selectedIds: number[]) => void;
+  selectedRows?: number[];
+  showSelection?: boolean;
 }
 
 export function BaseDataTable<T extends BaseDataItem>({
@@ -63,6 +67,9 @@ export function BaseDataTable<T extends BaseDataItem>({
   totalPages = 1,
   onPageChange,
   filterFunction,
+  onRowSelection,
+  selectedRows = [],
+  showSelection = false,
 }: BaseDataTableProps<T>) {
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -82,6 +89,26 @@ export function BaseDataTable<T extends BaseDataItem>({
     if (onSearch) {
       onSearch(value);
     }
+  };
+
+  const handleRowSelect = (id: number) => {
+    if (!onRowSelection) return;
+
+    const newSelectedRows = selectedRows.includes(id)
+      ? selectedRows.filter((rowId) => rowId !== id)
+      : [...selectedRows, id];
+
+    onRowSelection(newSelectedRows);
+  };
+
+  const handleSelectAll = () => {
+    if (!onRowSelection) return;
+
+    const allIds = filteredData.map((item) => item.id);
+    const newSelectedRows =
+      selectedRows.length === filteredData.length ? [] : allIds;
+
+    onRowSelection(newSelectedRows);
   };
 
   const renderPagination = () => {
@@ -130,6 +157,14 @@ export function BaseDataTable<T extends BaseDataItem>({
         <Table>
           <TableHeader>
             <TableRow>
+              {showSelection && (
+                <TableHead className="w-[50px]">
+                  <Checkbox
+                    checked={selectedRows.length === filteredData.length}
+                    onCheckedChange={handleSelectAll}
+                  />
+                </TableHead>
+              )}
               {columns.map((column, index) => (
                 <TableHead key={index}>{column.header}</TableHead>
               ))}
@@ -143,7 +178,9 @@ export function BaseDataTable<T extends BaseDataItem>({
               <TableRow>
                 <TableCell
                   colSpan={
-                    columns.length + (actions && actions.length > 0 ? 1 : 0)
+                    columns.length +
+                    (actions && actions.length > 0 ? 1 : 0) +
+                    (showSelection ? 1 : 0)
                   }
                   className="h-24 text-center"
                 >
@@ -153,6 +190,14 @@ export function BaseDataTable<T extends BaseDataItem>({
             ) : (
               filteredData.map((item) => (
                 <TableRow key={item.id}>
+                  {showSelection && (
+                    <TableCell>
+                      <Checkbox
+                        checked={selectedRows.includes(item.id)}
+                        onCheckedChange={() => handleRowSelect(item.id)}
+                      />
+                    </TableCell>
+                  )}
                   {columns.map((column, index) => (
                     <TableCell key={index}>
                       {column.cell
@@ -164,7 +209,7 @@ export function BaseDataTable<T extends BaseDataItem>({
                   ))}
                   {actions && actions.length > 0 && (
                     <TableCell>
-                      <DropdownMenu >
+                      <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button variant="ghost" size="icon">
                             <MoreHorizontal className="h-4 w-4" />

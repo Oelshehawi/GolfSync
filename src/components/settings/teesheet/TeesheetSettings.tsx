@@ -8,7 +8,7 @@ import {
   CardTitle,
   CardContent,
 } from "~/components/ui/card";
-import { Calendar, Plus, Shield, Edit, Trash } from "lucide-react";
+import { Calendar, Plus, Shield } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { TeesheetConfigDialog } from "./TeesheetConfigDialog";
 import type {
@@ -26,16 +26,6 @@ import {
 } from "~/server/settings/actions";
 import toast from "react-hot-toast";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "~/components/ui/alert-dialog";
-import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
@@ -43,6 +33,7 @@ import {
 } from "~/components/ui/tooltip";
 import { Badge } from "~/components/ui/badge";
 import { formatTimeStringTo12Hour } from "~/lib/utils";
+import { DeleteConfirmationDialog } from "~/components/ui/delete-confirmation-dialog";
 
 interface TeesheetSettingsProps {
   initialConfigs: TeesheetConfig[];
@@ -58,22 +49,34 @@ export function TeesheetSettings({
     TeesheetConfig | undefined
   >(undefined);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [deleteConfig, setDeleteConfig] = useState<TeesheetConfig | undefined>(
-    undefined,
-  );
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [configToDelete, setConfigToDelete] = useState<
+    TeesheetConfig | undefined
+  >(undefined);
 
   const handleCloseDialog = () => {
-    // Clear selected config first
     setSelectedConfig(undefined);
-    // Then close dialog
     setIsDialogOpen(false);
   };
 
   const handleOpenDialog = (config?: TeesheetConfig) => {
-    // Set selected config first (undefined for create, config for edit)
     setSelectedConfig(config);
-    // Then open dialog
     setIsDialogOpen(true);
+  };
+
+  const handleDelete = async () => {
+    if (!configToDelete) return;
+
+    try {
+      await deleteTeesheetConfig(configToDelete.id);
+      setConfigs(configs.filter((c) => c.id !== configToDelete.id));
+      toast.success("Configuration deleted successfully");
+      setIsDeleteDialogOpen(false);
+      setConfigToDelete(undefined);
+    } catch (error) {
+      toast.error("Failed to delete configuration");
+      console.error(error);
+    }
   };
 
   const handleSaveConfig = async (configInput: TeesheetConfigInput) => {
@@ -193,15 +196,6 @@ export function TeesheetSettings({
     }
   };
 
-  const handleDelete = async (configId: number) => {
-    try {
-      await deleteTeesheetConfig(configId);
-      toast.success("Configuration deleted successfully");
-    } catch (error) {
-      toast.error("Failed to delete configuration");
-    }
-  };
-
   return (
     <>
       <Card className="rounded-lg">
@@ -276,7 +270,11 @@ export function TeesheetSettings({
                       <Button
                         variant="destructive"
                         size="sm"
-                        onClick={() => handleDelete(config.id)}
+                        onClick={() => {
+                          setConfigToDelete(config);
+                          setIsDeleteDialogOpen(true);
+                        }}
+                        disabled={config.isSystemConfig}
                       >
                         Delete
                       </Button>
@@ -326,28 +324,14 @@ export function TeesheetSettings({
         templates={templates}
       />
 
-      <AlertDialog
-        open={!!deleteConfig}
-        onOpenChange={() => setDeleteConfig(undefined)}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will permanently delete the "{deleteConfig?.name}"
-              configuration. This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => handleDelete(deleteConfig?.id || 0)}
-            >
-              Delete Configuration
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DeleteConfirmationDialog
+        open={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+        onConfirm={handleDelete}
+        title="Delete Configuration"
+        description="This action cannot be undone and will permanently delete this configuration."
+        itemName={configToDelete?.name}
+      />
     </>
   );
 }

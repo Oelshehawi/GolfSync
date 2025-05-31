@@ -11,19 +11,10 @@ import {
   searchGuestsAction,
 } from "~/server/guests/actions";
 import toast from "react-hot-toast";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "~/components/ui/alert-dialog";
 import { Plus } from "lucide-react";
 import { SearchBar } from "~/components/ui/search-bar";
 import { BaseGuest } from "~/app/types/GuestTypes";
+import { DeleteConfirmationDialog } from "~/components/ui/delete-confirmation-dialog";
 
 interface GuestsHandlerProps {
   initialGuests: BaseGuest[];
@@ -169,7 +160,6 @@ export function GuestsHandler({ initialGuests }: GuestsHandlerProps) {
             value={searchQuery}
             onChange={setSearchQuery}
             placeholder="Search guests by name or email..."
-            
           />
         </div>
 
@@ -186,7 +176,6 @@ export function GuestsHandler({ initialGuests }: GuestsHandlerProps) {
           currentPage={currentPage}
           totalPages={totalPages}
           onPageChange={setCurrentPage}
-          
         />
       </div>
 
@@ -194,7 +183,6 @@ export function GuestsHandler({ initialGuests }: GuestsHandlerProps) {
         open={isAddDialogOpen}
         onOpenChange={setIsAddDialogOpen}
         onSubmit={handleAddGuest}
-        
       />
 
       <EditGuestDialog
@@ -202,29 +190,20 @@ export function GuestsHandler({ initialGuests }: GuestsHandlerProps) {
         open={isEditDialogOpen}
         onOpenChange={setIsEditDialogOpen}
         onSave={handleEditGuest}
-        
       />
 
-      <AlertDialog
+      <DeleteConfirmationDialog
         open={isDeleteDialogOpen}
         onOpenChange={setIsDeleteDialogOpen}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the
-              guest and all associated data.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteGuest}>
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        onConfirm={handleDeleteGuest}
+        title="Delete Guest"
+        description="This action cannot be undone and will permanently delete this guest and all associated data."
+        itemName={
+          selectedGuest
+            ? `${selectedGuest.firstName} ${selectedGuest.lastName}`
+            : undefined
+        }
+      />
     </div>
   );
 }

@@ -2,22 +2,13 @@
 
 import { Ban, Plus } from "lucide-react";
 import { Button } from "~/components/ui/button";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "~/components/ui/alert-dialog";
 import { useState, useEffect } from "react";
 import { RestrictionCard } from "./RestrictionCard";
 import { TimeblockRestrictionDialog } from "./TimeblockRestrictionDialog";
 import { TimeblockRestriction } from "./TimeblockRestrictionsSettings";
 import toast from "react-hot-toast";
 import { deleteTimeblockRestriction } from "~/server/timeblock-restrictions/actions";
+import { DeleteConfirmationDialog } from "~/components/ui/delete-confirmation-dialog";
 
 interface GuestRestrictionsProps {
   restrictions: TimeblockRestriction[];
@@ -40,7 +31,7 @@ export function GuestRestrictions({
   const [selectedRestriction, setSelectedRestriction] = useState<
     TimeblockRestriction | undefined
   >();
-  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [restrictionToDelete, setRestrictionToDelete] = useState<
     TimeblockRestriction | undefined
   >();
@@ -69,7 +60,7 @@ export function GuestRestrictions({
 
   const handleDeleteClick = (restriction: TimeblockRestriction) => {
     setRestrictionToDelete(restriction);
-    setDeleteConfirmOpen(true);
+    setIsDeleteDialogOpen(true);
   };
 
   const handleDeleteConfirm = async () => {
@@ -91,7 +82,7 @@ export function GuestRestrictions({
       console.error("Error deleting restriction:", error);
       toast.error("Failed to delete restriction");
     } finally {
-      setDeleteConfirmOpen(false);
+      setIsDeleteDialogOpen(false);
       setRestrictionToDelete(undefined);
     }
   };
@@ -146,23 +137,14 @@ export function GuestRestrictions({
       />
 
       {/* Delete Confirmation */}
-      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Restriction</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete "{restrictionToDelete?.name}"?
-              This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteConfirm}>
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DeleteConfirmationDialog
+        open={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+        onConfirm={handleDeleteConfirm}
+        title="Delete Guest Restriction"
+        description="This action cannot be undone and will permanently delete this restriction."
+        itemName={restrictionToDelete?.name}
+      />
     </>
   );
 }

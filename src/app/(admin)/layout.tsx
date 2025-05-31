@@ -26,7 +26,6 @@ export default async function AdminLayout({
     organizationId: session.orgId,
   });
 
-
   return (
     <div className={GeistSans.variable}>
       <div className="min-h-screen bg-[var(--org-secondary)]">
@@ -34,9 +33,7 @@ export default async function AdminLayout({
           logoUrl={organization.imageUrl}
           organizationName={organization.name}
         />
-        <main className="container mx-auto px-4 py-8">
-          {children}
-        </main>
+        <main className="container mx-auto px-4 py-8">{children}</main>
       </div>
     </div>
   );

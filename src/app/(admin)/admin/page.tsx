@@ -7,7 +7,6 @@ import { TeesheetHeader } from "~/components/teesheet/TeesheetHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { getTeesheetConfigs } from "~/server/settings/data";
 import { formatCalendarDate, preserveDate } from "~/lib/utils";
-import { parse } from "date-fns";
 import { getAllPaceOfPlayForDate } from "~/server/pace-of-play/actions";
 
 interface PageProps {
@@ -72,7 +71,7 @@ export default async function AdminPage({ searchParams }: PageProps) {
     const paceOfPlayData = await getAllPaceOfPlayForDate(date);
 
     if (!Array.isArray(configsResult)) {
-      throw new Error(configsResult.error || "Failed to load configurations");
+      throw new Error("Failed to load configurations");
     }
 
     // Pass the date string to the client component

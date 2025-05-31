@@ -25,6 +25,9 @@ import type {
   PaceOfPlayRecord,
   PaceOfPlayStatus as PaceOfPlayStatusType,
 } from "~/server/pace-of-play/data";
+import { QuickCartAssignment } from "./QuickCartAssignment";
+import { quickAssignPowerCart } from "~/server/charges/actions";
+import { type PowerCartAssignmentData } from "~/app/types/ChargeTypes";
 
 interface TimeBlockProps {
   timeBlock: TimeBlockWithMembers;
@@ -58,6 +61,7 @@ export function TimeBlock({
   const formattedTime = formatDisplayTime(timeBlock.startTime);
   const [isEditingNotes, setIsEditingNotes] = useState(false);
   const [editedNotes, setEditedNotes] = useState(timeBlock.notes || "");
+  const [isExpanded, setIsExpanded] = useState(false);
 
   // Calculate members, guests, and fills
   const members = timeBlock.members || [];
@@ -247,6 +251,25 @@ export function TimeBlock({
     }
   };
 
+  const handleCartAssign = async (data: PowerCartAssignmentData) => {
+    try {
+      await quickAssignPowerCart(data);
+    } catch (error) {
+      console.error("Failed to assign cart:", error);
+    }
+  };
+
+  // Get all members except the one being assigned a cart
+  const getOtherMembers = (currentMemberId: number) => {
+    return timeBlock.members
+      .filter((m) => m.id !== currentMemberId)
+      .map((m) => ({
+        id: m.id,
+        firstName: m.firstName,
+        lastName: m.lastName,
+      }));
+  };
+
   // Vertical view layout (for table row)
   if (viewMode === "vertical") {
     return (
@@ -326,6 +349,11 @@ export function TimeBlock({
                       </div>
                     </div>
                     <div className="flex items-center space-x-1">
+                      <QuickCartAssignment
+                        memberId={memberData.id}
+                        onAssign={handleCartAssign}
+                        otherMembers={getOtherMembers(memberData.id)}
+                      />
                       <Button
                         variant="ghost"
                         size="sm"
@@ -699,6 +727,11 @@ export function TimeBlock({
                       )}
                     </div>
                     <div className="flex">
+                      <QuickCartAssignment
+                        memberId={memberData.id}
+                        onAssign={handleCartAssign}
+                        otherMembers={getOtherMembers(memberData.id)}
+                      />
                       <Button
                         variant="ghost"
                         size="sm"

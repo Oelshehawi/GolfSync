@@ -17,6 +17,7 @@ import {
   serial,
   pgTable,
   jsonb,
+  pgEnum,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { FillTypes, type FillType } from "~/app/types/TeeSheetTypes";
@@ -72,6 +73,18 @@ export const members = createTable(
 export const membersRelations = relations(members, ({ many }) => ({
   timeBlockMembers: many(timeBlockMembers),
   eventRegistrations: many(eventRegistrations),
+  powerCartCharges: many(powerCartCharges, {
+    relationName: "memberPowerCartCharges",
+  }),
+  splitPowerCartCharges: many(powerCartCharges, {
+    relationName: "memberSplitCharges",
+  }),
+  generalCharges: many(generalCharges, {
+    relationName: "memberGeneralCharges",
+  }),
+  sponsoredCharges: many(generalCharges, {
+    relationName: "memberSponsoredCharges",
+  }),
 }));
 
 // Teesheet configurations
@@ -356,6 +369,127 @@ export const guests = createTable(
     index("guests_name_idx").on(table.firstName, table.lastName),
   ],
 );
+
+// Payment Method enum
+export const PaymentMethod = pgEnum("payment_method", [
+  "VISA",
+  "ACCOUNT",
+  "MASTERCARD",
+]);
+
+// Power Cart Charges table
+export const powerCartCharges = createTable(
+  "power_cart_charges",
+  {
+    id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+    memberId: integer("member_id").references(() => members.id, {
+      onDelete: "set null",
+    }),
+    guestId: integer("guest_id").references(() => guests.id, {
+      onDelete: "set null",
+    }),
+    date: date("date").notNull(),
+    numHoles: integer("num_holes").notNull(), // 9 or 18
+    isSplit: boolean("is_split").notNull().default(false),
+    splitWithMemberId: integer("split_with_member_id").references(
+      () => members.id,
+      { onDelete: "set null" },
+    ),
+    isMedical: boolean("is_medical").notNull().default(false),
+    charged: boolean("charged").notNull().default(false),
+    staffInitials: varchar("staff_initials", { length: 10 }).notNull(),
+    clerkOrgId: varchar("clerk_org_id", { length: 50 }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).$onUpdate(
+      () => new Date(),
+    ),
+  },
+  (table) => [
+    index("power_cart_charges_org_id_idx").on(table.clerkOrgId),
+    index("power_cart_charges_date_idx").on(table.date),
+    index("power_cart_charges_member_id_idx").on(table.memberId),
+    index("power_cart_charges_guest_id_idx").on(table.guestId),
+  ],
+);
+
+// General Charges table
+export const generalCharges = createTable(
+  "general_charges",
+  {
+    id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+    memberId: integer("member_id").references(() => members.id, {
+      onDelete: "cascade",
+    }),
+    guestId: integer("guest_id").references(() => guests.id, {
+      onDelete: "cascade",
+    }),
+    sponsorMemberId: integer("sponsor_member_id").references(() => members.id, {
+      onDelete: "cascade",
+    }), // Member who brought guest or is responsible for charge
+    date: date("date").notNull(),
+    chargeType: varchar("charge_type", { length: 20 }).notNull(), // 'GUEST_FEE', 'MEMBER_FEE', etc
+    paymentMethod: PaymentMethod("payment_method"),
+    charged: boolean("charged").notNull().default(false),
+    staffInitials: varchar("staff_initials", { length: 10 }).notNull(),
+    clerkOrgId: varchar("clerk_org_id", { length: 50 }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).$onUpdate(
+      () => new Date(),
+    ),
+  },
+  (table) => [
+    index("general_charges_org_id_idx").on(table.clerkOrgId),
+    index("general_charges_date_idx").on(table.date),
+    index("general_charges_member_id_idx").on(table.memberId),
+    index("general_charges_guest_id_idx").on(table.guestId),
+    index("general_charges_sponsor_member_id_idx").on(table.sponsorMemberId),
+    index("general_charges_charge_type_idx").on(table.chargeType),
+  ],
+);
+
+// Relations for charges
+export const powerCartChargesRelations = relations(
+  powerCartCharges,
+  ({ one }) => ({
+    member: one(members, {
+      fields: [powerCartCharges.memberId],
+      references: [members.id],
+    }),
+    guest: one(guests, {
+      fields: [powerCartCharges.guestId],
+      references: [guests.id],
+    }),
+    splitWithMember: one(members, {
+      fields: [powerCartCharges.splitWithMemberId],
+      references: [members.id],
+    }),
+  }),
+);
+
+export const generalChargesRelations = relations(generalCharges, ({ one }) => ({
+  member: one(members, {
+    fields: [generalCharges.memberId],
+    references: [members.id],
+  }),
+  guest: one(guests, {
+    fields: [generalCharges.guestId],
+    references: [guests.id],
+  }),
+  sponsorMember: one(members, {
+    fields: [generalCharges.sponsorMemberId],
+    references: [members.id],
+  }),
+}));
+
+// Type exports for charges
+export type PowerCartCharge = typeof powerCartCharges.$inferSelect;
+export type PowerCartChargeInsert = typeof powerCartCharges.$inferInsert;
+export type GeneralCharge = typeof generalCharges.$inferSelect;
+export type GeneralChargeInsert = typeof generalCharges.$inferInsert;
 
 // Time block guests (join table)
 export const timeBlockGuests = createTable(
