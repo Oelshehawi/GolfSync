@@ -2,7 +2,7 @@ import { Metadata } from "next";
 import { Card, CardContent, CardHeader } from "~/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { PendingChargesList } from "~/components/charges/PendingChargesList";
-import { ChargeHistoryTab } from "~/components/charges/ChargeHistoryTab";
+import { ChargeHistoryList } from "~/components/charges/ChargeHistoryList";
 import {
   getPendingPowerCartCharges,
   getPendingGeneralCharges,
@@ -85,7 +85,7 @@ export default async function ChargesDashboard({ searchParams }: PageProps) {
         </TabsContent>
 
         <TabsContent value="history" className="space-y-4">
-          <ChargeHistoryTab
+          <ChargeHistoryList
             initialPowerCartCharges={chargeHistory.powerCartCharges}
             initialGeneralCharges={chargeHistory.generalCharges}
             initialPagination={chargeHistory.pagination}

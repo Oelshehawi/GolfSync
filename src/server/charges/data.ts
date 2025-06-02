@@ -36,6 +36,9 @@ export async function getPendingPowerCartCharges(date?: Date) {
       date: powerCartCharges.date,
       isMedical: powerCartCharges.isMedical,
       staffInitials: powerCartCharges.staffInitials,
+      charged: powerCartCharges.charged,
+      numHoles: powerCartCharges.numHoles,
+      isSplit: powerCartCharges.isSplit,
       member: {
         id: memberTable.id,
         firstName: memberTable.firstName,
@@ -88,6 +91,7 @@ export async function getPendingGeneralCharges(date?: Date) {
       chargeType: generalCharges.chargeType,
       paymentMethod: generalCharges.paymentMethod,
       staffInitials: generalCharges.staffInitials,
+      charged: generalCharges.charged,
       member: {
         id: memberTable.id,
         firstName: memberTable.firstName,
@@ -293,21 +297,67 @@ export async function getFilteredCharges(filters: ChargeFilters) {
   const orgId = await getOrganizationId();
   if (!orgId) throw new Error("Organization not found");
 
-  const pageSize = filters.pageSize || 10;
-  const offset = ((filters.page || 1) - 1) * pageSize;
+  const { page = 1, pageSize = 10 } = filters;
+  const offset = (page - 1) * pageSize;
 
-  // Base power cart query
+  const memberTable = members;
+  const splitMemberTable = alias(members, "split_members");
+  const sponsorMemberTable = alias(members, "sponsor_members");
+
+  // Create search conditions for each word in the search term
+  const searchTerms = filters.search?.split(/\s+/).filter(Boolean) || [];
+  const createSearchConditions = (terms: string[]) => {
+    if (terms.length === 0) return undefined;
+
+    return and(
+      ...terms.map((term) =>
+        or(
+          ilike(memberTable.firstName, `%${term}%`),
+          ilike(memberTable.lastName, `%${term}%`),
+          ilike(guests.firstName, `%${term}%`),
+          ilike(guests.lastName, `%${term}%`),
+          sql<boolean>`split_members.first_name ILIKE ${`%${term}%`}`,
+          sql<boolean>`split_members.last_name ILIKE ${`%${term}%`}`,
+          ilike(powerCartCharges.staffInitials, `%${term}%`),
+        ),
+      ),
+    );
+  };
+
+  const createGeneralSearchConditions = (terms: string[]) => {
+    if (terms.length === 0) return undefined;
+
+    return and(
+      ...terms.map((term) =>
+        or(
+          ilike(memberTable.firstName, `%${term}%`),
+          ilike(memberTable.lastName, `%${term}%`),
+          ilike(guests.firstName, `%${term}%`),
+          ilike(guests.lastName, `%${term}%`),
+          sql<boolean>`sponsor_members.first_name ILIKE ${`%${term}%`}`,
+          sql<boolean>`sponsor_members.last_name ILIKE ${`%${term}%`}`,
+          ilike(generalCharges.staffInitials, `%${term}%`),
+          ilike(generalCharges.chargeType, `%${term}%`),
+        ),
+      ),
+    );
+  };
+
+  // Power cart charges query
   const powerCartQuery = db
     .select({
       id: powerCartCharges.id,
       date: powerCartCharges.date,
       isMedical: powerCartCharges.isMedical,
       staffInitials: powerCartCharges.staffInitials,
+      charged: powerCartCharges.charged,
+      numHoles: powerCartCharges.numHoles,
+      isSplit: powerCartCharges.isSplit,
       member: {
-        id: members.id,
-        firstName: members.firstName,
-        lastName: members.lastName,
-        memberNumber: members.memberNumber,
+        id: memberTable.id,
+        firstName: memberTable.firstName,
+        lastName: memberTable.lastName,
+        memberNumber: memberTable.memberNumber,
       },
       guest: {
         id: guests.id,
@@ -322,11 +372,11 @@ export async function getFilteredCharges(filters: ChargeFilters) {
       },
     })
     .from(powerCartCharges)
-    .leftJoin(members, eq(powerCartCharges.memberId, members.id))
+    .leftJoin(memberTable, eq(powerCartCharges.memberId, memberTable.id))
     .leftJoin(guests, eq(powerCartCharges.guestId, guests.id))
     .leftJoin(
-      alias(members, "split_members"),
-      eq(powerCartCharges.splitWithMemberId, sql`split_members.id`),
+      splitMemberTable,
+      eq(powerCartCharges.splitWithMemberId, splitMemberTable.id),
     )
     .where(
       and(
@@ -338,28 +388,14 @@ export async function getFilteredCharges(filters: ChargeFilters) {
         filters.endDate
           ? lte(powerCartCharges.date, formatCalendarDate(filters.endDate))
           : undefined,
-        filters.search
-          ? or(
-              // Member name search
-              ilike(members.firstName, `%${filters.search}%`),
-              ilike(members.lastName, `%${filters.search}%`),
-              // Guest name search
-              ilike(guests.firstName, `%${filters.search}%`),
-              ilike(guests.lastName, `%${filters.search}%`),
-              // Split member name search
-              sql<boolean>`split_members.first_name ILIKE ${`%${filters.search}%`}`,
-              sql<boolean>`split_members.last_name ILIKE ${`%${filters.search}%`}`,
-              // Staff initials search
-              ilike(powerCartCharges.staffInitials, `%${filters.search}%`),
-            )
-          : undefined,
+        createSearchConditions(searchTerms),
       ),
     )
     .orderBy(desc(powerCartCharges.date))
     .limit(pageSize)
     .offset(offset);
 
-  // Base general charges query
+  // General charges query
   const generalQuery = db
     .select({
       id: generalCharges.id,
@@ -367,11 +403,12 @@ export async function getFilteredCharges(filters: ChargeFilters) {
       chargeType: generalCharges.chargeType,
       paymentMethod: generalCharges.paymentMethod,
       staffInitials: generalCharges.staffInitials,
+      charged: generalCharges.charged,
       member: {
-        id: members.id,
-        firstName: members.firstName,
-        lastName: members.lastName,
-        memberNumber: members.memberNumber,
+        id: memberTable.id,
+        firstName: memberTable.firstName,
+        lastName: memberTable.lastName,
+        memberNumber: memberTable.memberNumber,
       },
       guest: {
         id: guests.id,
@@ -386,11 +423,11 @@ export async function getFilteredCharges(filters: ChargeFilters) {
       },
     })
     .from(generalCharges)
-    .leftJoin(members, eq(generalCharges.memberId, members.id))
+    .leftJoin(memberTable, eq(generalCharges.memberId, memberTable.id))
     .leftJoin(guests, eq(generalCharges.guestId, guests.id))
     .leftJoin(
-      alias(members, "sponsor_members"),
-      eq(generalCharges.sponsorMemberId, sql`sponsor_members.id`),
+      sponsorMemberTable,
+      eq(generalCharges.sponsorMemberId, sponsorMemberTable.id),
     )
     .where(
       and(
@@ -402,22 +439,7 @@ export async function getFilteredCharges(filters: ChargeFilters) {
         filters.endDate
           ? lte(generalCharges.date, formatCalendarDate(filters.endDate))
           : undefined,
-        filters.search
-          ? or(
-              // Member name search
-              ilike(members.firstName, `%${filters.search}%`),
-              ilike(members.lastName, `%${filters.search}%`),
-              // Guest name search
-              ilike(guests.firstName, `%${filters.search}%`),
-              ilike(guests.lastName, `%${filters.search}%`),
-              // Sponsor member name search
-              sql<boolean>`sponsor_members.first_name ILIKE ${`%${filters.search}%`}`,
-              sql<boolean>`sponsor_members.last_name ILIKE ${`%${filters.search}%`}`,
-              // Staff initials and charge type search
-              ilike(generalCharges.staffInitials, `%${filters.search}%`),
-              ilike(generalCharges.chargeType, `%${filters.search}%`),
-            )
-          : undefined,
+        createGeneralSearchConditions(searchTerms),
       ),
     )
     .orderBy(desc(generalCharges.date))

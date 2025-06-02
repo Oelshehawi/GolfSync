@@ -375,6 +375,8 @@ export const PaymentMethod = pgEnum("payment_method", [
   "VISA",
   "ACCOUNT",
   "MASTERCARD",
+  "DEBIT",
+  "OTHER",
 ]);
 
 // Power Cart Charges table

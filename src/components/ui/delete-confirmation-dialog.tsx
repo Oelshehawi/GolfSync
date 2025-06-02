@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -15,7 +16,7 @@ interface DeleteConfirmationDialogProps {
   onConfirm: () => void;
   title?: string;
   description?: string;
-  itemName?: string;
+  itemName?: ReactNode;
 }
 
 export function DeleteConfirmationDialog({
@@ -32,9 +33,14 @@ export function DeleteConfirmationDialog({
         <AlertDialogHeader>
           <AlertDialogTitle>{title}</AlertDialogTitle>
           <AlertDialogDescription>
-            {itemName
-              ? `Are you sure you want to delete "${itemName}"? ${description}`
-              : description}
+            {itemName ? (
+              <>
+                Are you sure you want to delete &quot;{itemName}&quot;?{" "}
+                {description}
+              </>
+            ) : (
+              description
+            )}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

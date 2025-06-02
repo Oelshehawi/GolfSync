@@ -11,6 +11,7 @@ import {
   guests,
   teesheets,
   timeBlockFills,
+  generalCharges,
 } from "~/server/db/schema";
 import { and, eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
@@ -180,6 +181,32 @@ export async function checkInGuest(
   try {
     const clerkOrgId = await getOrganizationId();
 
+    // Get guest and time block details
+    const guestDetails = await db.query.timeBlockGuests.findFirst({
+      where: and(
+        eq(timeBlockGuests.timeBlockId, timeBlockId),
+        eq(timeBlockGuests.guestId, guestId),
+        eq(timeBlockGuests.clerkOrgId, clerkOrgId),
+      ),
+      with: {
+        guest: true,
+        timeBlock: {
+          with: {
+            teesheet: true,
+          },
+        },
+        invitedByMember: true,
+      },
+    });
+
+    if (!guestDetails) {
+      return {
+        success: false,
+        error: "Guest not found in time block",
+      };
+    }
+
+    // Update check-in status
     const result = await db
       .update(timeBlockGuests)
       .set({
@@ -198,8 +225,21 @@ export async function checkInGuest(
     if (!result || result.length === 0) {
       return {
         success: false,
-        error: "Guest not found in time block",
+        error: "Failed to update guest check-in status",
       };
+    }
+
+    // If checking in (not out), create a general charge
+    if (isCheckedIn && guestDetails.guest && guestDetails.timeBlock?.teesheet) {
+      await db.insert(generalCharges).values({
+        guestId: guestId,
+        sponsorMemberId: guestDetails.invitedByMember?.id,
+        date: guestDetails.timeBlock.teesheet.date,
+        chargeType: "GUEST_FEE",
+        charged: false,
+        staffInitials: "AUTO", // Auto-generated charge
+        clerkOrgId,
+      });
     }
 
     revalidatePath(`/teesheet`);

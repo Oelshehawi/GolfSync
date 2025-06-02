@@ -3,7 +3,11 @@
 import { and, eq, sql } from "drizzle-orm";
 import { db } from "../db";
 import { getOrganizationId } from "~/lib/auth";
-import { powerCartCharges, generalCharges } from "../db/schema";
+import {
+  powerCartCharges,
+  generalCharges,
+  type PaymentMethod,
+} from "../db/schema";
 import { type PowerCartAssignmentData } from "~/app/types/ChargeTypes";
 import { revalidatePath } from "next/cache";
 import { formatCalendarDate } from "~/lib/utils";
@@ -46,13 +50,19 @@ export async function createGeneralCharge(data: any) {
 }
 
 // Complete power cart charge
-export async function completePowerCartCharge(id: number) {
+export async function completePowerCartCharge({
+  id,
+  staffInitials,
+}: {
+  id: number;
+  staffInitials: string;
+}) {
   const orgId = await getOrganizationId();
   if (!orgId) throw new Error("Organization not found");
 
   const charge = await db
     .update(powerCartCharges)
-    .set({ charged: true })
+    .set({ charged: true, staffInitials })
     .where(
       and(eq(powerCartCharges.id, id), eq(powerCartCharges.clerkOrgId, orgId)),
     )
@@ -63,13 +73,21 @@ export async function completePowerCartCharge(id: number) {
 }
 
 // Complete general charge
-export async function completeGeneralCharge(id: number) {
+export async function completeGeneralCharge({
+  id,
+  staffInitials,
+  paymentMethod,
+}: {
+  id: number;
+  staffInitials: string;
+  paymentMethod: (typeof PaymentMethod.enumValues)[number];
+}) {
   const orgId = await getOrganizationId();
   if (!orgId) throw new Error("Organization not found");
 
   const charge = await db
     .update(generalCharges)
-    .set({ charged: true })
+    .set({ charged: true, staffInitials, paymentMethod })
     .where(and(eq(generalCharges.id, id), eq(generalCharges.clerkOrgId, orgId)))
     .returning();
 
