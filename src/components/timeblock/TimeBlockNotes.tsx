@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Button } from "~/components/ui/button";
 import { Textarea } from "~/components/ui/textarea";
 import { Check, Edit, PlusCircle, Trash2 } from "lucide-react";
+import { DeleteConfirmationDialog } from "~/components/ui/delete-confirmation-dialog";
 
 // TimeBlock Note Editor component
 interface TimeBlockNoteEditorProps {
@@ -74,40 +75,52 @@ export function TimeBlockNote({
   timeBlockId,
   onSaveNotes,
 }: TimeBlockNoteProps) {
+  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
+
   if (!notes || notes.trim() === "") return null;
 
-  const handleDelete = async (e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handleDelete = async () => {
     await onSaveNotes(timeBlockId, "");
+    setShowDeleteConfirmation(false);
   };
 
   return (
-    <div className="group border-l-4 border-[var(--org-primary)] bg-[var(--org-primary-light)] px-4 py-3 transition-colors hover:bg-[var(--org-primary-lighter)]">
-      <div className="flex items-center justify-between">
-        <div className="flex-1 text-sm text-gray-700">{notes}</div>
-        <div className="flex space-x-1">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleDelete}
-            className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 hover:bg-[var(--org-primary-light)] hover:text-red-500"
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={(e) => {
-              e.stopPropagation();
-              onEditClick();
-            }}
-            className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 hover:bg-[var(--org-primary-light)]"
-          >
-            <Edit className="h-4 w-4" />
-          </Button>
+    <>
+      <div className="group border-l-4 border-[var(--org-primary)] bg-[var(--org-primary-light)] px-4 py-3 transition-colors hover:bg-[var(--org-primary-lighter)]">
+        <div className="flex items-center justify-between">
+          <div className="flex-1 text-sm text-gray-700">{notes}</div>
+          <div className="flex space-x-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowDeleteConfirmation(true)}
+              className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 hover:bg-[var(--org-primary-light)] hover:text-red-500"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                onEditClick();
+              }}
+              className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 hover:bg-[var(--org-primary-light)]"
+            >
+              <Edit className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       </div>
-    </div>
+
+      <DeleteConfirmationDialog
+        open={showDeleteConfirmation}
+        onOpenChange={setShowDeleteConfirmation}
+        onConfirm={handleDelete}
+        title="Delete Note"
+        description="Are you sure you want to delete this note? This action cannot be undone."
+      />
+    </>
   );
 }
 
