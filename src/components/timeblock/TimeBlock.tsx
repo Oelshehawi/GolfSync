@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useState, useEffect } from "react";
 import type { TimeBlockWithMembers } from "~/app/types/TeeSheetTypes";
 import { Button } from "~/components/ui/button";
@@ -8,17 +7,12 @@ import {
   X,
   UserCheck,
   UserX,
-  Users,
-  Edit,
-  Check,
-  Activity,
+
   UserPlus,
 } from "lucide-react";
 import { toast } from "react-hot-toast";
-import { Textarea } from "~/components/ui/textarea";
 import { RestrictionViolation } from "~/app/types/RestrictionTypes";
 import { formatDisplayTime, getMemberClassStyling } from "~/lib/utils";
-import { PaceOfPlayStatus } from "~/components/pace-of-play/PaceOfPlayStatus";
 import { Badge } from "~/components/ui/badge";
 import { cn } from "~/lib/utils";
 import type {
@@ -158,33 +152,6 @@ export function TimeBlock({
     }
   };
 
-  const handleCheckInAll = async () => {
-    try {
-      if (onCheckInAll) {
-        await onCheckInAll();
-      } else {
-        toast.error("Check-in all function not provided");
-      }
-    } catch (error) {
-      toast.error("An unexpected error occurred");
-    }
-  };
-
-  const handleSaveNotes = async () => {
-    setIsEditingNotes(false);
-    try {
-      if (onSaveNotes) {
-        const success = await onSaveNotes(editedNotes);
-        if (success) {
-          setEditedNotes(timeBlock.notes || "");
-        }
-      } else {
-        toast.error("Save notes function not provided");
-      }
-    } catch (error) {
-      toast.error("An unexpected error occurred");
-    }
-  };
 
   // Get pace of play status class
   const getPaceOfPlayStatusClass = (status: string | null) => {

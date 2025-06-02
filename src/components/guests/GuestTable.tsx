@@ -150,10 +150,6 @@ export function GuestTable({
       header: "Phone",
       cell: (guest) => guest.phone || "-",
     },
-    {
-      header: "Handicap",
-      cell: (guest) => guest.handicap || "-",
-    },
   ];
 
   const actions: ActionDef<BaseGuest>[] = [];

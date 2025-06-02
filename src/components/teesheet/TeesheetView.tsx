@@ -351,43 +351,7 @@ export function TeesheetView({
 
               return (
                 <React.Fragment key={`block-${block.id}`}>
-                  <TimeBlockComponent
-                    key={`timeblock-${block.id}`}
-                    timeBlock={{
-                      ...block,
-                      startTime: block.startTime,
-                      endTime: block.endTime,
-                      date: block.date || teesheet.date,
-                      members: block.members || [],
-                      guests: block.guests || [],
-                      displayName:
-                        block.displayName || templateBlock?.displayName,
-                    }}
-                    onRestrictionViolation={handleRestrictionViolations}
-                    setPendingAction={setPendingAction}
-                    paceOfPlay={paceOfPlayMap.get(block.id) || null}
-                    showMemberClass={true}
-                    onRemoveMember={(memberId: number) =>
-                      handleRemoveMember(block.id, memberId)
-                    }
-                    onRemoveGuest={(guestId: number) =>
-                      handleRemoveGuest(block.id, guestId)
-                    }
-                    onRemoveFill={(fillId: number) =>
-                      handleRemoveFill(block.id, fillId)
-                    }
-                    onCheckInMember={(memberId: number, isCheckedIn: boolean) =>
-                      handleCheckInMember(block.id, memberId, isCheckedIn)
-                    }
-                    onCheckInGuest={(guestId: number, isCheckedIn: boolean) =>
-                      handleCheckInGuest(block.id, guestId, isCheckedIn)
-                    }
-                    onCheckInAll={() => handleCheckInAll(block.id)}
-                    onSaveNotes={(notes: string) =>
-                      handleSaveNotes(block.id, notes)
-                    }
-                  />
-
+                  
                   {/* Display existing notes if any */}
                   {block.notes && block.notes.trim() !== "" && (
                     <tr>
@@ -425,6 +389,43 @@ export function TeesheetView({
                       )}
                     </td>
                   </tr>
+                  <TimeBlockComponent
+                    key={`timeblock-${block.id}`}
+                    timeBlock={{
+                      ...block,
+                      startTime: block.startTime,
+                      endTime: block.endTime,
+                      date: block.date || teesheet.date,
+                      members: block.members || [],
+                      guests: block.guests || [],
+                      displayName:
+                        block.displayName || templateBlock?.displayName,
+                    }}
+                    onRestrictionViolation={handleRestrictionViolations}
+                    setPendingAction={setPendingAction}
+                    paceOfPlay={paceOfPlayMap.get(block.id) || null}
+                    showMemberClass={true}
+                    onRemoveMember={(memberId: number) =>
+                      handleRemoveMember(block.id, memberId)
+                    }
+                    onRemoveGuest={(guestId: number) =>
+                      handleRemoveGuest(block.id, guestId)
+                    }
+                    onRemoveFill={(fillId: number) =>
+                      handleRemoveFill(block.id, fillId)
+                    }
+                    onCheckInMember={(memberId: number, isCheckedIn: boolean) =>
+                      handleCheckInMember(block.id, memberId, isCheckedIn)
+                    }
+                    onCheckInGuest={(guestId: number, isCheckedIn: boolean) =>
+                      handleCheckInGuest(block.id, guestId, isCheckedIn)
+                    }
+                    onCheckInAll={() => handleCheckInAll(block.id)}
+                    onSaveNotes={(notes: string) =>
+                      handleSaveNotes(block.id, notes)
+                    }
+                  />
+
                 </React.Fragment>
               );
             })}

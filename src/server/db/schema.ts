@@ -356,7 +356,6 @@ export const guests = createTable(
     lastName: varchar("last_name", { length: 50 }).notNull(),
     email: varchar("email", { length: 100 }),
     phone: varchar("phone", { length: 20 }),
-    handicap: varchar("handicap", { length: 20 }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .default(sql`CURRENT_TIMESTAMP`)
       .notNull(),

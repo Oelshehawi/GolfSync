@@ -37,7 +37,6 @@ export async function createGuest(data: {
   lastName: string;
   email?: string;
   phone?: string;
-  handicap?: string;
 }) {
   const orgId = await getOrganizationId();
   if (!orgId) {
@@ -53,7 +52,6 @@ export async function createGuest(data: {
         lastName: data.lastName,
         email: data.email || null,
         phone: data.phone || null,
-        handicap: data.handicap || null,
       })
       .returning();
 
@@ -72,7 +70,6 @@ export async function updateGuest(
     lastName?: string;
     email?: string;
     phone?: string;
-    handicap?: string;
   },
 ) {
   const orgId = await getOrganizationId();

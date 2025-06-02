@@ -324,7 +324,6 @@ type Guest = {
   lastName: string;
   email: string | null;
   phone: string | null;
-  handicap: string | null;
 };
 
 type Member = {

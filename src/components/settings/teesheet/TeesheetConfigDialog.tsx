@@ -243,21 +243,23 @@ export function TeesheetConfigDialog({
       // Use the selected template if available, otherwise keep existing templateId
       formData.templateId = selectedTemplate?.id || formData.templateId;
       formData.blocks = selectedTemplate?.blocks || formData.blocks;
+      // Clear schedule rules for custom configs
+      formData.hasScheduleRules = false;
+      formData.rules = [];
     } else {
       // Clear template-related fields for regular configs
       formData.templateId = undefined;
       formData.blocks = undefined;
-    }
-
-    // Only include rules if hasScheduleRules is true
-    if (!formData.hasScheduleRules) {
-      formData.rules = [];
-    } else {
-      // Ensure each rule has priority set to 1 if not specified
-      formData.rules = formData.rules.map((rule) => ({
-        ...rule,
-        priority: rule.priority || 1,
-      }));
+      // Only include rules if hasScheduleRules is true for regular configs
+      if (!formData.hasScheduleRules) {
+        formData.rules = [];
+      } else {
+        // Ensure each rule has priority set to 1 if not specified
+        formData.rules = formData.rules.map((rule) => ({
+          ...rule,
+          priority: rule.priority || 1,
+        }));
+      }
     }
 
     onSave(formData as TeesheetConfigInput);
@@ -455,81 +457,87 @@ export function TeesheetConfigDialog({
                     </div>
                   )}
 
-                  {/* Schedule Rules Toggle */}
-                  <div className="flex items-center space-x-2">
-                    <Switch
-                      id="hasScheduleRules"
-                      checked={hasScheduleRules}
-                      onCheckedChange={(checked) =>
-                        setValue("hasScheduleRules", checked)
-                      }
-                    />
-                    <Label htmlFor="hasScheduleRules">
-                      Enable Schedule Rules
-                    </Label>
-                  </div>
+                  {/* Schedule Rules Toggle - Only show for Regular config */}
+                  {configType === ConfigTypes.REGULAR && (
+                    <>
+                      <div className="flex items-center space-x-2">
+                        <Switch
+                          id="hasScheduleRules"
+                          checked={hasScheduleRules}
+                          onCheckedChange={(checked) =>
+                            setValue("hasScheduleRules", checked)
+                          }
+                        />
+                        <Label htmlFor="hasScheduleRules">
+                          Enable Schedule Rules
+                        </Label>
+                      </div>
 
-                  {/* Schedule Rules */}
-                  {hasScheduleRules && (
-                    <div className="space-y-2">
-                      <Label>Schedule Rules</Label>
-                      <div className="space-y-4 rounded-lg border p-4">
+                      {/* Schedule Rules */}
+                      {hasScheduleRules && (
                         <div className="space-y-2">
-                          <Label>Days of Week</Label>
-                          <div className="grid grid-cols-4 gap-2">
-                            {[
-                              "Sun",
-                              "Mon",
-                              "Tue",
-                              "Wed",
-                              "Thu",
-                              "Fri",
-                              "Sat",
-                            ].map((day, index) => (
-                              <Button
-                                key={day}
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                className={`w-full ${watch("rules.0.daysOfWeek")?.includes(index) ? "bg-[#1e3a5f] text-white" : ""}`}
-                                onClick={() => {
-                                  const currentDays =
-                                    watch("rules.0.daysOfWeek") || [];
-                                  if (currentDays.includes(index)) {
-                                    setValue(
-                                      "rules.0.daysOfWeek",
-                                      currentDays.filter((d) => d !== index),
-                                    );
-                                  } else {
-                                    setValue("rules.0.daysOfWeek", [
-                                      ...currentDays,
-                                      index,
-                                    ]);
-                                  }
-                                }}
-                              >
-                                {day}
-                              </Button>
-                            ))}
+                          <Label>Schedule Rules</Label>
+                          <div className="space-y-4 rounded-lg border p-4">
+                            <div className="space-y-2">
+                              <Label>Days of Week</Label>
+                              <div className="grid grid-cols-4 gap-2">
+                                {[
+                                  "Sun",
+                                  "Mon",
+                                  "Tue",
+                                  "Wed",
+                                  "Thu",
+                                  "Fri",
+                                  "Sat",
+                                ].map((day, index) => (
+                                  <Button
+                                    key={day}
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    className={`w-full ${watch("rules.0.daysOfWeek")?.includes(index) ? "bg-[#1e3a5f] text-white" : ""}`}
+                                    onClick={() => {
+                                      const currentDays =
+                                        watch("rules.0.daysOfWeek") || [];
+                                      if (currentDays.includes(index)) {
+                                        setValue(
+                                          "rules.0.daysOfWeek",
+                                          currentDays.filter(
+                                            (d) => d !== index,
+                                          ),
+                                        );
+                                      } else {
+                                        setValue("rules.0.daysOfWeek", [
+                                          ...currentDays,
+                                          index,
+                                        ]);
+                                      }
+                                    }}
+                                  >
+                                    {day}
+                                  </Button>
+                                ))}
+                              </div>
+                            </div>
+
+                            <div className="space-y-2">
+                              <Label>Priority (1-10)</Label>
+                              <Input
+                                type="number"
+                                min={1}
+                                max={10}
+                                {...register("rules.0.priority")}
+                                className="w-24"
+                              />
+                              <p className="text-sm text-gray-500">
+                                Higher priority configurations override lower
+                                priority ones
+                              </p>
+                            </div>
                           </div>
                         </div>
-
-                        <div className="space-y-2">
-                          <Label>Priority (1-10)</Label>
-                          <Input
-                            type="number"
-                            min={1}
-                            max={10}
-                            {...register("rules.0.priority")}
-                            className="w-24"
-                          />
-                          <p className="text-sm text-gray-500">
-                            Higher priority configurations override lower
-                            priority ones
-                          </p>
-                        </div>
-                      </div>
-                    </div>
+                      )}
+                    </>
                   )}
 
                   <div className="flex items-center space-x-2 pt-2">

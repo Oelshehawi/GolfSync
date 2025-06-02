@@ -19,9 +19,17 @@ import {
   FormMessage,
 } from "~/components/ui/form";
 import { Input } from "~/components/ui/input";
-import { guestFormSchema } from "./guestFormSchema";
+import * as z from "zod";
 import React from "react";
-import { BaseGuest, GuestFormValues } from "~/app/types/GuestTypes";
+import type { BaseGuest, GuestFormValues } from "~/app/types/GuestTypes";
+
+// Define the form schema (same as AddGuestDialog)
+const guestFormSchema = z.object({
+  firstName: z.string().min(1, "First name is required"),
+  lastName: z.string().min(1, "Last name is required"),
+  email: z.string().email("Invalid email").optional().or(z.literal("")),
+  phone: z.string().optional().or(z.literal("")),
+});
 
 interface EditGuestDialogProps {
   guest: BaseGuest | null;
@@ -43,7 +51,6 @@ export function EditGuestDialog({
       lastName: guest?.lastName || "",
       email: guest?.email || "",
       phone: guest?.phone || "",
-      handicap: guest?.handicap || "",
     },
   });
 
@@ -55,7 +62,6 @@ export function EditGuestDialog({
         lastName: guest.lastName,
         email: guest.email || "",
         phone: guest.phone || "",
-        handicap: guest.handicap || "",
       });
     }
   }, [guest, form]);
@@ -78,77 +84,74 @@ export function EditGuestDialog({
             onSubmit={form.handleSubmit(handleSubmit)}
             className="space-y-4"
           >
-            <FormField
-              control={form.control}
-              name="firstName"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>First Name</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Enter first name" {...field} />
-                  </FormControl>
-                  <FormMessage className="text-red-500" />
-                </FormItem>
-              )}
-            />
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="firstName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>First Name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter first name" {...field} />
+                    </FormControl>
+                    <FormMessage className="text-red-500" />
+                  </FormItem>
+                )}
+              />
 
-            <FormField
-              control={form.control}
-              name="lastName"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Last Name</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Enter last name" {...field} />
-                  </FormControl>
-                  <FormMessage className="text-red-500" />
-                </FormItem>
-              )}
-            />
+              <FormField
+                control={form.control}
+                name="lastName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Last Name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter last name" {...field} />
+                    </FormControl>
+                    <FormMessage className="text-red-500" />
+                  </FormItem>
+                )}
+              />
+            </div>
 
-            <FormField
-              control={form.control}
-              name="email"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Email</FormLabel>
-                  <FormControl>
-                    <Input type="email" placeholder="Enter email" {...field} />
-                  </FormControl>
-                  <FormMessage className="text-red-500" />
-                </FormItem>
-              )}
-            />
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="email"
+                        placeholder="Enter email"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage className="text-red-500" />
+                  </FormItem>
+                )}
+              />
 
-            <FormField
-              control={form.control}
-              name="phone"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Phone</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Enter phone" {...field} />
-                  </FormControl>
-                  <FormMessage className="text-red-500" />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="handicap"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Handicap</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Enter handicap" {...field} />
-                  </FormControl>
-                  <FormMessage className="text-red-500" />
-                </FormItem>
-              )}
-            />
+              <FormField
+                control={form.control}
+                name="phone"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Phone</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter phone number" {...field} />
+                    </FormControl>
+                    <FormMessage className="text-red-500" />
+                  </FormItem>
+                )}
+              />
+            </div>
 
             <DialogFooter>
+              <Button variant="outline" onClick={() => onOpenChange(false)}>
+                Cancel
+              </Button>
               <Button type="submit">Save Changes</Button>
             </DialogFooter>
           </form>

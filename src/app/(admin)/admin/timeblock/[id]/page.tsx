@@ -34,7 +34,6 @@ export default async function TimeBlockPage({ params }: TimeBlockPageProps) {
     lastName: item.guest.lastName,
     email: item.guest.email,
     phone: item.guest.phone,
-    handicap: item.guest.handicap,
     checkedIn: item.checkedIn || false,
     checkedInAt: item.checkedInAt,
     invitedByMember: item.invitedByMember

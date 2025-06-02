@@ -6,7 +6,6 @@ export type BaseGuest = {
   lastName: string;
   email: string | null;
   phone: string | null;
-  handicap: string | null;
 };
 
 export interface TimeBlockGuest {
@@ -15,7 +14,6 @@ export interface TimeBlockGuest {
   lastName: string;
   email: string | null;
   phone: string | null;
-  handicap: string | null;
   checkedIn?: boolean;
   checkedInAt?: Date | null;
   invitedByMember?: {
@@ -31,5 +29,4 @@ export type GuestFormValues = {
   lastName: string;
   email?: string;
   phone?: string;
-  handicap?: string;
 };

@@ -309,7 +309,6 @@ export async function getTimeBlocksForTeesheet(
         lastName: guests.lastName,
         email: guests.email,
         phone: guests.phone,
-        handicap: guests.handicap,
       },
       checkedIn: timeBlockGuests.checkedIn,
       checkedInAt: timeBlockGuests.checkedInAt,
@@ -340,7 +339,6 @@ export async function getTimeBlocksForTeesheet(
         lastName: row.guest.lastName!,
         email: row.guest.email,
         phone: row.guest.phone,
-        handicap: row.guest.handicap,
         checkedIn: row.checkedIn || false,
         checkedInAt: row.checkedInAt,
         invitedByMember: row.invitedByMember
@@ -479,7 +477,6 @@ export async function getTimeBlockWithMembers(
         lastName: guests.lastName,
         email: guests.email,
         phone: guests.phone,
-        handicap: guests.handicap,
       },
       checkedIn: timeBlockGuests.checkedIn,
       checkedInAt: timeBlockGuests.checkedInAt,
@@ -521,7 +518,6 @@ export async function getTimeBlockWithMembers(
     lastName: row.guest!.lastName!,
     email: row.guest!.email,
     phone: row.guest!.phone,
-    handicap: row.guest!.handicap,
     checkedIn: row.checkedIn || false,
     checkedInAt: row.checkedInAt,
     invitedByMember: row.invitedByMember

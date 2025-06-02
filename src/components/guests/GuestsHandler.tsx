@@ -60,7 +60,6 @@ export function GuestsHandler({ initialGuests }: GuestsHandlerProps) {
     lastName: string;
     email?: string;
     phone?: string;
-    handicap?: string;
   }) => {
     try {
       const result = await createGuest(data);
@@ -73,7 +72,6 @@ export function GuestsHandler({ initialGuests }: GuestsHandlerProps) {
           lastName: result.data.lastName,
           email: result.data.email,
           phone: result.data.phone,
-          handicap: result.data.handicap,
         } as BaseGuest;
 
         setGuests([...guests, newGuest]);
@@ -94,7 +92,6 @@ export function GuestsHandler({ initialGuests }: GuestsHandlerProps) {
       lastName: string;
       email?: string;
       phone?: string;
-      handicap?: string;
     },
   ) => {
     try {
@@ -108,7 +105,6 @@ export function GuestsHandler({ initialGuests }: GuestsHandlerProps) {
           lastName: result.data.lastName,
           email: result.data.email,
           phone: result.data.phone,
-          handicap: result.data.handicap,
         } as BaseGuest;
 
         setGuests(
