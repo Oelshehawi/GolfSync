@@ -41,6 +41,7 @@ interface TeesheetHeaderProps {
   config: TeesheetConfig;
   teesheetId: number;
   timeBlocks: TimeBlockWithMembers[];
+  isAdmin?: boolean;
 }
 
 export function TeesheetHeader({
@@ -48,6 +49,7 @@ export function TeesheetHeader({
   config,
   teesheetId,
   timeBlocks,
+  isAdmin,
 }: TeesheetHeaderProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -121,6 +123,19 @@ export function TeesheetHeader({
     }
   };
 
+  // Determine if calendar should be shown
+  // Default to true for admin pages, otherwise check the search param
+  const shouldShowCalendar = () => {
+    const showCalendarParam = searchParams.get("showCalendar");
+    if (showCalendarParam !== null) {
+      return showCalendarParam === "true";
+    }
+    // Default to true for admin pages, false for others
+    return isAdmin === true;
+  };
+
+  const isCalendarVisible = shouldShowCalendar();
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -142,19 +157,14 @@ export function TeesheetHeader({
           </Button>
         </div>
         <Button
-          variant={
-            searchParams.get("showCalendar") === "true" ? "default" : "outline"
-          }
+          variant={isCalendarVisible ? "default" : "outline"}
           onClick={() => {
             const params = new URLSearchParams(searchParams.toString());
-            params.set(
-              "showCalendar",
-              params.get("showCalendar") === "true" ? "false" : "true",
-            );
+            params.set("showCalendar", isCalendarVisible ? "false" : "true");
             router.push(`?${params.toString()}`);
           }}
         >
-          {searchParams.get("showCalendar") === "true" ? (
+          {isCalendarVisible ? (
             <X className="mr-2 h-4 w-4" />
           ) : (
             <CalendarIcon className="mr-2 h-4 w-4" />
@@ -169,7 +179,7 @@ export function TeesheetHeader({
         timeBlocks={timeBlocks}
       />
 
-      {searchParams.get("showCalendar") === "true" && (
+      {isCalendarVisible && (
         <Card className="mt-4 p-4">
           <Calendar
             selected={date}

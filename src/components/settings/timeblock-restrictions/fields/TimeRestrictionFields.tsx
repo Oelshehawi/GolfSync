@@ -16,6 +16,7 @@ import { preserveDate } from "~/lib/utils";
 
 interface TimeRestrictionFieldsProps {
   form: UseFormReturn<TimeblockRestrictionFormValues>;
+  restrictionCategory?: "MEMBER_CLASS" | "GUEST" | "COURSE_AVAILABILITY";
 }
 
 const daysOfWeek = [
@@ -28,7 +29,10 @@ const daysOfWeek = [
   { label: "Saturday", value: 6 },
 ];
 
-export function TimeRestrictionFields({ form }: TimeRestrictionFieldsProps) {
+export function TimeRestrictionFields({
+  form,
+  restrictionCategory,
+}: TimeRestrictionFieldsProps) {
   // Get current values for conditional rendering
   const daysOfWeekValue = form.watch("daysOfWeek") || [];
 
@@ -106,54 +110,56 @@ export function TimeRestrictionFields({ form }: TimeRestrictionFieldsProps) {
         <FormMessage />
       </div>
 
-      {/* Date Range */}
-      <div className="grid grid-cols-2 gap-4">
-        <FormField
-          control={form.control}
-          name="startDate"
-          render={({ field }) => (
-            <FormItem className="flex flex-col">
-              <FormLabel>Start Date</FormLabel>
-              <DatePicker
-                date={field.value ? preserveDate(field.value) : undefined}
-                setDate={(date?: Date) => {
-                  if (date) {
-                    // Ensure selected date doesn't get timezone-shifted
-                    field.onChange(preserveDate(date));
-                  } else {
-                    field.onChange(null);
-                  }
-                }}
-                placeholder="Select start date"
-              />
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+      {/* Date Range - Only show for COURSE_AVAILABILITY */}
+      {restrictionCategory === "COURSE_AVAILABILITY" && (
+        <div className="grid grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="startDate"
+            render={({ field }) => (
+              <FormItem className="flex flex-col">
+                <FormLabel>Start Date</FormLabel>
+                <DatePicker
+                  date={field.value ? preserveDate(field.value) : undefined}
+                  setDate={(date?: Date) => {
+                    if (date) {
+                      // Ensure selected date doesn't get timezone-shifted
+                      field.onChange(preserveDate(date));
+                    } else {
+                      field.onChange(null);
+                    }
+                  }}
+                  placeholder="Select start date"
+                />
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
-        <FormField
-          control={form.control}
-          name="endDate"
-          render={({ field }) => (
-            <FormItem className="flex flex-col">
-              <FormLabel>End Date</FormLabel>
-              <DatePicker
-                date={field.value ? preserveDate(field.value) : undefined}
-                setDate={(date?: Date) => {
-                  if (date) {
-                    // Ensure selected date doesn't get timezone-shifted
-                    field.onChange(preserveDate(date));
-                  } else {
-                    field.onChange(null);
-                  }
-                }}
-                placeholder="Select end date"
-              />
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-      </div>
+          <FormField
+            control={form.control}
+            name="endDate"
+            render={({ field }) => (
+              <FormItem className="flex flex-col">
+                <FormLabel>End Date</FormLabel>
+                <DatePicker
+                  date={field.value ? preserveDate(field.value) : undefined}
+                  setDate={(date?: Date) => {
+                    if (date) {
+                      // Ensure selected date doesn't get timezone-shifted
+                      field.onChange(preserveDate(date));
+                    } else {
+                      field.onChange(null);
+                    }
+                  }}
+                  placeholder="Select end date"
+                />
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+      )}
     </div>
   );
 }

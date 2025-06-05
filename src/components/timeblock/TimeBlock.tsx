@@ -10,7 +10,6 @@ import { formatDisplayTime, getMemberClassStyling } from "~/lib/utils";
 import { Badge } from "~/components/ui/badge";
 import { cn } from "~/lib/utils";
 import type { PaceOfPlayRecord } from "~/server/pace-of-play/data";
-import type { PaceOfPlayStatus as PaceOfPlayStatusType } from "~/app/types/PaceOfPlayTypes";
 import { QuickCartAssignment } from "./QuickCartAssignment";
 import { quickAssignPowerCart } from "~/server/charges/actions";
 import { type PowerCartAssignmentData } from "~/app/types/ChargeTypes";
@@ -265,11 +264,20 @@ export function TimeBlock({
                   <div className="min-w-0 flex-1">
                     <div
                       className={cn(
-                        "truncate text-sm font-medium",
+                        "cursor-pointer truncate text-sm font-medium hover:underline",
                         memberData.checkedIn
-                          ? "text-green-800"
+                          ? "text-green-800 hover:text-green-900"
                           : memberStyle.text,
                       )}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        window.dispatchEvent(
+                          new CustomEvent("open-account-dialog", {
+                            detail: { accountData: memberData },
+                          }),
+                        );
+                      }}
                     >
                       {memberData.firstName} {memberData.lastName} (
                       {memberData.memberNumber})
@@ -347,11 +355,20 @@ export function TimeBlock({
                   <div className="min-w-0 flex-1">
                     <div
                       className={cn(
-                        "truncate text-sm font-medium",
+                        "cursor-pointer truncate text-sm font-medium hover:underline",
                         guestData.checkedIn
-                          ? "text-green-800"
+                          ? "text-green-800 hover:text-green-900"
                           : guestStyle.text,
                       )}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        window.dispatchEvent(
+                          new CustomEvent("open-account-dialog", {
+                            detail: { accountData: guestData },
+                          }),
+                        );
+                      }}
                     >
                       {guestData.firstName} {guestData.lastName}
                       <Badge variant="outline" className="ml-1 text-xs">

@@ -159,7 +159,7 @@ export async function getOrCreateTeesheet(
   if (existingTeesheet) {
     // For existing teesheets, use the stored config
     teesheet = existingTeesheet;
-    config = existingTeesheet.config as TeesheetConfig; 
+    config = existingTeesheet.config as TeesheetConfig;
   } else {
     // For new teesheets, determine the appropriate config using getConfigForDate
     config = await getConfigForDate(date);
@@ -240,6 +240,11 @@ export async function getTimeBlocksForTeesheet(
         memberNumber: members.memberNumber,
         class: members.class,
         bagNumber: members.bagNumber,
+        username: members.username,
+        email: members.email,
+        gender: members.gender,
+        dateOfBirth: members.dateOfBirth,
+        handicap: members.handicap,
         checkedIn: timeBlockMembers.checkedIn,
         checkedInAt: timeBlockMembers.checkedInAt,
       },
@@ -293,6 +298,11 @@ export async function getTimeBlocksForTeesheet(
         memberNumber: row.members.memberNumber!,
         class: row.members.class!,
         bagNumber: row.members.bagNumber,
+        username: row.members.username!,
+        email: row.members.email!,
+        gender: row.members.gender,
+        dateOfBirth: row.members.dateOfBirth,
+        handicap: row.members.handicap,
         checkedIn: row.members.checkedIn || false,
         checkedInAt: row.members.checkedInAt,
       });
@@ -430,6 +440,11 @@ export async function getTimeBlockWithMembers(
         memberNumber: members.memberNumber,
         class: members.class,
         bagNumber: members.bagNumber,
+        username: members.username,
+        email: members.email,
+        gender: members.gender,
+        dateOfBirth: members.dateOfBirth,
+        handicap: members.handicap,
         checkedIn: timeBlockMembers.checkedIn,
         checkedInAt: timeBlockMembers.checkedInAt,
       },
@@ -507,6 +522,11 @@ export async function getTimeBlockWithMembers(
       memberNumber: row.members!.memberNumber!,
       class: row.members!.class!,
       bagNumber: row.members!.bagNumber,
+      username: row.members!.username!,
+      email: row.members!.email!,
+      gender: row.members!.gender,
+      dateOfBirth: row.members!.dateOfBirth,
+      handicap: row.members!.handicap,
       checkedIn: row.members!.checkedIn || false,
       checkedInAt: row.members!.checkedInAt,
     }));

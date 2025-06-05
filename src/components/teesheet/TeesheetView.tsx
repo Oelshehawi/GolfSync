@@ -8,7 +8,9 @@ import type {
   TemplateBlock,
   CustomConfig,
   Template,
+  TimeBlockMemberView,
 } from "~/app/types/TeeSheetTypes";
+import type { TimeBlockGuest } from "~/app/types/GuestTypes";
 import { ConfigTypes } from "~/app/types/TeeSheetTypes";
 import { RestrictionViolation } from "~/app/types/RestrictionTypes";
 import { TimeBlock as TimeBlockComponent } from "../timeblock/TimeBlock";
@@ -34,6 +36,7 @@ import {
   updateTimeBlockNotes,
   removeFillFromTimeBlock,
 } from "~/server/teesheet/actions";
+import { AccountDialog } from "../member-teesheet-client/AccountDialog";
 
 // Extended ActionResult type to include violations
 type ExtendedActionResult = {
@@ -70,6 +73,12 @@ export function TeesheetView({
   const [pendingAction, setPendingAction] = useState<
     (() => Promise<void>) | null
   >(null);
+
+  // Account dialog state
+  const [selectedAccountData, setSelectedAccountData] = useState<
+    TimeBlockMemberView | TimeBlockGuest | null
+  >(null);
+  const [isAccountDialogOpen, setIsAccountDialogOpen] = useState(false);
 
   // Use shared hooks
   useTeesheetPolling(isAdmin);
@@ -302,6 +311,35 @@ export function TeesheetView({
     }
   };
 
+  // Handle opening account dialog
+  const handleShowAccount = (data: TimeBlockMemberView | TimeBlockGuest) => {
+    setSelectedAccountData(data);
+    setIsAccountDialogOpen(true);
+  };
+
+  const handleCloseAccountDialog = () => {
+    setIsAccountDialogOpen(false);
+    setSelectedAccountData(null);
+  };
+
+  // Add event listener for opening the account dialog
+  useEffect(() => {
+    const handleOpenAccountDialog = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      if (customEvent.detail?.accountData) {
+        handleShowAccount(customEvent.detail.accountData);
+      }
+    };
+
+    window.addEventListener("open-account-dialog", handleOpenAccountDialog);
+    return () => {
+      window.removeEventListener(
+        "open-account-dialog",
+        handleOpenAccountDialog,
+      );
+    };
+  }, []);
+
   return (
     <div className="rounded-lg bg-white p-4 shadow">
       <TeesheetControlPanel
@@ -449,6 +487,13 @@ export function TeesheetView({
           timeBlockGuests={selectedTimeBlock.guests}
         />
       )}
+
+      {/* Account Dialog */}
+      <AccountDialog
+        member={selectedAccountData}
+        isOpen={isAccountDialogOpen}
+        onClose={handleCloseAccountDialog}
+      />
     </div>
   );
 }

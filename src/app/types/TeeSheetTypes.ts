@@ -59,6 +59,11 @@ export interface TimeBlockMemberView {
   memberNumber: string;
   class?: string;
   bagNumber?: string | null;
+  username: string;
+  email: string;
+  gender?: string | null;
+  dateOfBirth?: Date | string | null;
+  handicap?: string | null;
   checkedIn?: boolean;
   checkedInAt?: Date | null;
 }

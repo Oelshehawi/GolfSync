@@ -112,7 +112,8 @@ export function TimeblockRestrictionDialog({
   // Determine default restriction type based on category
   const getDefaultRestrictionType = () => {
     if (restrictionCategory === "COURSE_AVAILABILITY") return "AVAILABILITY";
-    return "TIME"; // Default for MEMBER_CLASS and GUEST
+    if (restrictionCategory === "GUEST") return "TIME";
+    return "TIME"; // Default for MEMBER_CLASS
   };
 
   // Get default values based on existing restriction or create new ones
@@ -147,7 +148,9 @@ export function TimeblockRestrictionDialog({
         maxCount: existingRestriction.maxCount ?? null,
         periodDays: existingRestriction.periodDays ?? null,
         applyCharge: existingRestriction.applyCharge ?? false,
-        chargeAmount: existingRestriction.chargeAmount ?? "",
+        chargeAmount: existingRestriction.chargeAmount
+          ? String(existingRestriction.chargeAmount)
+          : "",
         isFullDay: isFullDay,
       };
 
@@ -264,7 +267,7 @@ export function TimeblockRestrictionDialog({
 
       // Call onSuccess with the created/updated restriction
       if (result) {
-        onSuccess(result as TimeblockRestriction);
+        onSuccess(result as unknown as TimeblockRestriction);
       }
     } catch (error) {
       console.error("Error submitting form:", error);
@@ -379,8 +382,8 @@ export function TimeblockRestrictionDialog({
                 />
               )}
 
-              {/* Restriction Type - Not shown for COURSE_AVAILABILITY */}
-              {restrictionCategory !== "COURSE_AVAILABILITY" && (
+              {/* Restriction Type - Not shown for COURSE_AVAILABILITY or GUEST */}
+              {restrictionCategory === "MEMBER_CLASS" && (
                 <FormField
                   control={form.control}
                   name="restrictionType"
@@ -469,17 +472,27 @@ export function TimeblockRestrictionDialog({
             </div>
 
             {/* Type-specific fields */}
-            {(restrictionCategory === "MEMBER_CLASS" ||
-              restrictionCategory === "GUEST") && (
+            {restrictionCategory === "MEMBER_CLASS" && (
               <>
                 {watchRestrictionType === "TIME" && (
-                  <TimeRestrictionFields form={form as any} />
+                  <TimeRestrictionFields
+                    form={form as any}
+                    restrictionCategory={restrictionCategory}
+                  />
                 )}
 
                 {watchRestrictionType === "FREQUENCY" && (
                   <FrequencyRestrictionFields form={form as any} />
                 )}
               </>
+            )}
+
+            {/* Guest restrictions - always time-based */}
+            {restrictionCategory === "GUEST" && (
+              <TimeRestrictionFields
+                form={form as any}
+                restrictionCategory={restrictionCategory}
+              />
             )}
 
             {/* Course Availability Fields */}

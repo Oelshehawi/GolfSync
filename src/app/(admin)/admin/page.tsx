@@ -82,6 +82,7 @@ export default async function AdminPage({ searchParams }: PageProps) {
           config={config}
           teesheetId={teesheet.id}
           timeBlocks={timeBlocks}
+          isAdmin={true}
         />
         <Card>
           <CardContent>
