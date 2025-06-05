@@ -9,7 +9,7 @@ import {
 } from "~/components/ui/dialog";
 import { Button } from "~/components/ui/button";
 import { Textarea } from "~/components/ui/textarea";
-import { TimeBlockWithPaceOfPlay } from "~/server/pace-of-play/data";
+import { TimeBlockWithPaceOfPlay } from "~/app/types/PaceOfPlayTypes";
 import { updateTurnAndFinishTime } from "~/server/pace-of-play/actions";
 import toast from "react-hot-toast";
 import { formatDisplayTime } from "~/lib/utils";
@@ -55,8 +55,8 @@ export function CombinedTurnFinishModal({
   const createDateFromTimeString = (timeString: string): Date => {
     const [hours, minutes] = timeString.split(":");
     const date = new Date();
-    date.setHours(parseInt(hours, 10));
-    date.setMinutes(parseInt(minutes, 10));
+    date.setHours(parseInt(hours || "0", 10));
+    date.setMinutes(parseInt(minutes || "0", 10));
     date.setSeconds(0);
     date.setMilliseconds(0);
     return date;

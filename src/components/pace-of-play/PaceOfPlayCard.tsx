@@ -6,10 +6,10 @@ import {
   CardTitle,
 } from "~/components/ui/card";
 import { PaceOfPlayStatus, getStatusColor } from "./PaceOfPlayStatus";
-import {
+import type {
   TimeBlockWithPaceOfPlay,
-  type PaceOfPlayStatus as PaceOfPlayStatusType,
-} from "~/server/pace-of-play/data";
+  PaceOfPlayStatus as PaceOfPlayStatusType,
+} from "~/app/types/PaceOfPlayTypes";
 import { Button } from "~/components/ui/button";
 import {
   CalendarClock,

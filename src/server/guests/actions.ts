@@ -205,7 +205,11 @@ export async function removeGuestFromTimeBlock(
   }
 }
 
-export async function getGuestBookingHistoryAction(guestId: number) {
-  const bookings = await getGuestBookingHistory(guestId);
+export async function getGuestBookingHistoryAction(
+  guestId: number,
+  year?: number,
+  month?: number,
+) {
+  const bookings = await getGuestBookingHistory(guestId, { year, month });
   return bookings;
 }

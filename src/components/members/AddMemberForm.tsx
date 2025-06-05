@@ -1,7 +1,7 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { memberFormSchema } from "./memberFormSchema";
-import type { MemberFormValues } from "./memberFormSchema";
+import { Member } from "~/app/types/MemberTypes";
 import {
   Form,
   FormControl,
@@ -16,12 +16,12 @@ import { SearchableSelect } from "~/components/ui/searchable-select";
 import { MEMBER_CLASSES } from "~/lib/constants/memberClasses";
 
 interface AddMemberFormProps {
-  onSubmit: (values: MemberFormValues) => Promise<void>;
+  onSubmit: (values: Member) => Promise<void>;
   onCancel: () => void;
 }
 
 export function AddMemberForm({ onSubmit, onCancel }: AddMemberFormProps) {
-  const form = useForm<MemberFormValues>({
+  const form = useForm<Member>({
     resolver: zodResolver(memberFormSchema) as any,
     defaultValues: {
       memberNumber: "",
@@ -37,7 +37,7 @@ export function AddMemberForm({ onSubmit, onCancel }: AddMemberFormProps) {
     },
   });
 
-  const handleSubmit = async (values: MemberFormValues) => {
+  const handleSubmit = async (values: Member) => {
     await onSubmit(values);
   };
 

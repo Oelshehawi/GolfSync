@@ -7,10 +7,10 @@ import {
   getPaceOfPlayByDate,
   upsertPaceOfPlay,
   type PaceOfPlayInsert,
-  type PaceOfPlayStatus,
   type PaceOfPlayRecord,
   getMemberPaceOfPlayHistory,
 } from "./data";
+import { type PaceOfPlayStatus } from "~/app/types/PaceOfPlayTypes";
 import { db } from "../db";
 import { and, eq } from "drizzle-orm";
 import { timeBlocks } from "../db/schema";
@@ -307,9 +307,18 @@ export async function getMemberPaceOfPlayHistoryAction(memberId: number) {
 
   try {
     const history = await getMemberPaceOfPlayHistory(memberId);
-    return { success: true, data: history };
+    // Transform the data to match PaceOfPlayHistoryItem interface
+    const transformedHistory = history.map((item) => ({
+      ...item,
+      status: item.status as PaceOfPlayStatus,
+    }));
+    return { success: true, data: transformedHistory };
   } catch (error) {
     console.error("Error fetching member pace of play history:", error);
-    return { success: false, error: "Failed to fetch pace of play history" };
+    return {
+      success: false,
+      data: [],
+      error: "Failed to fetch pace of play history",
+    };
   }
 }

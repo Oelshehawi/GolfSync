@@ -7,7 +7,7 @@ import { Button } from "~/components/ui/button";
 import { RefreshCw } from "lucide-react";
 import { PaceOfPlayCard } from "~/components/pace-of-play/PaceOfPlayCard";
 import { PaceOfPlayUpdateModal } from "~/components/pace-of-play/PaceOfPlayUpdateModal";
-import { type TimeBlockWithPaceOfPlay } from "~/server/pace-of-play/data";
+import { type TimeBlockWithPaceOfPlay } from "~/app/types/PaceOfPlayTypes";
 import { useRouter } from "next/navigation";
 
 interface TurnPageClientProps {

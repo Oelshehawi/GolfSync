@@ -50,9 +50,9 @@ export function GuestTable({
     setHistoryDialogOpen(true);
   };
 
-  const fetchGuestHistory = async () => {
+  const fetchGuestHistory = async (year?: number, month?: number) => {
     if (!selectedGuest) return [];
-    return await getGuestBookingHistoryAction(selectedGuest.id);
+    return await getGuestBookingHistoryAction(selectedGuest.id, year, month);
   };
 
   if (variant === "timeblock") {

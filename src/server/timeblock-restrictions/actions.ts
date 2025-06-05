@@ -1,10 +1,14 @@
 "use server";
 
 import { db } from "~/server/db";
-import { eq, and, or, isNull } from "drizzle-orm";
+import { eq, and, or, isNull, sql, gte, lte } from "drizzle-orm";
 import { getOrganizationId } from "~/lib/auth";
 import { revalidatePath } from "next/cache";
-import { timeblockRestrictions, timeblockOverrides } from "~/server/db/schema";
+import {
+  timeblockRestrictions,
+  timeblockOverrides,
+  timeBlockMembers,
+} from "~/server/db/schema";
 import { auth } from "@clerk/nextjs/server";
 import {
   formatDisplayDate,
@@ -424,8 +428,65 @@ export async function checkTimeblockRestrictionsAction(params: {
               }
             }
           }
+        } else if (restriction.restrictionType === "FREQUENCY") {
+          // Check frequency restrictions
+          if (restriction.maxCount && restriction.periodDays) {
+            // Calculate the current calendar month range
+            const currentDate = new Date(bookingDateStr);
+            const monthStart = new Date(
+              currentDate.getFullYear(),
+              currentDate.getMonth(),
+              1,
+            );
+            const monthEnd = new Date(
+              currentDate.getFullYear(),
+              currentDate.getMonth() + 1,
+              0,
+            );
+
+            const monthStartStr = formatDateToYYYYMMDD(monthStart);
+            const monthEndStr = formatDateToYYYYMMDD(monthEnd);
+
+            // Count existing bookings for this member in the current month
+            const existingBookings = await db
+              .select({ count: sql<number>`cast(count(*) as integer)` })
+              .from(timeBlockMembers)
+              .where(
+                and(
+                  eq(timeBlockMembers.memberId, memberId),
+                  eq(timeBlockMembers.clerkOrgId, orgId),
+                  gte(timeBlockMembers.bookingDate, monthStartStr),
+                  lte(timeBlockMembers.bookingDate, monthEndStr),
+                ),
+              );
+
+            const currentBookingCount = Number(existingBookings[0]?.count || 0);
+            const newTotalCount = currentBookingCount + 1; // Including this new booking
+
+            if (newTotalCount > restriction.maxCount) {
+              const monthName = format(currentDate, "MMMM yyyy");
+              violations.push({
+                restrictionId: restriction.id,
+                restrictionName: restriction.name,
+                restrictionDescription: restriction.description,
+                restrictionCategory: "MEMBER_CLASS",
+                entityId: memberId.toString(),
+                memberClass,
+                type: "FREQUENCY",
+                message: `Member has exceeded frequency limit (${currentBookingCount}/${restriction.maxCount} bookings in ${monthName})`,
+                canOverride: restriction.canOverride,
+                frequencyInfo: {
+                  currentCount: currentBookingCount,
+                  maxCount: restriction.maxCount,
+                  monthName,
+                  willCreateCharge: restriction.applyCharge,
+                  chargeAmount: restriction.chargeAmount,
+                },
+              });
+            }
+          }
         }
-        // Note: Frequency restrictions would be checked here
+        // Note: Other restriction types can be added here
       }
     }
 

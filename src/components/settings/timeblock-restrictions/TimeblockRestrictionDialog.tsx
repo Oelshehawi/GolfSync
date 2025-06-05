@@ -73,7 +73,7 @@ const formSchema = z.object({
   maxCount: z.coerce.number().optional().nullable(),
   periodDays: z.coerce.number().optional().nullable(),
   applyCharge: z.boolean().default(false),
-  chargeAmount: z.coerce.number().optional().nullable(),
+  chargeAmount: z.string().optional().nullable(),
 
   // Course availability fields
   isFullDay: z.boolean().default(false),
@@ -147,7 +147,7 @@ export function TimeblockRestrictionDialog({
         maxCount: existingRestriction.maxCount ?? null,
         periodDays: existingRestriction.periodDays ?? null,
         applyCharge: existingRestriction.applyCharge ?? false,
-        chargeAmount: existingRestriction.chargeAmount ?? null,
+        chargeAmount: existingRestriction.chargeAmount ?? "",
         isFullDay: isFullDay,
       };
 
@@ -177,7 +177,7 @@ export function TimeblockRestrictionDialog({
         endDate: null,
         maxCount: null,
         periodDays: null,
-        chargeAmount: null,
+        chargeAmount: "",
       };
 
       return defaultValues;

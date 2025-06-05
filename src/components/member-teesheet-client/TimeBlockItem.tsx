@@ -51,8 +51,16 @@ export function TimeBlockItem({
   // Calculate total people including fills
   const totalPeople = timeBlock.members.length + (timeBlock.fills?.length || 0);
 
-  // Determine if the button should be disabled (either by prop, past, or restricted)
-  const isButtonDisabled = disabled || isPast || isRestricted;
+  // Check if it's a frequency restriction (which should allow booking)
+  const hasFrequencyViolation = timeBlock.restriction?.violations?.some(
+    (v: any) => v.type === "FREQUENCY",
+  );
+
+  // For frequency restrictions, don't disable the button
+  const isRestrictedNonFrequency = isRestricted && !hasFrequencyViolation;
+
+  // Determine if the button should be disabled (either by prop, past, or non-frequency restricted)
+  const isButtonDisabled = disabled || isPast || isRestrictedNonFrequency;
 
   // Check if current member is checked in
   const isMemberCheckedIn =
@@ -65,9 +73,11 @@ export function TimeBlockItem({
     timeBlock.members.length > 0 && timeBlock.members.every((m) => m.checkedIn);
 
   // Get the appropriate CSS class for the timeblock container
-  let timeBlockClass = isRestricted
+  let timeBlockClass = isRestrictedNonFrequency
     ? "rounded-md border border-red-300 bg-red-50 p-4 shadow-sm"
-    : `rounded-md border p-4 shadow-sm hover:bg-gray-50 ${isPast ? "bg-gray-100 border-gray-200" : "border-gray-200"}`;
+    : hasFrequencyViolation
+      ? "rounded-md border border-yellow-300 bg-yellow-50 p-4 shadow-sm hover:bg-yellow-100"
+      : `rounded-md border p-4 shadow-sm hover:bg-gray-50 ${isPast ? "bg-gray-100 border-gray-200" : "border-gray-200"}`;
 
   // Add a green border if all members are checked in
   if (allMembersCheckedIn) {
@@ -94,9 +104,14 @@ export function TimeBlockItem({
               </Badge>
             )}
             {isPast && <Badge className="ml-2 bg-gray-500">Past</Badge>}
-            {isRestricted && (
+            {isRestrictedNonFrequency && (
               <Badge className="ml-2 bg-red-500 hover:bg-red-600">
                 Restricted
+              </Badge>
+            )}
+            {hasFrequencyViolation && (
+              <Badge className="ml-2 bg-yellow-500 hover:bg-yellow-600">
+                Frequency Limit
               </Badge>
             )}
             {allMembersCheckedIn && (
@@ -118,7 +133,7 @@ export function TimeBlockItem({
             >
               Cancel
             </Button>
-          ) : isRestricted ? (
+          ) : isRestrictedNonFrequency ? (
             <Button
               variant="outline"
               size="sm"
@@ -147,10 +162,19 @@ export function TimeBlockItem({
       </div>
 
       {/* Restriction reason */}
-      {isRestricted && restrictionReason && (
+      {isRestrictedNonFrequency && restrictionReason && (
         <div className="mb-2 flex items-center rounded-md bg-red-100 p-2 text-sm text-red-700">
           <AlertCircle className="mr-2 h-4 w-4" />
           {restrictionReason}
+        </div>
+      )}
+
+      {/* Frequency warning */}
+      {hasFrequencyViolation && (
+        <div className="mb-2 flex items-center rounded-md bg-yellow-100 p-2 text-sm text-yellow-700">
+          <AlertCircle className="mr-2 h-4 w-4" />
+          You've reached your monthly booking limit. Additional bookings may
+          incur charges.
         </div>
       )}
 

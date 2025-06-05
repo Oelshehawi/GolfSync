@@ -186,7 +186,11 @@ export async function searchMembersAction(query: string = "") {
   }));
 }
 
-export async function getMemberBookingHistoryAction(memberId: number) {
-  const bookings = await getMemberBookingHistory(memberId);
+export async function getMemberBookingHistoryAction(
+  memberId: number,
+  year?: number,
+  month?: number,
+) {
+  const bookings = await getMemberBookingHistory(memberId, { year, month });
   return bookings;
 }

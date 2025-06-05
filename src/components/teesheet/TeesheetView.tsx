@@ -13,7 +13,7 @@ import { ConfigTypes } from "~/app/types/TeeSheetTypes";
 import { RestrictionViolation } from "~/app/types/RestrictionTypes";
 import { TimeBlock as TimeBlockComponent } from "../timeblock/TimeBlock";
 import { RestrictionViolationAlert } from "~/components/settings/timeblock-restrictions/RestrictionViolationAlert";
-import type { TimeBlockWithPaceOfPlay } from "~/server/pace-of-play/data";
+import type { TimeBlockWithPaceOfPlay } from "~/app/types/PaceOfPlayTypes";
 import { TeesheetControlPanel } from "./TeesheetControlPanel";
 import { TeesheetGeneralNotes } from "./TeesheetGeneralNotes";
 import {
@@ -351,7 +351,6 @@ export function TeesheetView({
 
               return (
                 <React.Fragment key={`block-${block.id}`}>
-                  
                   {/* Display existing notes if any */}
                   {block.notes && block.notes.trim() !== "" && (
                     <tr>
@@ -425,7 +424,6 @@ export function TeesheetView({
                       handleSaveNotes(block.id, notes)
                     }
                   />
-
                 </React.Fragment>
               );
             })}

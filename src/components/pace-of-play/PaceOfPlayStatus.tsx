@@ -1,7 +1,7 @@
 "use client";
 
 import { Badge } from "~/components/ui/badge";
-import { type PaceOfPlayStatus } from "~/server/pace-of-play/data";
+import { type PaceOfPlayStatus } from "~/app/types/PaceOfPlayTypes";
 
 interface PaceOfPlayStatusProps {
   status: PaceOfPlayStatus;

@@ -1,9 +1,10 @@
 import { db } from "~/server/db";
 import { members } from "~/server/db/schema";
-import { eq, sql, and, desc } from "drizzle-orm";
+import { eq, sql, and, desc, gte, lte } from "drizzle-orm";
 import { getOrganizationId } from "~/lib/auth";
 import type { Member } from "~/app/types/MemberTypes";
 import { timeBlockMembers as timeBlockMembersSchema } from "~/server/db/schema";
+import { formatDateToYYYYMMDD } from "~/lib/utils";
 
 // Helper function to map members to their full names
 export function mapMembersToNames(members: Member[]): string[] {
@@ -74,20 +75,45 @@ export async function searchMembers(
 
 export async function getMemberBookingHistory(
   memberId: number,
-  limit: number = 20,
+  options: {
+    limit?: number;
+    year?: number;
+    month?: number; // 0-based month (0 = January, 11 = December)
+  } = {},
 ): Promise<any[]> {
   try {
     const orgId = await getOrganizationId();
+    const { limit = 50, year, month } = options;
+
+    let whereConditions = and(
+      eq(timeBlockMembersSchema.memberId, memberId),
+      eq(timeBlockMembersSchema.clerkOrgId, orgId),
+    );
+
+    // Add month filtering if specified
+    if (year !== undefined && month !== undefined) {
+      const monthStart = new Date(year, month, 1);
+      const monthEnd = new Date(year, month + 1, 0);
+
+      const monthStartStr = formatDateToYYYYMMDD(monthStart);
+      const monthEndStr = formatDateToYYYYMMDD(monthEnd);
+
+      whereConditions = and(
+        whereConditions,
+        gte(timeBlockMembersSchema.bookingDate, monthStartStr),
+        lte(timeBlockMembersSchema.bookingDate, monthEndStr),
+      );
+    }
 
     const bookings = await db.query.timeBlockMembers.findMany({
-      where: and(
-        eq(timeBlockMembersSchema.memberId, memberId),
-        eq(timeBlockMembersSchema.clerkOrgId, orgId),
-      ),
+      where: whereConditions,
       with: {
         timeBlock: true,
       },
-      orderBy: desc(timeBlockMembersSchema.createdAt),
+      orderBy: [
+        desc(timeBlockMembersSchema.bookingDate),
+        desc(timeBlockMembersSchema.bookingTime),
+      ],
       limit,
     });
 

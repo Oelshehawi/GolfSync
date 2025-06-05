@@ -9,30 +9,17 @@ import {
   DialogDescription,
 } from "~/components/ui/dialog";
 import { Card, CardContent } from "~/components/ui/card";
-import { Calendar, Clock, Activity, MessageSquare } from "lucide-react";
+import { Calendar, Clock, MessageSquare } from "lucide-react";
 import {
   formatDateStringToWords,
   formatTimeStringTo12Hour,
   formatPaceOfPlayTimestamp,
 } from "~/lib/utils";
 import { PaceOfPlayStatus } from "~/components/pace-of-play/PaceOfPlayStatus";
-import type { PaceOfPlayStatus as PaceOfPlayStatusType } from "~/server/pace-of-play/data";
-
-export interface PaceOfPlayHistoryItem {
-  id: number;
-  timeBlockId: number;
-  date: string;
-  startTime: string;
-  actualStartTime: Date | null;
-  turn9Time: Date | null;
-  finishTime: Date | null;
-  expectedStartTime: Date;
-  expectedTurn9Time: Date;
-  expectedFinishTime: Date;
-  status: PaceOfPlayStatusType;
-  notes: string | null;
-  createdAt: Date;
-}
+import type {
+  PaceOfPlayHistoryItem,
+  PaceOfPlayStatus as PaceOfPlayStatusType,
+} from "~/app/types/PaceOfPlayTypes";
 
 interface PaceOfPlayHistoryDialogProps {
   isOpen: boolean;

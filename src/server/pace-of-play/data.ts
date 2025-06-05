@@ -11,27 +11,14 @@ import {
   guests,
 } from "../db/schema";
 
-export type PaceOfPlayStatus =
-  | "pending"
-  | "on_time"
-  | "behind"
-  | "ahead"
-  | "completed"
-  | "completed_on_time"
-  | "completed_early"
-  | "completed_late";
+import type {
+  PaceOfPlayStatus,
+  TimeBlockWithPaceOfPlay,
+} from "~/app/types/PaceOfPlayTypes";
 
+export type { PaceOfPlayStatus, TimeBlockWithPaceOfPlay };
 export type PaceOfPlayRecord = typeof paceOfPlay.$inferSelect;
 export type PaceOfPlayInsert = typeof paceOfPlay.$inferInsert;
-
-export interface TimeBlockWithPaceOfPlay {
-  id: number;
-  startTime: string;
-  teesheetId: number;
-  paceOfPlay: PaceOfPlayRecord | null;
-  playerNames: string;
-  numPlayers: number;
-}
 
 // Create or update pace of play record
 export async function upsertPaceOfPlay(

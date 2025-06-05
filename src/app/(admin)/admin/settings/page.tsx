@@ -1,9 +1,3 @@
-import {
-  Card,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "~/components/ui/card";
 import { getTeesheetConfigs, getTemplates } from "~/server/settings/data";
 import { TeesheetSettings } from "~/components/settings/teesheet/TeesheetSettings";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
@@ -93,7 +87,7 @@ export default async function SettingsPage() {
           {/* Teesheet Settings */}
           <TeesheetSettings
             initialConfigs={teesheetConfigs}
-            templates={templates}
+            templates={templates as any[]}
           />
         </TabsContent>
 

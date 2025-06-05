@@ -94,11 +94,9 @@ export function FrequencyRestrictionFields({
               <FormLabel>Charge Amount</FormLabel>
               <FormControl>
                 <Input
-                  type="number"
-                  step="0.01"
-                  placeholder="e.g. 25.00"
+                  type="text"
+                  placeholder="e.g. 25.00 or 30% of green fee"
                   {...field}
-                  onChange={(e) => field.onChange(Number(e.target.value))}
                   value={field.value || ""}
                 />
               </FormControl>

@@ -1,7 +1,8 @@
 import { db } from "~/server/db";
 import { guests, timeBlockGuests, members } from "~/server/db/schema";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, gte, lte } from "drizzle-orm";
 import { getOrganizationId } from "~/lib/auth";
+import { formatDateToYYYYMMDD } from "~/lib/utils";
 
 export async function getGuests() {
   const orgId = await getOrganizationId();
@@ -64,21 +65,46 @@ export async function searchGuests(searchTerm: string) {
 
 export async function getGuestBookingHistory(
   guestId: number,
-  limit: number = 20,
+  options: {
+    limit?: number;
+    year?: number;
+    month?: number; // 0-based month (0 = January, 11 = December)
+  } = {},
 ): Promise<any[]> {
   try {
     const orgId = await getOrganizationId();
+    const { limit = 50, year, month } = options;
+
+    let whereConditions = and(
+      eq(timeBlockGuests.guestId, guestId),
+      eq(timeBlockGuests.clerkOrgId, orgId),
+    );
+
+    // Add month filtering if specified
+    if (year !== undefined && month !== undefined) {
+      const monthStart = new Date(year, month, 1);
+      const monthEnd = new Date(year, month + 1, 0);
+
+      const monthStartStr = formatDateToYYYYMMDD(monthStart);
+      const monthEndStr = formatDateToYYYYMMDD(monthEnd);
+
+      whereConditions = and(
+        whereConditions,
+        gte(timeBlockGuests.bookingDate, monthStartStr),
+        lte(timeBlockGuests.bookingDate, monthEndStr),
+      );
+    }
 
     const bookings = await db.query.timeBlockGuests.findMany({
-      where: and(
-        eq(timeBlockGuests.guestId, guestId),
-        eq(timeBlockGuests.clerkOrgId, orgId),
-      ),
+      where: whereConditions,
       with: {
         timeBlock: true,
         invitedByMember: true,
       },
-      orderBy: desc(timeBlockGuests.createdAt),
+      orderBy: [
+        desc(timeBlockGuests.bookingDate),
+        desc(timeBlockGuests.bookingTime),
+      ],
       limit,
     });
 

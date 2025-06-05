@@ -459,6 +459,7 @@ export const powerCartChargesRelations = relations(
     member: one(members, {
       fields: [powerCartCharges.memberId],
       references: [members.id],
+      relationName: "memberPowerCartCharges",
     }),
     guest: one(guests, {
       fields: [powerCartCharges.guestId],
@@ -467,6 +468,7 @@ export const powerCartChargesRelations = relations(
     splitWithMember: one(members, {
       fields: [powerCartCharges.splitWithMemberId],
       references: [members.id],
+      relationName: "memberSplitCharges",
     }),
   }),
 );
@@ -475,6 +477,7 @@ export const generalChargesRelations = relations(generalCharges, ({ one }) => ({
   member: one(members, {
     fields: [generalCharges.memberId],
     references: [members.id],
+    relationName: "memberGeneralCharges",
   }),
   guest: one(guests, {
     fields: [generalCharges.guestId],
@@ -483,6 +486,7 @@ export const generalChargesRelations = relations(generalCharges, ({ one }) => ({
   sponsorMember: one(members, {
     fields: [generalCharges.sponsorMemberId],
     references: [members.id],
+    relationName: "memberSponsoredCharges",
   }),
 }));
 
@@ -643,7 +647,7 @@ export const timeblockRestrictions = createTable(
     maxCount: integer("max_count"),
     periodDays: integer("period_days"),
     applyCharge: boolean("apply_charge"),
-    chargeAmount: real("charge_amount"),
+    chargeAmount: text("charge_amount"),
 
     // Status and override
     isActive: boolean("is_active").notNull().default(true),

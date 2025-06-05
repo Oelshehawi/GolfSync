@@ -17,7 +17,6 @@ interface MembersTableProps {
   members: Member[];
   onEdit?: (member: Member) => void;
   onDelete?: (member: Member) => void;
-  onViewHistory?: (member: Member) => void;
   currentPage: number;
   totalPages: number;
   onPageChange: (page: number) => void;
@@ -30,12 +29,10 @@ export function MembersTable({
   members,
   onEdit,
   onDelete,
-  onViewHistory,
   currentPage,
   totalPages,
   onPageChange,
   showSearch = false,
-  title = "Members",
   emptyMessage = "No members found",
 }: MembersTableProps) {
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
@@ -113,9 +110,9 @@ export function MembersTable({
     );
   };
 
-  const fetchMemberHistory = async () => {
+  const fetchMemberHistory = async (year?: number, month?: number) => {
     if (!selectedMember) return [];
-    return await getMemberBookingHistoryAction(selectedMember.id);
+    return await getMemberBookingHistoryAction(selectedMember.id, year, month);
   };
 
   const fetchMemberPaceOfPlayHistory = async () => {

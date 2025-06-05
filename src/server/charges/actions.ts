@@ -95,31 +95,6 @@ export async function completeGeneralCharge({
   return charge[0];
 }
 
-// Bulk complete charges
-export async function bulkCompleteCharges(
-  ids: number[],
-  type: "power-cart" | "general",
-) {
-  const orgId = await getOrganizationId();
-  if (!orgId) throw new Error("Organization not found");
-
-  if (type === "power-cart") {
-    await db
-      .update(powerCartCharges)
-      .set({ charged: true })
-      .where(
-        and(eq(powerCartCharges.clerkOrgId, orgId), sql`id = ANY(${ids})`),
-      );
-  } else {
-    await db
-      .update(generalCharges)
-      .set({ charged: true })
-      .where(and(eq(generalCharges.clerkOrgId, orgId), sql`id = ANY(${ids})`));
-  }
-
-  revalidatePath("/admin/charges");
-}
-
 // Quick cart assignment from teesheet
 export async function quickAssignPowerCart(data: PowerCartAssignmentData) {
   const orgId = await getOrganizationId();

@@ -3,22 +3,14 @@
 import { useState, useEffect } from "react";
 import type { TimeBlockWithMembers } from "~/app/types/TeeSheetTypes";
 import { Button } from "~/components/ui/button";
-import {
-  X,
-  UserCheck,
-  UserX,
-
-  UserPlus,
-} from "lucide-react";
+import { X, UserCheck, UserX, UserPlus } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { RestrictionViolation } from "~/app/types/RestrictionTypes";
 import { formatDisplayTime, getMemberClassStyling } from "~/lib/utils";
 import { Badge } from "~/components/ui/badge";
 import { cn } from "~/lib/utils";
-import type {
-  PaceOfPlayRecord,
-  PaceOfPlayStatus as PaceOfPlayStatusType,
-} from "~/server/pace-of-play/data";
+import type { PaceOfPlayRecord } from "~/server/pace-of-play/data";
+import type { PaceOfPlayStatus as PaceOfPlayStatusType } from "~/app/types/PaceOfPlayTypes";
 import { QuickCartAssignment } from "./QuickCartAssignment";
 import { quickAssignPowerCart } from "~/server/charges/actions";
 import { type PowerCartAssignmentData } from "~/app/types/ChargeTypes";
@@ -151,7 +143,6 @@ export function TimeBlock({
       toast.error("An unexpected error occurred");
     }
   };
-
 
   // Get pace of play status class
   const getPaceOfPlayStatusClass = (status: string | null) => {

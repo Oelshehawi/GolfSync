@@ -8,7 +8,7 @@ import { RefreshCw, ChevronDown, ChevronUp, ShieldAlert } from "lucide-react";
 import { PaceOfPlayCard } from "~/components/pace-of-play/PaceOfPlayCard";
 import { PaceOfPlayUpdateModal } from "~/components/pace-of-play/PaceOfPlayUpdateModal";
 import { CombinedTurnFinishModal } from "~/components/pace-of-play/CombinedTurnFinishModal";
-import { type TimeBlockWithPaceOfPlay } from "~/server/pace-of-play/data";
+import { type TimeBlockWithPaceOfPlay } from "~/app/types/PaceOfPlayTypes";
 import { useRouter } from "next/navigation";
 
 interface FinishPageClientProps {

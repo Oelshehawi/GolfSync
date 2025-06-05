@@ -18,7 +18,6 @@ import {
   deleteMember,
   searchMembersAction,
 } from "~/server/members/actions";
-import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { AddMemberForm } from "./AddMemberForm";
 import { EditMemberForm } from "./EditMemberForm";
@@ -31,7 +30,6 @@ interface MembersHandlerProps {
 const ITEMS_PER_PAGE = 6;
 
 export function MembersHandler({ initialMembers }: MembersHandlerProps) {
-  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const [members, setMembers] = useState<Member[]>(initialMembers);
   const [currentPage, setCurrentPage] = useState(1);

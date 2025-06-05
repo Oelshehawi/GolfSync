@@ -87,10 +87,9 @@ export function RestrictionCard({
               <strong>Max Bookings:</strong> {restriction.maxCount} per{" "}
               {restriction.periodDays} days
             </p>
-            {restriction.applyCharge && (
+            {restriction.applyCharge && restriction.chargeAmount && (
               <p className="text-sm">
-                <strong>Charge:</strong> ${restriction.chargeAmount?.toFixed(2)}{" "}
-                after limit
+                <strong>Charge:</strong> {restriction.chargeAmount} after limit
               </p>
             )}
           </>

@@ -138,7 +138,7 @@ export function TimeBlockMemberManager({
     setIsGuestSearching(true);
     try {
       const results = await searchGuestsAction(query);
-      setGuestSearchResults(results);
+      setGuestSearchResults(results as any);
     } finally {
       setIsGuestSearching(false);
     }
@@ -353,7 +353,6 @@ export function TimeBlockMemberManager({
                 lastName: guestToAdd.lastName,
                 email: guestToAdd.email,
                 phone: guestToAdd.phone,
-                handicap: guestToAdd.handicap,
                 checkedIn: false,
                 checkedInAt: null,
                 invitedByMember: {
@@ -395,7 +394,6 @@ export function TimeBlockMemberManager({
           lastName: guestToAdd.lastName,
           email: guestToAdd.email,
           phone: guestToAdd.phone,
-          handicap: guestToAdd.handicap,
           checkedIn: false,
           checkedInAt: null,
           invitedByMember: {

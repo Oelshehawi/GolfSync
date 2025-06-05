@@ -12,11 +12,14 @@ import {
   teesheets,
   timeBlockFills,
   generalCharges,
+  timeblockRestrictions,
 } from "~/server/db/schema";
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, sql, gte, lte } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { initializePaceOfPlay } from "~/server/pace-of-play/actions";
 import type { FillType } from "~/app/types/TeeSheetTypes";
+import { formatDateToYYYYMMDD } from "~/lib/utils";
+import { format } from "date-fns";
 
 type ActionResult = {
   success: boolean;
@@ -131,20 +134,98 @@ export async function checkInMember(
       };
     }
 
-    // If checking in, initialize pace of play
+    // If checking in, handle frequency restrictions and initialize pace of play
     if (isCheckedIn) {
-      // Check if this is the first check-in for this time block
-      const checkedInCount = await db
-        .select({ count: sql`COUNT(*)` })
-        .from(timeBlockMembers)
-        .where(
-          and(
-            eq(timeBlockMembers.timeBlockId, timeBlockId),
-            eq(timeBlockMembers.clerkOrgId, clerkOrgId),
-            eq(timeBlockMembers.checkedIn, true),
-          ),
-        )
-        .then((result) => result[0]?.count || 0);
+      // Get member details and timeblock info for frequency restriction checking
+      const memberBooking = await db.query.timeBlockMembers.findFirst({
+        where: and(
+          eq(timeBlockMembers.timeBlockId, timeBlockId),
+          eq(timeBlockMembers.memberId, memberId),
+          eq(timeBlockMembers.clerkOrgId, clerkOrgId),
+        ),
+        with: {
+          member: true,
+          timeBlock: {
+            with: {
+              teesheet: true,
+            },
+          },
+        },
+      });
+
+      // Check for frequency violations if member and timeblock exist
+      if (memberBooking?.member && memberBooking?.timeBlock?.teesheet) {
+        const memberClass = memberBooking.member.class;
+        const bookingDate = memberBooking.timeBlock.teesheet.date;
+
+        // Check for active frequency restrictions for this member class
+        const frequencyRestrictions =
+          await db.query.timeblockRestrictions.findMany({
+            where: and(
+              eq(timeblockRestrictions.clerkOrgId, clerkOrgId),
+              eq(timeblockRestrictions.restrictionCategory, "MEMBER_CLASS"),
+              eq(timeblockRestrictions.restrictionType, "FREQUENCY"),
+              eq(timeblockRestrictions.isActive, true),
+              eq(timeblockRestrictions.applyCharge, true),
+            ),
+          });
+
+        for (const restriction of frequencyRestrictions) {
+          // Check if this restriction applies to the member class
+          const memberClassesApplies =
+            !restriction.memberClasses?.length ||
+            restriction.memberClasses?.includes(memberClass);
+
+          if (
+            memberClassesApplies &&
+            restriction.maxCount &&
+            restriction.periodDays
+          ) {
+            // Calculate the current calendar month range
+            const currentDate = new Date(bookingDate);
+            const monthStart = new Date(
+              currentDate.getFullYear(),
+              currentDate.getMonth(),
+              1,
+            );
+            const monthEnd = new Date(
+              currentDate.getFullYear(),
+              currentDate.getMonth() + 1,
+              0,
+            );
+
+            const monthStartStr = formatDateToYYYYMMDD(monthStart);
+            const monthEndStr = formatDateToYYYYMMDD(monthEnd);
+
+            // Count existing bookings for this member in the current month
+            const existingBookings = await db
+              .select({ count: sql<number>`cast(count(*) as integer)` })
+              .from(timeBlockMembers)
+              .where(
+                and(
+                  eq(timeBlockMembers.memberId, memberId),
+                  eq(timeBlockMembers.clerkOrgId, clerkOrgId),
+                  gte(timeBlockMembers.bookingDate, monthStartStr),
+                  lte(timeBlockMembers.bookingDate, monthEndStr),
+                ),
+              );
+
+            const currentBookingCount = Number(existingBookings[0]?.count || 0);
+
+            // If this check-in exceeds the limit, create a charge
+            if (currentBookingCount > restriction.maxCount) {
+              await db.insert(generalCharges).values({
+                memberId: memberId,
+                date: bookingDate,
+                chargeType: "FREQUENCY_FEE",
+                charged: false,
+                staffInitials: "AUTO", // Auto-generated charge from frequency restriction
+                clerkOrgId,
+              });
+            }
+          }
+        }
+      }
 
       // Get the pace of play record for this time block
       const existingPaceOfPlay = await db.query.paceOfPlay.findFirst({

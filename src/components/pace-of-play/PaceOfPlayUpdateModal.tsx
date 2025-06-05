@@ -9,7 +9,7 @@ import {
 } from "~/components/ui/dialog";
 import { Button } from "~/components/ui/button";
 import { Textarea } from "~/components/ui/textarea";
-import { TimeBlockWithPaceOfPlay } from "~/server/pace-of-play/data";
+import { TimeBlockWithPaceOfPlay } from "~/app/types/PaceOfPlayTypes";
 import {
   updateTurnTime,
   updateFinishTime,

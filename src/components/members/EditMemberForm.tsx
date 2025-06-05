@@ -1,7 +1,7 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { memberFormSchema } from "./memberFormSchema";
-import type { MemberFormValues } from "./memberFormSchema";
+import type { Member } from "~/app/types/MemberTypes";
 import {
   Form,
   FormControl,
@@ -12,7 +12,6 @@ import {
 } from "~/components/ui/form";
 import { Input } from "~/components/ui/input";
 import { Button } from "~/components/ui/button";
-import { Member } from "~/app/types/MemberTypes";
 import { cn } from "~/lib/utils";
 import { Check, ChevronsUpDown } from "lucide-react";
 import {
@@ -31,7 +30,7 @@ import { MEMBER_CLASSES } from "~/lib/constants/memberClasses";
 
 interface EditMemberFormProps {
   member: Member;
-  onSubmit: (values: MemberFormValues) => Promise<void>;
+  onSubmit: (values: Member) => Promise<void>;
   onCancel: () => void;
 }
 
@@ -40,7 +39,7 @@ export function EditMemberForm({
   onSubmit,
   onCancel,
 }: EditMemberFormProps) {
-  const form = useForm<MemberFormValues>({
+  const form = useForm<Member>({
     resolver: zodResolver(memberFormSchema) as any,
     defaultValues: {
       memberNumber: member.memberNumber,
@@ -58,7 +57,7 @@ export function EditMemberForm({
     },
   });
 
-  const handleSubmit = async (values: MemberFormValues) => {
+  const handleSubmit = async (values: Member) => {
     await onSubmit(values);
   };
 

@@ -360,19 +360,50 @@ export default function TeesheetClient({
 
       // Check if the timeblock is restricted (pre-checked from server)
       if (timeBlock.restriction && timeBlock.restriction.isRestricted) {
-        toast.error(
-          timeBlock.restriction.reason ||
-            "This timeblock is not available for booking",
-          {
-            icon: <AlertCircle className="h-5 w-5 text-red-500" />,
-            id: `restriction-${timeBlockId}`,
-          },
+        // Check if it's a frequency restriction
+        const hasFrequencyViolation = timeBlock.restriction.violations?.some(
+          (v: any) => v.type === "FREQUENCY",
         );
-        return;
-      }
 
-      // No restrictions, proceed with booking
-      dispatch({ type: "START_BOOKING", payload: timeBlockId });
+        if (hasFrequencyViolation) {
+          // For frequency restrictions, show a friendly warning but allow booking
+          const frequencyInfo = timeBlock.restriction.violations.find(
+            (v: any) => v.type === "FREQUENCY",
+          )?.frequencyInfo;
+
+          if (frequencyInfo) {
+            toast(
+              `You've played ${frequencyInfo.currentCount}/${frequencyInfo.maxCount} times this month. Additional bookings may incur charges.`,
+              {
+                icon: <AlertCircle className="h-5 w-5 text-yellow-500" />,
+                id: `frequency-warning-${timeBlockId}`,
+                duration: 5000,
+                style: {
+                  background: "#FEF3C7",
+                  border: "1px solid #F59E0B",
+                  color: "#92400E",
+                },
+              },
+            );
+          }
+          // Proceed with booking despite frequency limit
+          dispatch({ type: "START_BOOKING", payload: timeBlockId });
+        } else {
+          // For other restrictions, block the booking
+          toast.error(
+            timeBlock.restriction.reason ||
+              "This timeblock is not available for booking",
+            {
+              icon: <AlertCircle className="h-5 w-5 text-red-500" />,
+              id: `restriction-${timeBlockId}`,
+            },
+          );
+          return;
+        }
+      } else {
+        // No restrictions, proceed with booking
+        dispatch({ type: "START_BOOKING", payload: timeBlockId });
+      }
     },
     [timeBlocks],
   );
@@ -410,7 +441,6 @@ export default function TeesheetClient({
 
   return (
     <div className="space-y-6 pt-20">
-
       {/* Date navigation */}
       <div className="flex items-center justify-between rounded-lg bg-white p-3 shadow-sm">
         <Button
