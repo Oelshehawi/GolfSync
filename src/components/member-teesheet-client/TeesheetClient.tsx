@@ -1,13 +1,6 @@
 "use client";
 
-import {
-  useEffect,
-  useState,
-  useRef,
-  useMemo,
-  useCallback,
-  useReducer,
-} from "react";
+import { useEffect, useRef, useMemo, useCallback, useReducer } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { Button } from "~/components/ui/button";
 import { addDays } from "date-fns";
@@ -36,8 +29,9 @@ import {
 } from "lucide-react";
 import { TimeBlockItem, type TimeBlockItemProps } from "./TimeBlockItem";
 import { DatePicker } from "./DatePicker";
+import { PlayerDetailsDrawer } from "./PlayerDetailsDrawer";
+import { TeesheetGeneralNotes } from "~/components/teesheet/TeesheetGeneralNotes";
 import toast from "react-hot-toast";
-import { Toaster } from "react-hot-toast";
 import {
   checkTimeBlockInPast,
   formatCalendarDate,
@@ -45,7 +39,10 @@ import {
 } from "~/lib/utils";
 import { parse } from "date-fns";
 import { Member } from "~/app/types/MemberTypes";
-import type { TimeBlockMemberView } from "~/app/types/TeeSheetTypes";
+import type {
+  TimeBlockMemberView,
+  TimeBlockFill,
+} from "~/app/types/TeeSheetTypes";
 import { Skeleton } from "~/components/ui/skeleton";
 
 // Define proper types that match TimeBlockItem requirements
@@ -54,6 +51,7 @@ type ClientTimeBlock = {
   startTime: string;
   endTime: string;
   members: TimeBlockMemberView[];
+  fills: TimeBlockFill[];
   restriction?: {
     isRestricted: boolean;
     reason: string;
@@ -137,6 +135,9 @@ type BookingState = {
   bookingTimeBlockId: number | null;
   cancelTimeBlockId: number | null;
   showDatePicker: boolean;
+  showPlayerDetails: boolean;
+  selectedTimeBlock: ClientTimeBlock | null;
+  swipeLoading: boolean;
 };
 
 type BookingAction =
@@ -145,13 +146,19 @@ type BookingAction =
   | { type: "SET_LOADING"; payload: boolean }
   | { type: "CLEAR_BOOKING" }
   | { type: "CLEAR_CANCELLING" }
-  | { type: "TOGGLE_DATE_PICKER"; payload?: boolean };
+  | { type: "TOGGLE_DATE_PICKER"; payload?: boolean }
+  | { type: "SHOW_PLAYER_DETAILS"; payload: ClientTimeBlock }
+  | { type: "HIDE_PLAYER_DETAILS" }
+  | { type: "SET_SWIPE_LOADING"; payload: boolean };
 
 const initialState: BookingState = {
   loading: false,
   bookingTimeBlockId: null,
   cancelTimeBlockId: null,
   showDatePicker: false,
+  showPlayerDetails: false,
+  selectedTimeBlock: null,
+  swipeLoading: false,
 };
 
 function bookingReducer(
@@ -174,6 +181,20 @@ function bookingReducer(
         ...state,
         showDatePicker: action.payload ?? !state.showDatePicker,
       };
+    case "SHOW_PLAYER_DETAILS":
+      return {
+        ...state,
+        showPlayerDetails: true,
+        selectedTimeBlock: action.payload,
+      };
+    case "HIDE_PLAYER_DETAILS":
+      return {
+        ...state,
+        showPlayerDetails: false,
+        selectedTimeBlock: null,
+      };
+    case "SET_SWIPE_LOADING":
+      return { ...state, swipeLoading: action.payload };
     default:
       return state;
   }
@@ -181,6 +202,7 @@ function bookingReducer(
 
 // Client component to handle interactive elements
 export default function TeesheetClient({
+  teesheet,
   config,
   timeBlocks: initialTimeBlocks,
   selectedDate,
@@ -193,14 +215,22 @@ export default function TeesheetClient({
   member: Member;
 }) {
   const [state, dispatch] = useReducer(bookingReducer, initialState);
-  const { loading, bookingTimeBlockId, cancelTimeBlockId, showDatePicker } =
-    state;
+  const {
+    loading,
+    bookingTimeBlockId,
+    cancelTimeBlockId,
+    showDatePicker,
+    showPlayerDetails,
+    selectedTimeBlock,
+    swipeLoading,
+  } = state;
 
   // Use sorted timeBlocks from server
   const timeBlocks = initialTimeBlocks;
 
   // Create a ref for the time blocks container to enable scrolling
   const timeBlocksContainerRef = useRef<HTMLDivElement>(null);
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
 
   // Auto-scroll to current time once when time blocks load
   useEffect(() => {
@@ -230,7 +260,8 @@ export default function TeesheetClient({
     [pathname, searchParams, replace],
   );
 
-  const goToPreviousDay = useCallback(() => {
+  const goToPreviousDay = useCallback(async () => {
+    dispatch({ type: "SET_SWIPE_LOADING", payload: true });
     const newDate = addDays(date, -1);
     // Set to start of day to avoid timezone issues
     const adjustedDate = new Date(
@@ -243,9 +274,14 @@ export default function TeesheetClient({
       0,
     );
     navigateToDate(adjustedDate);
+    // Clear loading after a short delay to show feedback
+    setTimeout(() => {
+      dispatch({ type: "SET_SWIPE_LOADING", payload: false });
+    }, 500);
   }, [date, navigateToDate]);
 
-  const goToNextDay = useCallback(() => {
+  const goToNextDay = useCallback(async () => {
+    dispatch({ type: "SET_SWIPE_LOADING", payload: true });
     const newDate = addDays(date, 1);
     // Set to start of day to avoid timezone issues
     const adjustedDate = new Date(
@@ -258,6 +294,10 @@ export default function TeesheetClient({
       0,
     );
     navigateToDate(adjustedDate);
+    // Clear loading after a short delay to show feedback
+    setTimeout(() => {
+      dispatch({ type: "SET_SWIPE_LOADING", payload: false });
+    }, 500);
   }, [date, navigateToDate]);
 
   const handleDateChange = useCallback(
@@ -278,7 +318,41 @@ export default function TeesheetClient({
     [navigateToDate],
   );
 
-  // Debounced handlers
+  // Touch/Swipe handlers for date navigation
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    const touch = e.touches[0];
+    if (touch) {
+      touchStartRef.current = { x: touch.clientX, y: touch.clientY };
+    }
+  }, []);
+
+  const handleTouchEnd = useCallback(
+    (e: React.TouchEvent) => {
+      if (!touchStartRef.current) return;
+
+      const touch = e.changedTouches[0];
+      if (!touch) return;
+
+      const deltaX = touch.clientX - touchStartRef.current.x;
+      const deltaY = touch.clientY - touchStartRef.current.y;
+
+      // Only trigger if horizontal swipe is dominant
+      if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 50) {
+        if (deltaX > 0) {
+          // Swipe right - go to previous day
+          goToPreviousDay();
+        } else {
+          // Swipe left - go to next day
+          goToNextDay();
+        }
+      }
+
+      touchStartRef.current = null;
+    },
+    [goToPreviousDay, goToNextDay],
+  );
+
+  // Debounced booking handlers
   const [debouncedBooking] = useDebounce(async (timeBlockId: number) => {
     if (!timeBlockId) return;
 
@@ -287,9 +361,10 @@ export default function TeesheetClient({
       const result = await bookTeeTime(timeBlockId, member);
 
       if (result.success) {
-        toast.success("Tee time booked successfully", {
+        toast.success("Tee time booked successfully!", {
           icon: <CheckCircle className="h-5 w-5 text-green-500" />,
           id: `book-${timeBlockId}`,
+          duration: 3000,
         });
       } else {
         toast.error(result.error || "Failed to book tee time", {
@@ -316,9 +391,10 @@ export default function TeesheetClient({
       const result = await cancelTeeTime(timeBlockId, member);
 
       if (result.success) {
-        toast.success("Tee time cancelled successfully", {
+        toast.success("Tee time cancelled successfully!", {
           icon: <CheckCircle className="h-5 w-5 text-green-500" />,
           id: `cancel-${timeBlockId}`,
+          duration: 3000,
         });
       } else {
         toast.error(result.error || "Failed to cancel tee time", {
@@ -350,6 +426,11 @@ export default function TeesheetClient({
     }
   }, [cancelTimeBlockId, debouncedCancelling]);
 
+  // Show player details handler
+  const handleShowPlayerDetails = useCallback((timeBlock: ClientTimeBlock) => {
+    dispatch({ type: "SHOW_PLAYER_DETAILS", payload: timeBlock });
+  }, []);
+
   // Check for booking restrictions
   const checkBookingRestrictions = useCallback(
     (timeBlockId: number) => {
@@ -360,24 +441,60 @@ export default function TeesheetClient({
 
       // Check if the timeblock is restricted (pre-checked from server)
       if (timeBlock.restriction && timeBlock.restriction.isRestricted) {
-        // Check if it's a frequency restriction
-        const hasFrequencyViolation = timeBlock.restriction.violations?.some(
+        const violations = timeBlock.restriction.violations || [];
+
+        // Check for AVAILABILITY restrictions first (highest priority)
+        const hasAvailabilityViolation = violations.some(
+          (v: any) => v.type === "AVAILABILITY",
+        );
+
+        if (hasAvailabilityViolation) {
+          // AVAILABILITY restrictions block booking completely
+          toast.error(
+            timeBlock.restriction.reason ||
+              "Course is not available during this time",
+            {
+              icon: <AlertCircle className="h-5 w-5 text-red-500" />,
+              id: `availability-restriction-${timeBlockId}`,
+            },
+          );
+          return;
+        }
+
+        // Check for TIME restrictions second (high priority)
+        const hasTimeViolation = violations.some((v: any) => v.type === "TIME");
+
+        if (hasTimeViolation) {
+          // TIME restrictions block booking completely
+          toast.error(
+            timeBlock.restriction.reason ||
+              "This time slot is restricted for your member class",
+            {
+              icon: <AlertCircle className="h-5 w-5 text-red-500" />,
+              id: `time-restriction-${timeBlockId}`,
+            },
+          );
+          return;
+        }
+
+        // Check for FREQUENCY restrictions (lower priority)
+        const hasFrequencyViolation = violations.some(
           (v: any) => v.type === "FREQUENCY",
         );
 
         if (hasFrequencyViolation) {
           // For frequency restrictions, show a friendly warning but allow booking
-          const frequencyInfo = timeBlock.restriction.violations.find(
+          const frequencyInfo = violations.find(
             (v: any) => v.type === "FREQUENCY",
           )?.frequencyInfo;
 
           if (frequencyInfo) {
             toast(
-              `You've played ${frequencyInfo.currentCount}/${frequencyInfo.maxCount} times this month. Additional bookings may incur charges.`,
+              `You've played ${frequencyInfo.currentCount}/${frequencyInfo.maxCount} times this month.`,
               {
                 icon: <AlertCircle className="h-5 w-5 text-yellow-500" />,
                 id: `frequency-warning-${timeBlockId}`,
-                duration: 5000,
+                duration: 4000,
                 style: {
                   background: "#FEF3C7",
                   border: "1px solid #F59E0B",
@@ -440,95 +557,141 @@ export default function TeesheetClient({
   const hasTimeBlocks = timeBlocks.length > 0;
 
   return (
-    <div className="space-y-6 pt-20">
-      {/* Date navigation */}
-      <div className="flex items-center justify-between rounded-lg bg-white p-3 shadow-sm">
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={goToPreviousDay}
-          disabled={loading}
-          className="hover:bg-[var(--org-primary)] hover:text-white"
-          aria-label="Previous day"
-        >
-          <ChevronLeft className="h-4 w-4" />
-        </Button>
-
-        <div className="flex items-center gap-2">
-          <h2 className="text-lg font-semibold">{formatDisplayDate(date)}</h2>
+    <div className="space-y-4 px-3 pb-6">
+      {/* Sticky Date Navigation Header - Now the only sticky element */}
+      <div className="sticky top-2 z-30 mb-4 rounded-xl border border-gray-200 bg-white/95 p-3 shadow-lg backdrop-blur-sm">
+        <div className="flex items-center justify-between">
           <Button
-            variant="outline"
-            size="icon"
-            onClick={() => dispatch({ type: "TOGGLE_DATE_PICKER" })}
-            disabled={loading}
-            className="hover:bg-[var(--org-primary)] hover:text-white"
-            aria-label="Open date picker"
+            variant="ghost"
+            size="sm"
+            onClick={goToPreviousDay}
+            disabled={loading || swipeLoading}
+            className="h-10 w-10 rounded-full hover:bg-[var(--org-primary)]/10 hover:text-[var(--org-primary)]"
+            aria-label="Previous day"
           >
-            <CalendarIcon className="h-4 w-4" />
+            {swipeLoading ? (
+              <Loader2 className="h-5 w-5 animate-spin" />
+            ) : (
+              <ChevronLeft className="h-5 w-5" />
+            )}
+          </Button>
+
+          <div className="flex items-center gap-2">
+            <h2 className="text-lg font-bold text-gray-900">
+              {formatDisplayDate(date)}
+            </h2>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => dispatch({ type: "TOGGLE_DATE_PICKER" })}
+              disabled={loading || swipeLoading}
+              className="h-8 w-8 rounded-full hover:bg-[var(--org-primary)]/10 hover:text-[var(--org-primary)]"
+              aria-label="Open date picker"
+            >
+              <CalendarIcon className="h-4 w-4" />
+            </Button>
+          </div>
+
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={goToNextDay}
+            disabled={loading || swipeLoading}
+            className="h-10 w-10 rounded-full hover:bg-[var(--org-primary)]/10 hover:text-[var(--org-primary)]"
+            aria-label="Next day"
+          >
+            {swipeLoading ? (
+              <Loader2 className="h-5 w-5 animate-spin" />
+            ) : (
+              <ChevronRight className="h-5 w-5" />
+            )}
           </Button>
         </div>
 
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={goToNextDay}
-          disabled={loading}
-          className="hover:bg-[var(--org-primary)] hover:text-white"
-          aria-label="Next day"
-        >
-          <ChevronRight className="h-4 w-4" />
-        </Button>
+        {/* Swipe Loading Indicator */}
+        {swipeLoading && (
+          <div className="mt-2 flex items-center justify-center">
+            <div className="flex items-center gap-2 text-sm text-[var(--org-primary)]">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span>Loading new date...</span>
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Time blocks */}
-      <div className="rounded-lg bg-white p-6 shadow-sm">
-        <div className="mb-4">
-          <h3 className="flex items-center gap-2 text-lg font-semibold">
+      {/* General Notes Section */}
+      {teesheet?.generalNotes && (
+        <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+          <div className="border-b border-gray-100 bg-blue-50 p-4">
+            <h3 className="flex items-center gap-2 text-lg font-bold text-gray-900">
+              <AlertCircle className="h-5 w-5 text-blue-600" />
+              Important Information
+            </h3>
+          </div>
+          <div className="p-4">
+            <div className="border-l-4 border-blue-500 pl-4 text-sm leading-relaxed text-gray-700">
+              {teesheet.generalNotes}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Tee Sheet Grid - No internal scrolling */}
+      <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+        <div className="border-b border-gray-100 bg-[var(--org-primary)]/5 p-4">
+          <h3 className="flex items-center gap-2 text-lg font-bold text-gray-900">
             <ClockIcon className="h-5 w-5 text-[var(--org-primary)]" />
-            Available Tee Times
+            Tee Sheet - {formatDisplayDate(date)}
           </h3>
           {config?.disallowMemberBooking && (
-            <div className="mt-2 rounded-md border border-red-200 bg-red-50 p-2 text-sm text-red-700">
+            <div className="mt-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
               <AlertCircle className="mr-2 inline-block h-4 w-4" />
-              Member booking is not allowed for this teesheet
+              Member booking is currently disabled
             </div>
           )}
         </div>
 
         <div
           ref={timeBlocksContainerRef}
-          className="max-h-[60vh] space-y-3 overflow-y-auto scroll-smooth p-1"
+          className="p-4"
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
           aria-live="polite"
         >
           {hasTimeBlocks ? (
-            timeBlocks.map((timeBlock) => (
-              <TimeBlockItem
-                key={timeBlock.id}
-                timeBlock={
-                  timeBlock as unknown as TimeBlockItemProps["timeBlock"]
-                }
-                isBooked={isTimeBlockBooked(timeBlock)}
-                isAvailable={isTimeBlockAvailable(timeBlock)}
-                isPast={isTimeBlockInPast(timeBlock)}
-                onBook={() => checkBookingRestrictions(timeBlock.id)}
-                onCancel={() =>
-                  dispatch({ type: "START_CANCELLING", payload: timeBlock.id })
-                }
-                disabled={loading || config?.disallowMemberBooking}
-                member={member}
-                id={`time-block-${timeBlock.id}`}
-                isRestricted={timeBlock.restriction?.isRestricted || false}
-                restrictionReason={timeBlock.restriction?.reason || ""}
-              />
-            ))
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {timeBlocks.map((timeBlock) => (
+                <TimeBlockItem
+                  key={timeBlock.id}
+                  timeBlock={
+                    timeBlock as unknown as TimeBlockItemProps["timeBlock"]
+                  }
+                  isBooked={isTimeBlockBooked(timeBlock)}
+                  isAvailable={isTimeBlockAvailable(timeBlock)}
+                  isPast={isTimeBlockInPast(timeBlock)}
+                  onBook={() => checkBookingRestrictions(timeBlock.id)}
+                  onCancel={() =>
+                    dispatch({
+                      type: "START_CANCELLING",
+                      payload: timeBlock.id,
+                    })
+                  }
+                  onShowDetails={() => handleShowPlayerDetails(timeBlock)}
+                  disabled={loading || config?.disallowMemberBooking}
+                  member={member}
+                  id={`time-block-${timeBlock.id}`}
+                  isRestricted={timeBlock.restriction?.isRestricted || false}
+                />
+              ))}
+            </div>
           ) : (
-            <div className="flex flex-col items-center justify-center py-8 text-center">
-              <CalendarIcon className="mb-2 h-10 w-10 text-gray-300" />
-              <p className="text-gray-500">
-                No tee times available for this date.
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <CalendarIcon className="mb-4 h-16 w-16 text-gray-300" />
+              <p className="mb-2 text-lg font-medium text-gray-500">
+                No tee times available
               </p>
-              <p className="mt-2 text-sm text-gray-400">
-                Try selecting a different date.
+              <p className="text-sm text-gray-400">
+                Try selecting a different date to see available times.
               </p>
             </div>
           )}
@@ -552,7 +715,14 @@ export default function TeesheetClient({
         </Dialog>
       )}
 
-      {/* Booking Confirmation Dialog */}
+      {/* Player Details Drawer */}
+      <PlayerDetailsDrawer
+        isOpen={showPlayerDetails}
+        onClose={() => dispatch({ type: "HIDE_PLAYER_DETAILS" })}
+        timeBlock={selectedTimeBlock}
+      />
+
+      {/* Streamlined Booking Confirmation */}
       <Dialog
         open={bookingTimeBlockId !== null}
         onOpenChange={(isOpen) => {
@@ -561,25 +731,24 @@ export default function TeesheetClient({
       >
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Confirm Tee Time Booking</DialogTitle>
+            <DialogTitle>Book Tee Time</DialogTitle>
             <DialogDescription>
-              Are you sure you want to book this tee time?
+              Confirm your booking for this tee time?
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter className="space-y-2 sm:space-x-4">
+          <DialogFooter className="gap-2">
             <Button
               variant="outline"
               onClick={() => dispatch({ type: "CLEAR_BOOKING" })}
               disabled={loading}
-              className="w-full sm:w-auto"
+              className="flex-1"
             >
               Cancel
             </Button>
             <Button
-              variant="default"
               onClick={handleBookTeeTime}
               disabled={loading}
-              className="hover:bg-opacity-90 w-full bg-[var(--org-primary)] sm:w-auto"
+              className="flex-1 bg-[var(--org-primary)] hover:bg-[var(--org-primary)]/90"
             >
               {loading ? (
                 <>
@@ -587,7 +756,7 @@ export default function TeesheetClient({
                   Booking...
                 </>
               ) : (
-                "Confirm Booking"
+                "Confirm"
               )}
             </Button>
           </DialogFooter>
@@ -603,17 +772,17 @@ export default function TeesheetClient({
       >
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Cancel Tee Time Booking</DialogTitle>
+            <DialogTitle>Cancel Booking</DialogTitle>
             <DialogDescription>
-              Are you sure you want to cancel this tee time booking?
+              Are you sure you want to cancel this tee time?
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter className="space-y-2 sm:space-x-4">
+          <DialogFooter className="gap-2">
             <Button
               variant="outline"
               onClick={() => dispatch({ type: "CLEAR_CANCELLING" })}
               disabled={loading}
-              className="w-full sm:w-auto"
+              className="flex-1"
             >
               Keep Booking
             </Button>
@@ -621,7 +790,7 @@ export default function TeesheetClient({
               variant="destructive"
               onClick={handleCancelTeeTime}
               disabled={loading}
-              className="w-full sm:w-auto"
+              className="flex-1"
             >
               {loading ? (
                 <>

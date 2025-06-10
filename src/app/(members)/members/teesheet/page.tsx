@@ -31,6 +31,7 @@ export default async function MemberTeesheetPage({ searchParams }: PageProps) {
     member,
   } = await getMemberTeesheetDataWithRestrictions(date, userId as string);
 
+
   return (
     <TeesheetClient
       teesheet={teesheet}

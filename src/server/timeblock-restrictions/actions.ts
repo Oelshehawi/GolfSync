@@ -1,7 +1,7 @@
 "use server";
 
 import { db } from "~/server/db";
-import { eq, and, or, isNull, sql, gte, lte } from "drizzle-orm";
+import { eq, and, or, isNull, sql, gte, lte, desc } from "drizzle-orm";
 import { getOrganizationId } from "~/lib/auth";
 import { revalidatePath } from "next/cache";
 import {
@@ -381,6 +381,7 @@ export async function checkTimeblockRestrictionsAction(params: {
           eq(timeblockRestrictions.restrictionCategory, "MEMBER_CLASS"),
           eq(timeblockRestrictions.isActive, true),
         ),
+        orderBy: [desc(timeblockRestrictions.priority)],
       });
 
       for (const restriction of memberRestrictions) {
@@ -395,7 +396,12 @@ export async function checkTimeblockRestrictionsAction(params: {
         }
 
         if (restriction.restrictionType === "TIME") {
-          if (restriction.daysOfWeek?.includes(dayOfWeek)) {
+          // Check day of week - empty array or null means apply to all days
+          const dayApplies =
+            !restriction.daysOfWeek?.length ||
+            restriction.daysOfWeek?.includes(dayOfWeek);
+
+          if (dayApplies) {
             if (
               bookingTimeLocal >= (restriction.startTime || "00:00") &&
               bookingTimeLocal <= (restriction.endTime || "23:59")
@@ -539,15 +545,43 @@ export async function checkTimeblockRestrictionsAction(params: {
       }
     }
 
+    // Determine preferred reason: prioritize AVAILABILITY > TIME > FREQUENCY regardless of priority
+    let preferredReason = "";
+    if (violations.length > 0) {
+      // Look for AVAILABILITY violation first (highest priority)
+      const availabilityViolation = violations.find(
+        (v) => v.type === "AVAILABILITY",
+      );
+      if (availabilityViolation) {
+        preferredReason =
+          availabilityViolation.restrictionDescription &&
+          availabilityViolation.restrictionDescription.trim() !== ""
+            ? availabilityViolation.restrictionDescription
+            : availabilityViolation.message;
+      } else {
+        // Look for TIME violation second
+        const timeViolation = violations.find((v) => v.type === "TIME");
+        if (timeViolation) {
+          preferredReason =
+            timeViolation.restrictionDescription &&
+            timeViolation.restrictionDescription.trim() !== ""
+              ? timeViolation.restrictionDescription
+              : timeViolation.message;
+        } else {
+          // Fall back to first violation if no AVAILABILITY or TIME violation
+          preferredReason =
+            violations[0].restrictionDescription &&
+            violations[0].restrictionDescription.trim() !== ""
+              ? violations[0].restrictionDescription
+              : violations[0].message;
+        }
+      }
+    }
+
     return {
       hasViolations: violations.length > 0,
       violations,
-      preferredReason:
-        violations.length > 0
-          ? violations[0].description && violations[0].description.trim() !== ""
-            ? violations[0].description
-            : violations[0].message
-          : "",
+      preferredReason,
     };
   } catch (error) {
     console.error("Error checking timeblock restrictions:", error);

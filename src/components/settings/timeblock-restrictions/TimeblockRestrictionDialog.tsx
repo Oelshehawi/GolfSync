@@ -44,40 +44,100 @@ import { MultiSelect, type OptionType } from "~/components/ui/multi-select";
 import { MEMBER_CLASSES } from "~/lib/constants/memberClasses";
 
 // Define the form schema based on the TimeblockRestriction type
-const formSchema = z.object({
-  name: z.string().min(1, "Name is required"),
-  description: z.string().nullable().optional(),
-  restrictionCategory: z.enum(["MEMBER_CLASS", "GUEST", "COURSE_AVAILABILITY"]),
-  restrictionType: z.enum(["TIME", "FREQUENCY", "AVAILABILITY"]),
-  memberClasses: z.array(z.string()).default([]),
-  isActive: z.boolean().default(true),
-  priority: z.coerce.number().default(0),
-  canOverride: z.boolean().default(true),
+const formSchema = z
+  .object({
+    name: z.string().min(1, "Name is required"),
+    description: z.string().nullable().optional(),
+    restrictionCategory: z.enum([
+      "MEMBER_CLASS",
+      "GUEST",
+      "COURSE_AVAILABILITY",
+    ]),
+    restrictionType: z.enum(["TIME", "FREQUENCY", "AVAILABILITY"]),
+    memberClasses: z.array(z.string()).default([]),
+    isActive: z.boolean().default(true),
+    priority: z.coerce.number().default(0),
+    canOverride: z.boolean().default(true),
 
-  // Time restriction fields
-  startTime: z.string().min(1, "Start time is required"),
-  endTime: z.string().min(1, "End time is required"),
-  daysOfWeek: z.array(z.number()).default([]),
+    // Time restriction fields
+    startTime: z.string().optional(),
+    endTime: z.string().optional(),
+    daysOfWeek: z.array(z.number()).default([]),
 
-  // Date range fields
-  startDate: z
-    .union([z.date(), z.null(), z.string(), z.undefined()])
-    .optional()
-    .nullable(),
-  endDate: z
-    .union([z.date(), z.null(), z.string(), z.undefined()])
-    .optional()
-    .nullable(),
+    // Date range fields
+    startDate: z
+      .union([z.date(), z.null(), z.string(), z.undefined()])
+      .optional()
+      .nullable(),
+    endDate: z
+      .union([z.date(), z.null(), z.string(), z.undefined()])
+      .optional()
+      .nullable(),
 
-  // Frequency restriction fields
-  maxCount: z.coerce.number().optional().nullable(),
-  periodDays: z.coerce.number().optional().nullable(),
-  applyCharge: z.boolean().default(false),
-  chargeAmount: z.string().optional().nullable(),
+    // Frequency restriction fields
+    maxCount: z.coerce.number().optional().nullable(),
+    periodDays: z.coerce.number().optional().nullable(),
+    applyCharge: z.boolean().default(false),
+    chargeAmount: z.string().optional().nullable(),
 
-  // Course availability fields
-  isFullDay: z.boolean().default(false),
-});
+    // Course availability fields
+    isFullDay: z.boolean().default(false),
+  })
+  .refine(
+    (data) => {
+      // TIME restrictions require start time, end time, and days
+      if (
+        data.restrictionType === "TIME" &&
+        data.restrictionCategory !== "COURSE_AVAILABILITY"
+      ) {
+        return (
+          data.startTime &&
+          data.startTime.trim() !== "" &&
+          data.endTime &&
+          data.endTime.trim() !== "" &&
+          data.daysOfWeek &&
+          data.daysOfWeek.length > 0
+        );
+      }
+      return true;
+    },
+    {
+      message:
+        "TIME restrictions require start time, end time, and days of week",
+      path: ["startTime"],
+    },
+  )
+  .refine(
+    (data) => {
+      // FREQUENCY restrictions require max count and period days
+      if (data.restrictionType === "FREQUENCY") {
+        return (
+          data.maxCount &&
+          data.maxCount > 0 &&
+          data.periodDays &&
+          data.periodDays > 0
+        );
+      }
+      return true;
+    },
+    {
+      message: "FREQUENCY restrictions require max count and period days",
+      path: ["maxCount"],
+    },
+  )
+  .refine(
+    (data) => {
+      // COURSE_AVAILABILITY restrictions require date range
+      if (data.restrictionCategory === "COURSE_AVAILABILITY") {
+        return data.startDate && data.endDate;
+      }
+      return true;
+    },
+    {
+      message: "Course availability restrictions require start and end dates",
+      path: ["startDate"],
+    },
+  );
 
 export type TimeblockRestrictionFormValues = z.infer<typeof formSchema>;
 

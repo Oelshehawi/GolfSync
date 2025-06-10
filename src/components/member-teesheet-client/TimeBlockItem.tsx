@@ -3,7 +3,15 @@
 import React from "react";
 import { Button } from "~/components/ui/button";
 import { Badge } from "~/components/ui/badge";
-import { UserIcon, Users, Ban, AlertCircle, CheckCircle } from "lucide-react";
+import {
+  UserIcon,
+  Users,
+  Ban,
+  AlertCircle,
+  CheckCircle,
+  Info,
+  ClockIcon,
+} from "lucide-react";
 import { formatDisplayTime } from "~/lib/utils";
 import { TimeBlockMemberView, TimeBlockFill } from "~/app/types/TeeSheetTypes";
 import { Member } from "~/app/types/MemberTypes";
@@ -25,11 +33,11 @@ export interface TimeBlockItemProps {
   isPast?: boolean;
   onBook: () => void;
   onCancel: () => void;
+  onShowDetails?: () => void;
   disabled?: boolean;
   member?: Member;
   id?: string;
   isRestricted?: boolean;
-  restrictionReason?: string;
 }
 
 export function TimeBlockItem({
@@ -39,28 +47,49 @@ export function TimeBlockItem({
   isPast = false,
   onBook,
   onCancel,
+  onShowDetails,
   disabled = false,
   member,
   id,
   isRestricted = false,
-  restrictionReason = "",
 }: TimeBlockItemProps) {
   // Format the start time for display using our proper date utility function
-  const startTimeDisplay = formatDisplayTime(timeBlock.startTime).toUpperCase();
+  const startTimeDisplay = formatDisplayTime(timeBlock.startTime);
 
   // Calculate total people including fills
   const totalPeople = timeBlock.members.length + (timeBlock.fills?.length || 0);
+  const maxPlayers = timeBlock.maxMembersPerBlock || 4;
 
-  // Check if it's a frequency restriction (which should allow booking)
+  // Check for different types of restrictions
+  const hasAvailabilityViolation = timeBlock.restriction?.violations?.some(
+    (v: any) => v.type === "AVAILABILITY",
+  );
+  const hasTimeViolation = timeBlock.restriction?.violations?.some(
+    (v: any) => v.type === "TIME",
+  );
   const hasFrequencyViolation = timeBlock.restriction?.violations?.some(
     (v: any) => v.type === "FREQUENCY",
   );
 
-  // For frequency restrictions, don't disable the button
-  const isRestrictedNonFrequency = isRestricted && !hasFrequencyViolation;
+  // AVAILABILITY and TIME restrictions completely block booking, FREQUENCY allows booking with warning
+  const isAvailabilityRestricted = hasAvailabilityViolation;
+  const isTimeRestricted = hasTimeViolation && !hasAvailabilityViolation;
+  const isFrequencyRestricted =
+    hasFrequencyViolation && !hasTimeViolation && !hasAvailabilityViolation;
 
-  // Determine if the button should be disabled (either by prop, past, or non-frequency restricted)
-  const isButtonDisabled = disabled || isPast || isRestrictedNonFrequency;
+  // Get descriptions for all applicable violations
+  const getViolationDescriptions = (types: string[]) => {
+    if (!timeBlock.restriction?.violations) return [];
+
+    return timeBlock.restriction.violations
+      .filter((v: any) => types.includes(v.type))
+      .map((v: any) => v.restrictionDescription || v.message)
+      .filter((desc: string) => desc && desc.trim() !== "");
+  };
+
+  // Determine if the button should be disabled
+  const isButtonDisabled =
+    disabled || isPast || isAvailabilityRestricted || isTimeRestricted;
 
   // Check if current member is checked in
   const isMemberCheckedIn =
@@ -72,161 +101,281 @@ export function TimeBlockItem({
   const allMembersCheckedIn =
     timeBlock.members.length > 0 && timeBlock.members.every((m) => m.checkedIn);
 
-  // Get the appropriate CSS class for the timeblock container
-  let timeBlockClass = isRestrictedNonFrequency
-    ? "rounded-md border border-red-300 bg-red-50 p-4 shadow-sm"
-    : hasFrequencyViolation
-      ? "rounded-md border border-yellow-300 bg-yellow-50 p-4 shadow-sm hover:bg-yellow-100"
-      : `rounded-md border p-4 shadow-sm hover:bg-gray-50 ${isPast ? "bg-gray-100 border-gray-200" : "border-gray-200"}`;
+  // Determine cell status and styling
+  const getStatusInfo = () => {
+    if (isPast)
+      return {
+        status: "PAST",
+        color: "bg-gray-100 border-gray-300",
+        textColor: "text-gray-500",
+      };
+    if (isAvailabilityRestricted)
+      return {
+        status: "UNAVAILABLE",
+        color: "bg-red-50 border-red-300",
+        textColor: "text-red-600",
+      };
+    if (isTimeRestricted)
+      return {
+        status: "RESTRICTED",
+        color: "bg-red-50 border-red-300",
+        textColor: "text-red-600",
+      };
+    if (allMembersCheckedIn)
+      return {
+        status: "CHECKED IN",
+        color: "bg-emerald-50 border-emerald-400",
+        textColor: "text-emerald-700",
+      };
+    if (isBooked)
+      return {
+        status: "BOOKED",
+        color: "bg-blue-50 border-blue-400",
+        textColor: "text-blue-700",
+      };
+    if (!isAvailable)
+      return {
+        status: "FULL",
+        color: "bg-orange-50 border-orange-300",
+        textColor: "text-orange-600",
+      };
+    if (isFrequencyRestricted)
+      return {
+        status: "AVAILABLE*",
+        color: "bg-yellow-50 border-yellow-300",
+        textColor: "text-yellow-700",
+      };
+    return {
+      status: "AVAILABLE",
+      color: "bg-green-50 border-green-400",
+      textColor: "text-green-700",
+    };
+  };
 
-  // Add a green border if all members are checked in
-  if (allMembersCheckedIn) {
-    timeBlockClass = `rounded-md border border-green-400 p-4 shadow-sm hover:bg-green-50 bg-green-50`;
-  }
+  const statusInfo = getStatusInfo();
+
+  // Get first few player names for compact display
+  const displayPlayers = timeBlock.members.slice(0, 2);
+  const hasMorePlayers = totalPeople > 2;
+
+  // Handle click on the entire card (except action button)
+  const handleCardClick = () => {
+    if (onShowDetails) {
+      onShowDetails();
+    }
+  };
 
   return (
-    <div id={id} className={timeBlockClass}>
-      <div className="mb-2 flex items-center justify-between">
-        <div className="flex flex-col">
-          <span className="text-lg font-semibold">{startTimeDisplay}</span>
-          <div className="mt-1 flex flex-wrap items-center gap-1">
-            <span className="text-sm text-gray-600">
-              {totalPeople} / {timeBlock.maxMembersPerBlock} Players
+    <div
+      id={id}
+      className={`relative rounded-lg border-2 shadow-sm transition-all duration-200 ${statusInfo.color} flex min-h-[120px] cursor-pointer flex-col justify-between hover:shadow-md active:scale-[0.98]`}
+      onClick={handleCardClick}
+    >
+      {/* Content Container - Clickable */}
+      <div className="flex h-full flex-col justify-between p-3">
+        {/* Header Row - Time and Status */}
+        <div className="mb-2 flex items-start justify-between">
+          <div className="flex flex-col">
+            <span className="text-xl font-bold text-gray-900">
+              {startTimeDisplay}
             </span>
-            {isBooked && (
-              <Badge className="ml-2 bg-green-500 hover:bg-green-600">
-                Booked
-              </Badge>
-            )}
-            {isMemberCheckedIn && (
-              <Badge className="ml-2 bg-emerald-500 hover:bg-emerald-600">
-                <CheckCircle className="mr-1 h-3 w-3" /> Checked In
-              </Badge>
-            )}
-            {isPast && <Badge className="ml-2 bg-gray-500">Past</Badge>}
-            {isRestrictedNonFrequency && (
-              <Badge className="ml-2 bg-red-500 hover:bg-red-600">
-                Restricted
-              </Badge>
-            )}
-            {hasFrequencyViolation && (
-              <Badge className="ml-2 bg-yellow-500 hover:bg-yellow-600">
-                Frequency Limit
-              </Badge>
-            )}
-            {allMembersCheckedIn && (
-              <Badge className="ml-2 bg-emerald-500 hover:bg-emerald-600">
-                All Checked In
-              </Badge>
-            )}
+            <span className={`text-sm font-semibold ${statusInfo.textColor}`}>
+              {statusInfo.status}
+            </span>
+          </div>
+
+          {/* Player Count Badge */}
+          <div
+            className={`flex items-center gap-1 rounded-full px-2 py-1 text-sm font-semibold ${totalPeople === maxPlayers ? "bg-orange-100 text-orange-700" : "bg-gray-100 text-gray-700"} `}
+          >
+            <Users className="h-4 w-4" />
+            <span>
+              {totalPeople}/{maxPlayers}
+            </span>
           </div>
         </div>
 
-        {/* Action buttons */}
-        <div>
-          {isBooked ? (
-            <Button
-              variant="destructive"
-              size="sm"
-              onClick={onCancel}
-              disabled={isButtonDisabled}
-            >
-              Cancel
-            </Button>
-          ) : isRestrictedNonFrequency ? (
-            <Button
-              variant="outline"
-              size="sm"
-              disabled
-              className="border-red-300 bg-red-50 text-red-500"
-            >
-              <Ban className="mr-1 h-4 w-4" />
-              Unavailable
-            </Button>
-          ) : isAvailable ? (
-            <Button
-              variant="default"
-              size="sm"
-              onClick={onBook}
-              className={`${disabled ? "bg-gray-300" : "bg-[var(--org-primary)]"}`}
-              disabled={isButtonDisabled}
-            >
-              {isPast ? "Past" : "Book"}
-            </Button>
+        {/* Players Preview - Compact */}
+        <div className="min-h-[40px] flex-1">
+          {totalPeople > 0 ? (
+            <div className="space-y-1">
+              {displayPlayers.map((player, idx) => (
+                <div
+                  key={idx}
+                  className="flex items-center text-sm text-gray-700"
+                >
+                  {player.checkedIn ? (
+                    <CheckCircle className="mr-2 h-4 w-4 text-green-500" />
+                  ) : (
+                    <UserIcon className="mr-2 h-4 w-4 text-gray-400" />
+                  )}
+                  <span
+                    className={`text-base font-medium ${player.checkedIn ? "text-green-600" : "text-gray-800"}`}
+                  >
+                    {player.firstName} {player.lastName?.[0]}.
+                  </span>
+                </div>
+              ))}
+              {hasMorePlayers && (
+                <div className="mt-1 flex items-center text-sm text-[var(--org-primary)]">
+                  <Info className="mr-1 h-4 w-4" />
+                  <span className="font-medium">
+                    +{totalPeople - 2} more players
+                  </span>
+                </div>
+              )}
+            </div>
           ) : (
-            <Button variant="outline" size="sm" disabled>
-              Full
-            </Button>
+            <div className="flex h-full items-center justify-center">
+              <span className="text-sm font-medium text-gray-400">
+                Tap to see details
+              </span>
+            </div>
           )}
         </div>
       </div>
 
-      {/* Restriction reason */}
-      {isRestrictedNonFrequency && restrictionReason && (
-        <div className="mb-2 flex items-center rounded-md bg-red-100 p-2 text-sm text-red-700">
-          <AlertCircle className="mr-2 h-4 w-4" />
-          {restrictionReason}
-        </div>
-      )}
-
-      {/* Frequency warning */}
-      {hasFrequencyViolation && (
-        <div className="mb-2 flex items-center rounded-md bg-yellow-100 p-2 text-sm text-yellow-700">
-          <AlertCircle className="mr-2 h-4 w-4" />
-          You've reached your monthly booking limit. Additional bookings may
-          incur charges.
-        </div>
-      )}
-
-      {/* Player list - now more prominent */}
-      {(timeBlock.members.length > 0 || timeBlock.fills?.length > 0) && (
-        <div
-          className={`mt-2 rounded p-2 ${allMembersCheckedIn ? "bg-green-50" : "bg-gray-50"}`}
-        >
-          <div className="mb-1 flex items-center gap-2">
-            <Users className="h-4 w-4 text-gray-500" />
-            <span className="text-sm font-medium text-gray-700">Players:</span>
+      {/* Action Button - Non-clickable area */}
+      <div
+        className="p-3 pt-0"
+        onClick={(e) => e.stopPropagation()} // Prevent card click when clicking button
+      >
+        {isBooked ? (
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={onCancel}
+            disabled={isButtonDisabled}
+            className="h-9 w-full text-sm font-semibold"
+          >
+            Cancel
+          </Button>
+        ) : isAvailabilityRestricted ? (
+          <div className="space-y-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled
+              className="h-9 w-full border-red-300 bg-red-50 text-sm text-red-500"
+            >
+              <Ban className="mr-1 h-3 w-3" />
+              Unavailable
+            </Button>
+            {getViolationDescriptions(["AVAILABILITY"]).map(
+              (desc: string, idx: number) => (
+                <p key={idx} className="text-center text-xs text-red-600">
+                  {desc}
+                </p>
+              ),
+            )}
           </div>
-          <ul className="grid grid-cols-1 gap-x-4 gap-y-1 md:grid-cols-2">
-            {timeBlock.members.map((member, idx) => (
-              <li
-                key={idx}
-                className={`flex items-center text-sm ${
-                  member.checkedIn ? "text-green-600" : "text-gray-700"
-                }`}
-              >
-                {member.checkedIn ? (
-                  <CheckCircle className="mr-1 h-3 w-3 text-green-600" />
-                ) : (
-                  <UserIcon className="mr-1 h-3 w-3 text-gray-400" />
-                )}
-                <span
-                  className={`font-medium ${member.checkedIn ? "text-green-600" : ""}`}
-                >
-                  {member.firstName} {member.lastName}
-                  {member.checkedIn && <span className="ml-1 text-xs">✓</span>}
-                </span>
-              </li>
-            ))}
-            {timeBlock.fills?.map((fill, idx) => (
-              <li
-                key={`fill-${idx}`}
-                className="flex items-center text-sm text-gray-700"
-              >
-                <UserIcon className="mr-1 h-3 w-3 text-gray-400" />
-                <span className="font-medium">
-                  {fill.fillType === "custom_fill"
-                    ? fill.customName || "Custom Fill"
-                    : fill.fillType === "guest_fill"
-                      ? "Guest Fill"
-                      : "Reciprocal Fill"}
-                  <Badge variant="secondary" className="ml-1 text-xs">
-                    Fill
-                  </Badge>
-                </span>
-              </li>
-            ))}
-          </ul>
+        ) : isTimeRestricted ? (
+          <div className="space-y-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled
+              className="h-9 w-full border-red-300 bg-red-50 text-sm text-red-500"
+            >
+              <Ban className="mr-1 h-3 w-3" />
+              Restricted
+            </Button>
+            {getViolationDescriptions(["TIME"]).map(
+              (desc: string, idx: number) => (
+                <p key={idx} className="text-center text-xs text-red-600">
+                  {desc}
+                </p>
+              ),
+            )}
+          </div>
+        ) : isPast ? (
+          <Button
+            variant="outline"
+            size="sm"
+            disabled
+            className="h-9 w-full border-gray-300 bg-gray-50 text-sm text-gray-500"
+          >
+            Past
+          </Button>
+        ) : isFrequencyRestricted ? (
+          <div className="space-y-2">
+            <Button
+              variant="default"
+              size="sm"
+              onClick={onBook}
+              className="h-9 w-full bg-[var(--org-primary)] text-sm font-semibold hover:bg-[var(--org-primary)]/90"
+              disabled={isButtonDisabled}
+            >
+              Book Now*
+            </Button>
+            {getViolationDescriptions(["FREQUENCY"]).map(
+              (desc: string, idx: number) => (
+                <p key={idx} className="text-center text-xs text-yellow-700">
+                  {desc}
+                </p>
+              ),
+            )}
+          </div>
+        ) : isAvailable ? (
+          <Button
+            variant="default"
+            size="sm"
+            onClick={onBook}
+            className="h-9 w-full bg-[var(--org-primary)] text-sm font-semibold hover:bg-[var(--org-primary)]/90"
+            disabled={isButtonDisabled}
+          >
+            Book Now
+          </Button>
+        ) : (
+          <Button
+            variant="outline"
+            size="sm"
+            disabled
+            className="h-9 w-full border-orange-300 bg-orange-50 text-sm text-orange-600"
+          >
+            Full
+          </Button>
+        )}
+      </div>
+
+      {/* Warning Indicators */}
+      {isPast && (
+        <div className="absolute -top-1 -right-1">
+          <div className="flex h-5 w-5 items-center justify-center rounded-full bg-gray-400 text-white">
+            <ClockIcon className="h-3 w-3" />
+          </div>
+        </div>
+      )}
+
+      {isAvailabilityRestricted && (
+        <div className="absolute -top-1 -right-1">
+          <div className="flex h-5 w-5 items-center justify-center rounded-full bg-red-600 text-white">
+            <Ban className="h-3 w-3" />
+          </div>
+        </div>
+      )}
+
+      {isTimeRestricted && (
+        <div className="absolute -top-1 -right-1">
+          <div className="flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white">
+            <Ban className="h-3 w-3" />
+          </div>
+        </div>
+      )}
+
+      {isFrequencyRestricted && (
+        <div className="absolute -top-1 -right-1">
+          <div className="flex h-5 w-5 items-center justify-center rounded-full bg-yellow-400 text-yellow-900">
+            <AlertCircle className="h-3 w-3" />
+          </div>
+        </div>
+      )}
+
+      {isMemberCheckedIn && (
+        <div className="absolute -top-1 -right-1">
+          <div className="flex h-5 w-5 items-center justify-center rounded-full bg-green-500 text-white">
+            <CheckCircle className="h-3 w-3" />
+          </div>
         </div>
       )}
     </div>

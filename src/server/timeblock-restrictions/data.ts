@@ -172,9 +172,13 @@ export async function checkBatchTimeblockRestrictions(params: {
       if ("error" in memberRestrictionsResult) {
         return { success: false, error: memberRestrictionsResult.error };
       }
-      memberRestrictions = memberRestrictionsResult.filter(
-        (r) => r.isActive && (!r.memberClass || r.memberClass === memberClass),
-      );
+      memberRestrictions = memberRestrictionsResult
+        .filter(
+          (r) =>
+            r.isActive &&
+            (!r.memberClasses?.length || r.memberClasses.includes(memberClass)),
+        )
+        .sort((a, b) => (b.priority || 0) - (a.priority || 0)); // Sort by priority DESC
     }
 
     // Get guest restrictions if needed
@@ -400,11 +404,39 @@ export async function checkBatchTimeblockRestrictions(params: {
 
       // Add the prepared results for this timeblock
       const timeBlockViolations = violations.length > 0;
-      const preferredReason = timeBlockViolations
-        ? violations[0].description && violations[0].description.trim() !== ""
-          ? violations[0].description
-          : violations[0].message
-        : "";
+
+      // Determine preferred reason: prioritize AVAILABILITY > TIME > FREQUENCY regardless of priority
+      let preferredReason = "";
+      if (timeBlockViolations) {
+        // Look for AVAILABILITY violation first (highest priority)
+        const availabilityViolation = violations.find(
+          (v) => v.type === "AVAILABILITY",
+        );
+        if (availabilityViolation) {
+          preferredReason =
+            availabilityViolation.restrictionDescription &&
+            availabilityViolation.restrictionDescription.trim() !== ""
+              ? availabilityViolation.restrictionDescription
+              : availabilityViolation.message;
+        } else {
+          // Look for TIME violation second
+          const timeViolation = violations.find((v) => v.type === "TIME");
+          if (timeViolation) {
+            preferredReason =
+              timeViolation.restrictionDescription &&
+              timeViolation.restrictionDescription.trim() !== ""
+                ? timeViolation.restrictionDescription
+                : timeViolation.message;
+          } else {
+            // Fall back to first violation if no AVAILABILITY or TIME violation
+            preferredReason =
+              violations[0].restrictionDescription &&
+              violations[0].restrictionDescription.trim() !== ""
+                ? violations[0].restrictionDescription
+                : violations[0].message;
+          }
+        }
+      }
 
       results.push({
         timeBlockId: timeBlock.id,

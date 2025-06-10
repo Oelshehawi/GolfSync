@@ -52,29 +52,29 @@ export function AccountDialog({ member, isOpen, onClose }: AccountDialogProps) {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-lg">
-        <DialogHeader className="space-y-3">
-          <DialogTitle className="flex items-center gap-2 text-xl">
+      <DialogContent className="mx-4 max-w-sm sm:max-w-lg">
+        <DialogHeader className="space-y-2 pb-2">
+          <DialogTitle className="flex items-center gap-2 text-lg sm:text-xl">
             {isGuestAccount ? (
-              <Users className="h-5 w-5 text-blue-600" />
+              <Users className="h-4 w-4 text-blue-600 sm:h-5 sm:w-5" />
             ) : (
-              <UserCircle className="h-5 w-5 text-green-600" />
+              <UserCircle className="h-4 w-4 text-green-600 sm:h-5 sm:w-5" />
             )}
             {isGuestAccount ? "Guest Information" : "Member Account"}
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="max-h-[70vh] space-y-3 overflow-y-auto">
           {/* Main Info Card */}
           <Card className="border-l-4 border-l-blue-500">
-            <CardContent className="pt-4">
+            <CardContent className="pt-3 pb-3">
               <div className="space-y-3">
                 {/* Name */}
-                <div className="flex items-center gap-3">
-                  <User className="h-4 w-4 text-gray-500" />
-                  <div>
-                    <p className="text-sm font-medium text-gray-600">Name</p>
-                    <p className="font-semibold">
+                <div className="flex items-center gap-2">
+                  <User className="h-4 w-4 flex-shrink-0 text-gray-500" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-medium text-gray-600">Name</p>
+                    <p className="truncate text-sm font-semibold sm:text-base">
                       {member.firstName} {member.lastName}
                     </p>
                   </div>
@@ -85,56 +85,60 @@ export function AccountDialog({ member, isOpen, onClose }: AccountDialogProps) {
                   <>
                     {/* Username */}
                     {"username" in member && (
-                      <div className="flex items-center gap-3">
-                        <Hash className="h-4 w-4 text-gray-500" />
-                        <div>
-                          <p className="text-sm font-medium text-gray-600">
+                      <div className="flex items-center gap-2">
+                        <Hash className="h-4 w-4 flex-shrink-0 text-gray-500" />
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-medium text-gray-600">
                             Username
                           </p>
-                          <p className="font-medium">{member.username}</p>
+                          <p className="truncate text-sm font-medium">
+                            {member.username}
+                          </p>
                         </div>
                       </div>
                     )}
 
                     {/* Email */}
                     {"email" in member && (
-                      <div className="flex items-center gap-3">
-                        <Mail className="h-4 w-4 text-gray-500" />
-                        <div>
-                          <p className="text-sm font-medium text-gray-600">
+                      <div className="flex items-center gap-2">
+                        <Mail className="h-4 w-4 flex-shrink-0 text-gray-500" />
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-medium text-gray-600">
                             Email
                           </p>
-                          <p className="font-medium">{member.email}</p>
+                          <p className="truncate text-sm font-medium">
+                            {member.email}
+                          </p>
                         </div>
                       </div>
                     )}
 
                     {/* Member Number */}
                     {"memberNumber" in member && (
-                      <div className="flex items-center gap-3">
-                        <CreditCard className="h-4 w-4 text-gray-500" />
-                        <div>
-                          <p className="text-sm font-medium text-gray-600">
+                      <div className="flex items-center gap-2">
+                        <CreditCard className="h-4 w-4 flex-shrink-0 text-gray-500" />
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-medium text-gray-600">
                             Member #
                           </p>
-                          <p className="font-medium">{member.memberNumber}</p>
+                          <p className="text-sm font-medium">
+                            {member.memberNumber}
+                          </p>
                         </div>
                       </div>
                     )}
 
                     {/* Member Class */}
                     {"class" in member && member.class && (
-                      <div className="flex items-center gap-3">
-                        <Trophy className="h-4 w-4 text-gray-500" />
-                        <div className="flex items-center gap-2">
-                          <div>
-                            <p className="text-sm font-medium text-gray-600">
-                              Member Class
-                            </p>
-                            <Badge variant="outline" className="mt-1">
-                              {member.class}
-                            </Badge>
-                          </div>
+                      <div className="flex items-center gap-2">
+                        <Trophy className="h-4 w-4 flex-shrink-0 text-gray-500" />
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-medium text-gray-600">
+                            Member Class
+                          </p>
+                          <Badge variant="outline" className="mt-1 text-xs">
+                            {member.class}
+                          </Badge>
                         </div>
                       </div>
                     )}
@@ -146,42 +150,44 @@ export function AccountDialog({ member, isOpen, onClose }: AccountDialogProps) {
                   <>
                     {/* Email */}
                     {member.email && (
-                      <div className="flex items-center gap-3">
-                        <Mail className="h-4 w-4 text-gray-500" />
-                        <div>
-                          <p className="text-sm font-medium text-gray-600">
+                      <div className="flex items-center gap-2">
+                        <Mail className="h-4 w-4 flex-shrink-0 text-gray-500" />
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-medium text-gray-600">
                             Email
                           </p>
-                          <p className="font-medium">{member.email}</p>
+                          <p className="truncate text-sm font-medium">
+                            {member.email}
+                          </p>
                         </div>
                       </div>
                     )}
 
                     {/* Phone */}
                     {member.phone && (
-                      <div className="flex items-center gap-3">
-                        <Phone className="h-4 w-4 text-gray-500" />
-                        <div>
-                          <p className="text-sm font-medium text-gray-600">
+                      <div className="flex items-center gap-2">
+                        <Phone className="h-4 w-4 flex-shrink-0 text-gray-500" />
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-medium text-gray-600">
                             Phone
                           </p>
-                          <p className="font-medium">{member.phone}</p>
+                          <p className="text-sm font-medium">{member.phone}</p>
                         </div>
                       </div>
                     )}
 
                     {/* Invited By */}
                     {member.invitedByMember && (
-                      <div className="flex items-center gap-3">
-                        <Users className="h-4 w-4 text-gray-500" />
-                        <div>
-                          <p className="text-sm font-medium text-gray-600">
+                      <div className="flex items-center gap-2">
+                        <Users className="h-4 w-4 flex-shrink-0 text-gray-500" />
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-medium text-gray-600">
                             Invited By
                           </p>
-                          <p className="font-medium">
+                          <p className="text-sm font-medium">
                             {member.invitedByMember.firstName}{" "}
                             {member.invitedByMember.lastName}
-                            <span className="ml-1 text-sm text-gray-500">
+                            <span className="ml-1 text-xs text-gray-500">
                               (#{member.invitedByMember.memberNumber})
                             </span>
                           </p>
@@ -197,33 +203,33 @@ export function AccountDialog({ member, isOpen, onClose }: AccountDialogProps) {
           {/* Additional Info Card - Only for members with extra data */}
           {isMemberAccount && !isGuestAccount && (
             <Card>
-              <CardContent className="pt-4">
-                <h3 className="mb-3 font-medium text-gray-900">
+              <CardContent className="pt-3 pb-3">
+                <h3 className="mb-2 text-sm font-medium text-gray-900">
                   Additional Information
                 </h3>
                 <div className="space-y-3">
                   {/* Gender */}
                   {"gender" in member && member.gender && (
-                    <div className="flex items-center gap-3">
-                      <User className="h-4 w-4 text-gray-500" />
-                      <div>
-                        <p className="text-sm font-medium text-gray-600">
+                    <div className="flex items-center gap-2">
+                      <User className="h-4 w-4 flex-shrink-0 text-gray-500" />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-medium text-gray-600">
                           Gender
                         </p>
-                        <p className="font-medium">{member.gender}</p>
+                        <p className="text-sm font-medium">{member.gender}</p>
                       </div>
                     </div>
                   )}
 
                   {/* Date of Birth */}
                   {"dateOfBirth" in member && member.dateOfBirth && (
-                    <div className="flex items-center gap-3">
-                      <Calendar className="h-4 w-4 text-gray-500" />
-                      <div>
-                        <p className="text-sm font-medium text-gray-600">
+                    <div className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4 flex-shrink-0 text-gray-500" />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-medium text-gray-600">
                           Date of Birth
                         </p>
-                        <p className="font-medium">
+                        <p className="text-sm font-medium">
                           {new Date(member.dateOfBirth).toLocaleDateString()}
                         </p>
                       </div>
@@ -232,13 +238,13 @@ export function AccountDialog({ member, isOpen, onClose }: AccountDialogProps) {
 
                   {/* Handicap */}
                   {"handicap" in member && member.handicap && (
-                    <div className="flex items-center gap-3">
-                      <Trophy className="h-4 w-4 text-gray-500" />
-                      <div>
-                        <p className="text-sm font-medium text-gray-600">
+                    <div className="flex items-center gap-2">
+                      <Trophy className="h-4 w-4 flex-shrink-0 text-gray-500" />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-medium text-gray-600">
                           Handicap
                         </p>
-                        <Badge variant="secondary" className="mt-1">
+                        <Badge variant="secondary" className="mt-1 text-xs">
                           {member.handicap}
                         </Badge>
                       </div>
@@ -247,13 +253,15 @@ export function AccountDialog({ member, isOpen, onClose }: AccountDialogProps) {
 
                   {/* Bag Number */}
                   {"bagNumber" in member && member.bagNumber && (
-                    <div className="flex items-center gap-3">
-                      <CreditCard className="h-4 w-4 text-gray-500" />
-                      <div>
-                        <p className="text-sm font-medium text-gray-600">
+                    <div className="flex items-center gap-2">
+                      <CreditCard className="h-4 w-4 flex-shrink-0 text-gray-500" />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-medium text-gray-600">
                           Bag #
                         </p>
-                        <p className="font-medium">{member.bagNumber}</p>
+                        <p className="text-sm font-medium">
+                          {member.bagNumber}
+                        </p>
                       </div>
                     </div>
                   )}
@@ -267,17 +275,17 @@ export function AccountDialog({ member, isOpen, onClose }: AccountDialogProps) {
             <Card
               className={`border-l-4 ${member.checkedIn ? "border-l-green-500 bg-green-50" : "border-l-gray-300"}`}
             >
-              <CardContent className="pt-4">
-                <div className="flex items-center gap-3">
+              <CardContent className="pt-3 pb-3">
+                <div className="flex items-center gap-2">
                   <div
-                    className={`h-3 w-3 rounded-full ${member.checkedIn ? "bg-green-500" : "bg-gray-300"}`}
+                    className={`h-3 w-3 flex-shrink-0 rounded-full ${member.checkedIn ? "bg-green-500" : "bg-gray-300"}`}
                   />
-                  <div>
-                    <p className="text-sm font-medium text-gray-600">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-medium text-gray-600">
                       Check-in Status
                     </p>
                     <p
-                      className={`font-medium ${member.checkedIn ? "text-green-700" : "text-gray-600"}`}
+                      className={`text-sm font-medium ${member.checkedIn ? "text-green-700" : "text-gray-600"}`}
                     >
                       {member.checkedIn ? "Checked In" : "Not Checked In"}
                     </p>
@@ -295,8 +303,8 @@ export function AccountDialog({ member, isOpen, onClose }: AccountDialogProps) {
           )}
 
           {/* Close Button */}
-          <div className="flex justify-end pt-2">
-            <Button variant="ghost" onClick={onClose} className="px-6">
+          <div className="sticky bottom-0 flex justify-end bg-white pt-2">
+            <Button variant="ghost" onClick={onClose} className="px-6 text-sm">
               Close
             </Button>
           </div>
