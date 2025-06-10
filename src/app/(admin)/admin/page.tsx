@@ -9,16 +9,19 @@ import { getTeesheetConfigs } from "~/server/settings/data";
 import { formatCalendarDate, preserveDate } from "~/lib/utils";
 import { getAllPaceOfPlayForDate } from "~/server/pace-of-play/actions";
 
+// This page is now fully static - no dynamic dependencies!
+
 interface PageProps {
-  searchParams?: {
+  searchParams: Promise<{
     date?: string;
-  };
+  }>;
 }
 
 export default async function AdminPage({ searchParams }: PageProps) {
   try {
     // Get the date parameter as a string
-    const dateParam = (await searchParams)?.date;
+    const params = await searchParams;
+    const dateParam = params?.date;
 
     // Determine the date string to use
     let dateString: string;

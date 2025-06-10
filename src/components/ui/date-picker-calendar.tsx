@@ -64,7 +64,7 @@ export function DatePickerCalendar({
           onClick={previousMonth}
           className={cn(
             buttonVariants({ variant: "outline" }),
-            "hover:bg-opacity-20 absolute left-1 h-7 w-7 cursor-pointer bg-transparent p-0 !text-black opacity-50 hover:border-[var(--org-primary)] hover:bg-[var(--org-secondary)] hover:opacity-100",
+            "hover:bg-opacity-20 absolute left-1 h-7 w-7 cursor-pointer bg-transparent p-0 !text-black opacity-50 hover:border-org-primary hover:bg-org-secondary hover:opacity-100",
           )}
         >
           <ChevronLeft className="h-4 w-4" />
@@ -76,7 +76,7 @@ export function DatePickerCalendar({
           onClick={nextMonth}
           className={cn(
             buttonVariants({ variant: "outline" }),
-            "hover:bg-opacity-20 absolute right-1 h-7 w-7 cursor-pointer bg-transparent p-0 !text-black opacity-50 hover:border-[var(--org-primary)] hover:bg-[var(--org-secondary)] hover:opacity-100",
+            "hover:bg-opacity-20 absolute right-1 h-7 w-7 cursor-pointer bg-transparent p-0 !text-black opacity-50 hover:border-org-primary hover:bg-org-secondary hover:opacity-100",
           )}
         >
           <ChevronRight className="h-4 w-4" />
@@ -112,13 +112,13 @@ export function DatePickerCalendar({
                 isCurrentMonth
                   ? "text-foreground"
                   : "text-muted-foreground opacity-50",
-                isSelectedDay && "bg-[var(--org-primary)] text-white",
+                isSelectedDay && "bg-org-primary text-white",
                 isCurrentDay &&
                   !isSelectedDay &&
-                  "text-foreground bg-[var(--org-secondary)]",
+                  "text-foreground bg-org-secondary",
                 !isSelectedDay &&
                   !isCurrentDay &&
-                  "hover:text-foreground hover:bg-opacity-20 hover:bg-[var(--org-secondary)]",
+                  "hover:text-foreground hover:bg-opacity-20 hover:bg-org-secondary",
               )}
             >
               {format(day, "d")}

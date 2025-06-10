@@ -12,6 +12,7 @@ import { getCourseInfo } from "~/server/settings/data";
 import { PageHeader } from "~/components/ui/page-header";
 import { OverridesSettings } from "~/components/settings/overrides/OverridesSettings";
 
+
 type CourseInfoType = {
   id?: number;
   weatherStatus?: string;

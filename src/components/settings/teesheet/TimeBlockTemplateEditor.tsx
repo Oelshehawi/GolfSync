@@ -18,12 +18,7 @@ import { toast } from "react-hot-toast";
 interface TimeBlockTemplateEditorProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (
-    template: Omit<
-      TimeBlockTemplate,
-      "id" | "clerkOrgId" | "createdAt" | "updatedAt"
-    >,
-  ) => Promise<void>;
+  onSave: (template: Omit<TimeBlockTemplate, "id" | "createdAt" | "updatedAt">) => Promise<void>;
   template?: TimeBlockTemplate;
   configId: number;
 }

@@ -1,6 +1,6 @@
 import { db } from "~/server/db";
 import { and, eq, or, desc, isNull, lte, gte, sql } from "drizzle-orm";
-import { getOrganizationId } from "~/lib/auth";
+
 import {
   teesheetConfigs,
   teesheetConfigRules,
@@ -13,11 +13,9 @@ import { format } from "date-fns";
 
 export async function initializeDefaultConfigs() {
   try {
-    const clerkOrgId = await getOrganizationId();
 
     // First check if we already have configs
     const existingConfigs = await db.query.teesheetConfigs.findMany({
-      where: eq(teesheetConfigs.clerkOrgId, clerkOrgId),
     });
 
     if (existingConfigs.length > 0) {
@@ -28,7 +26,6 @@ export async function initializeDefaultConfigs() {
     const [weekdayConfigDb] = await db
       .insert(teesheetConfigs)
       .values({
-        clerkOrgId,
         name: "Weekday (Mon-Fri)",
         type: ConfigTypes.REGULAR,
         startTime: "07:00",
@@ -50,7 +47,6 @@ export async function initializeDefaultConfigs() {
     const [weekendConfigDb] = await db
       .insert(teesheetConfigs)
       .values({
-        clerkOrgId,
         name: "Weekend (Sat-Sun)",
         type: ConfigTypes.REGULAR,
         startTime: "07:00",
@@ -71,14 +67,12 @@ export async function initializeDefaultConfigs() {
     // Create rules with lowest priority (0)
     await db.insert(teesheetConfigRules).values([
       {
-        clerkOrgId,
         configId: weekdayConfig.id,
         daysOfWeek: [1, 2, 3, 4, 5], // Mon-Fri
         priority: 0,
         isActive: true,
       },
       {
-        clerkOrgId,
         configId: weekendConfig.id,
         daysOfWeek: [0, 6], // Sat-Sun
         priority: 0,
@@ -97,7 +91,6 @@ export async function initializeDefaultConfigs() {
 }
 
 export async function getConfigForDate(date: Date): Promise<TeesheetConfig> {
-  const clerkOrgId = await getOrganizationId();
 
   // First ensure we have default configs
   await initializeDefaultConfigs();
@@ -112,7 +105,6 @@ export async function getConfigForDate(date: Date): Promise<TeesheetConfig> {
   // First check for specific date rules
   const specificDateRules = await db.query.teesheetConfigRules.findMany({
     where: and(
-      eq(teesheetConfigRules.clerkOrgId, clerkOrgId),
       eq(teesheetConfigRules.isActive, true),
       eq(teesheetConfigRules.startDate, formattedDate),
       eq(teesheetConfigRules.endDate, formattedDate),
@@ -124,7 +116,6 @@ export async function getConfigForDate(date: Date): Promise<TeesheetConfig> {
   if (specificDateRules.length > 0 && specificDateRules[0]) {
     const config = await db.query.teesheetConfigs.findFirst({
       where: and(
-        eq(teesheetConfigs.clerkOrgId, clerkOrgId),
         eq(teesheetConfigs.id, specificDateRules[0].configId),
         eq(teesheetConfigs.isActive, true),
       ),
@@ -153,7 +144,6 @@ export async function getConfigForDate(date: Date): Promise<TeesheetConfig> {
   // Then check for recurring day rules
   const recurringRules = await db.query.teesheetConfigRules.findMany({
     where: and(
-      eq(teesheetConfigRules.clerkOrgId, clerkOrgId),
       eq(teesheetConfigRules.isActive, true),
       sql`${dayOfWeek} = ANY(${teesheetConfigRules.daysOfWeek})`,
       or(
@@ -172,7 +162,6 @@ export async function getConfigForDate(date: Date): Promise<TeesheetConfig> {
   if (recurringRules.length > 0 && recurringRules[0]) {
     const config = await db.query.teesheetConfigs.findFirst({
       where: and(
-        eq(teesheetConfigs.clerkOrgId, clerkOrgId),
         eq(teesheetConfigs.id, recurringRules[0].configId),
         eq(teesheetConfigs.isActive, true),
       ),
@@ -201,7 +190,6 @@ export async function getConfigForDate(date: Date): Promise<TeesheetConfig> {
   // If no specific or recurring rules found, fall back to system configs
   const systemConfigs = await db.query.teesheetConfigs.findMany({
     where: and(
-      eq(teesheetConfigs.clerkOrgId, clerkOrgId),
       eq(teesheetConfigs.isSystemConfig, true),
       eq(teesheetConfigs.isActive, true),
     ),
@@ -240,14 +228,9 @@ export async function getConfigForDate(date: Date): Promise<TeesheetConfig> {
 
 export async function getTeesheetConfigs(): Promise<TeesheetConfig[]> {
   try {
-    const orgId = await getOrganizationId();
-
     const configs = await db.query.teesheetConfigs.findMany({
-      where: eq(teesheetConfigs.clerkOrgId, orgId),
       with: {
-        rules: {
-          where: eq(teesheetConfigRules.clerkOrgId, orgId),
-        },
+        rules: true,
       },
       orderBy: (teesheetConfigs, { asc }) => [asc(teesheetConfigs.name)],
     });
@@ -267,21 +250,10 @@ export async function getTeesheetConfigs(): Promise<TeesheetConfig[]> {
 }
 
 export async function getTeesheetConfig(id: number) {
-  const orgId = await getOrganizationId();
-
-  if (!orgId) {
-    return { success: false, error: "No organization selected" };
-  }
-
   const config = await db.query.teesheetConfigs.findFirst({
-    where: and(
-      eq(teesheetConfigs.id, id),
-      eq(teesheetConfigs.clerkOrgId, orgId),
-    ),
+    where: eq(teesheetConfigs.id, id),
     with: {
-      rules: {
-        where: eq(teesheetConfigRules.clerkOrgId, orgId),
-      },
+      rules: true,
     },
   });
 
@@ -304,15 +276,9 @@ export async function getTeesheetConfig(id: number) {
 
 // Get course info for the current organization
 export async function getCourseInfo() {
-  const orgId = await getOrganizationId();
-
-  if (!orgId) {
-    return { success: false, error: "Not authenticated" };
-  }
 
   try {
     const info = await db.query.courseInfo.findFirst({
-      where: eq(courseInfo.clerkOrgId, orgId),
     });
 
     return info ?? null;
@@ -323,15 +289,8 @@ export async function getCourseInfo() {
 }
 
 export async function getTemplates() {
-  const orgId = await getOrganizationId();
-
-  if (!orgId) {
-    return { success: false, error: "No organization selected" };
-  }
-
   try {
     const templateList = await db.query.templates.findMany({
-      where: eq(templates.clerkOrgId, orgId),
       orderBy: desc(templates.updatedAt),
     });
 

@@ -1,27 +1,36 @@
 "use server";
 import { auth } from "@clerk/nextjs/server";
-import { getPrivateMetadata } from "~/server/config/data";
 
 /**
- * Get the organization ID from the session or user metadata
+ * Get the current user session
+ * Single-tenant mode - no organization logic needed
  */
-export async function getOrganizationId() {
+export async function getCurrentUser() {
   const session = await auth();
 
-  // First try to get organization ID from session
-  if (session.orgId) {
-    return session.orgId;
+  if (!session.userId) {
+    throw new Error("Not authenticated");
   }
 
-  // If not in session, try to get from user's private metadata
-  if (session.userId) {
-    const metadata = await getPrivateMetadata(session.userId);
-    const orgId = metadata?.organizationId as string | undefined;
+  return session;
+}
 
-    if (orgId) {
-      return orgId;
-    }
+/**
+ * Get current user ID
+ */
+export async function getCurrentUserId() {
+  const session = await getCurrentUser();
+  return session.userId;
+}
+
+/**
+ * Check if user is authenticated
+ */
+export async function isAuthenticated() {
+  try {
+    await getCurrentUser();
+    return true;
+  } catch {
+    return false;
   }
-
-  throw new Error("No organization ID found in session or user metadata");
 }

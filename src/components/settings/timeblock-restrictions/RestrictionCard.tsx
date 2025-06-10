@@ -134,11 +134,11 @@ export function RestrictionCard({
 
     switch (restriction.restrictionCategory) {
       case "MEMBER_CLASS":
-        return "bg-[var(--org-primary)]/20 text-[var(--org-primary)]";
+        return "bg-org-primary/20 text-org-primary";
       case "GUEST":
-        return "bg-[var(--org-secondary)]/20 text-[var(--org-secondary)]";
+        return "bg-org-secondary/20 text-org-secondary";
       case "COURSE_AVAILABILITY":
-        return "bg-[var(--org-tertiary)]/20 text-[var(--org-tertiary)]";
+        return "bg-org-tertiary/20 text-org-tertiary";
       default:
         return "bg-gray-100 text-gray-800";
     }

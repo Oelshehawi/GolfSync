@@ -12,7 +12,7 @@ import {
   teesheetConfigRules,
 } from "~/server/db/schema";
 import { eq, and, inArray, sql, isNull, or, lte, gte, desc } from "drizzle-orm";
-import { getOrganizationId } from "~/lib/auth";
+
 import type {
   TeeSheet,
   TimeBlockWithMembers,
@@ -31,16 +31,11 @@ export async function createTimeBlocksForTeesheet(
   config: TeesheetConfig,
   teesheetDate?: string,
 ) {
-  const clerkOrgId = await getOrganizationId();
-
   // If no teesheet date provided, fetch it from the database
   let dateStr = teesheetDate;
   if (!dateStr) {
     const teesheet = await db.query.teesheets.findFirst({
-      where: and(
-        eq(teesheets.id, teesheetId),
-        eq(teesheets.clerkOrgId, clerkOrgId),
-      ),
+      where: eq(teesheets.id, teesheetId),
     });
 
     if (teesheet) {
@@ -53,21 +48,13 @@ export async function createTimeBlocksForTeesheet(
   // Delete existing time blocks for this teesheet
   await db
     .delete(timeBlocks)
-    .where(
-      and(
-        eq(timeBlocks.teesheetId, teesheetId),
-        eq(timeBlocks.clerkOrgId, clerkOrgId),
-      ),
-    );
+    .where(and(eq(timeBlocks.teesheetId, teesheetId)));
 
   // For custom configurations, fetch the template and create blocks based on it
   if (config.type === ConfigTypes.CUSTOM) {
     // Fetch the template
     const template = await db.query.templates.findFirst({
-      where: and(
-        eq(templates.id, config.templateId),
-        eq(templates.clerkOrgId, clerkOrgId),
-      ),
+      where: eq(templates.id, config.templateId),
     });
 
     if (!template) {
@@ -84,7 +71,6 @@ export async function createTimeBlocksForTeesheet(
 
       // Create blocks based on template
       const blocks = templateBlocks.map((block, index) => ({
-        clerkOrgId,
         teesheetId,
         startTime: block.startTime,
         endTime: block.startTime, // For template blocks, end time is same as start time
@@ -110,7 +96,6 @@ export async function createTimeBlocksForTeesheet(
     });
 
     const blocks = timeBlocksArray.map((time, index) => ({
-      clerkOrgId,
       teesheetId,
       startTime: time,
       endTime: time, // For regular blocks, end time is same as start time
@@ -133,17 +118,12 @@ export async function createTimeBlocksForTeesheet(
 export async function getOrCreateTeesheet(
   date: Date,
 ): Promise<{ teesheet: TeeSheet; config: TeesheetConfig }> {
-  const clerkOrgId = await getOrganizationId();
-
   // Format date as YYYY-MM-DD string in local time to ensure consistency
   const formattedDate = formatDateToYYYYMMDD(date);
 
   // Try to find existing teesheet for the date
   const existingTeesheet = await db.query.teesheets.findFirst({
-    where: and(
-      eq(teesheets.clerkOrgId, clerkOrgId),
-      eq(teesheets.date, formattedDate),
-    ),
+    where: eq(teesheets.date, formattedDate),
     with: {
       config: {
         with: {
@@ -168,7 +148,6 @@ export async function getOrCreateTeesheet(
     const newTeesheet = await db
       .insert(teesheets)
       .values({
-        clerkOrgId,
         date: formattedDate,
         configId: config.id,
       })
@@ -184,10 +163,7 @@ export async function getOrCreateTeesheet(
 
   // Check if the teesheet has any time blocks
   const existingBlocks = await db.query.timeBlocks.findMany({
-    where: and(
-      eq(timeBlocks.teesheetId, teesheet.id),
-      eq(timeBlocks.clerkOrgId, clerkOrgId),
-    ),
+    where: eq(timeBlocks.teesheetId, teesheet.id),
     limit: 1,
   });
 
@@ -206,14 +182,9 @@ export async function getOrCreateTeesheet(
 export async function getTimeBlocksForTeesheet(
   teesheetId: number,
 ): Promise<TimeBlockWithMembers[]> {
-  const clerkOrgId = await getOrganizationId();
-
   // First get the teesheet to get its date
   const teesheet = await db.query.teesheets.findFirst({
-    where: and(
-      eq(teesheets.id, teesheetId),
-      eq(teesheets.clerkOrgId, clerkOrgId),
-    ),
+    where: eq(teesheets.id, teesheetId),
   });
 
   if (!teesheet) {
@@ -223,7 +194,6 @@ export async function getTimeBlocksForTeesheet(
   const result = await db
     .select({
       id: timeBlocks.id,
-      clerkOrgId: timeBlocks.clerkOrgId,
       teesheetId: timeBlocks.teesheetId,
       startTime: timeBlocks.startTime,
       endTime: timeBlocks.endTime,
@@ -252,12 +222,7 @@ export async function getTimeBlocksForTeesheet(
     .from(timeBlocks)
     .leftJoin(timeBlockMembers, eq(timeBlocks.id, timeBlockMembers.timeBlockId))
     .leftJoin(members, eq(timeBlockMembers.memberId, members.id))
-    .where(
-      and(
-        eq(timeBlocks.clerkOrgId, clerkOrgId),
-        eq(timeBlocks.teesheetId, teesheetId),
-      ),
-    )
+    .where(and(eq(timeBlocks.teesheetId, teesheetId)))
     .orderBy(timeBlocks.sortOrder, timeBlocks.startTime);
 
   if (!result || result.length === 0) {
@@ -271,7 +236,6 @@ export async function getTimeBlocksForTeesheet(
     if (!timeBlocksMap.has(row.id)) {
       timeBlocksMap.set(row.id, {
         id: row.id,
-        clerkOrgId: row.clerkOrgId,
         teesheetId: row.teesheetId,
         date: teesheet.date,
         startTime: row.startTime,
@@ -332,12 +296,7 @@ export async function getTimeBlocksForTeesheet(
     .from(timeBlockGuests)
     .innerJoin(guests, eq(timeBlockGuests.guestId, guests.id))
     .innerJoin(members, eq(timeBlockGuests.invitedByMemberId, members.id))
-    .where(
-      and(
-        eq(timeBlockGuests.clerkOrgId, clerkOrgId),
-        inArray(timeBlockGuests.timeBlockId, Array.from(timeBlocksMap.keys())),
-      ),
-    );
+    .where(inArray(timeBlockGuests.timeBlockId, Array.from(timeBlocksMap.keys())));
 
   // Add guests to the corresponding time blocks
   guestsResult.forEach((row) => {
@@ -367,12 +326,7 @@ export async function getTimeBlocksForTeesheet(
   const fillsResult = await db
     .select()
     .from(timeBlockFills)
-    .where(
-      and(
-        eq(timeBlockFills.clerkOrgId, clerkOrgId),
-        inArray(timeBlockFills.timeBlockId, Array.from(timeBlocksMap.keys())),
-      ),
-    );
+    .where(inArray(timeBlockFills.timeBlockId, Array.from(timeBlocksMap.keys())));
 
   // Add fills to the corresponding time blocks
   fillsResult.forEach((fill) => {
@@ -386,7 +340,6 @@ export async function getTimeBlocksForTeesheet(
         timeBlockId: fill.timeBlockId,
         fillType: fill.fillType as FillType,
         customName: fill.customName,
-        clerkOrgId: fill.clerkOrgId,
         createdAt: fill.createdAt || new Date(),
       });
     }
@@ -398,14 +351,9 @@ export async function getTimeBlocksForTeesheet(
 export async function getTimeBlockWithMembers(
   timeBlockId: number,
 ): Promise<TimeBlockWithMembers | null> {
-  const clerkOrgId = await getOrganizationId();
-
   // First get the teesheet ID to fetch its date
   const timeBlockInfo = await db.query.timeBlocks.findFirst({
-    where: and(
-      eq(timeBlocks.id, timeBlockId),
-      eq(timeBlocks.clerkOrgId, clerkOrgId),
-    ),
+    where: eq(timeBlocks.id, timeBlockId),
   });
 
   if (!timeBlockInfo) {
@@ -414,16 +362,12 @@ export async function getTimeBlockWithMembers(
 
   // Get the teesheet to get the date
   const teesheet = await db.query.teesheets.findFirst({
-    where: and(
-      eq(teesheets.id, timeBlockInfo.teesheetId),
-      eq(teesheets.clerkOrgId, clerkOrgId),
-    ),
+    where: eq(teesheets.id, timeBlockInfo.teesheetId),
   });
 
   const result = await db
     .select({
       id: timeBlocks.id,
-      clerkOrgId: timeBlocks.clerkOrgId,
       teesheetId: timeBlocks.teesheetId,
       startTime: timeBlocks.startTime,
       endTime: timeBlocks.endTime,
@@ -452,12 +396,7 @@ export async function getTimeBlockWithMembers(
     .from(timeBlocks)
     .leftJoin(timeBlockMembers, eq(timeBlocks.id, timeBlockMembers.timeBlockId))
     .leftJoin(members, eq(timeBlockMembers.memberId, members.id))
-    .where(
-      and(
-        eq(timeBlocks.clerkOrgId, clerkOrgId),
-        eq(timeBlocks.id, timeBlockId),
-      ),
-    );
+    .where(eq(timeBlocks.id, timeBlockId));
 
   if (!result || result.length === 0) {
     return null;
@@ -471,7 +410,6 @@ export async function getTimeBlockWithMembers(
 
   const timeBlock = {
     id: firstRow.id,
-    clerkOrgId: firstRow.clerkOrgId,
     teesheetId: firstRow.teesheetId,
     startTime: firstRow.startTime,
     endTime: firstRow.endTime,
@@ -505,12 +443,7 @@ export async function getTimeBlockWithMembers(
     .from(timeBlockGuests)
     .innerJoin(guests, eq(timeBlockGuests.guestId, guests.id))
     .innerJoin(members, eq(timeBlockGuests.invitedByMemberId, members.id))
-    .where(
-      and(
-        eq(timeBlockGuests.clerkOrgId, clerkOrgId),
-        eq(timeBlockGuests.timeBlockId, timeBlockId),
-      ),
-    );
+    .where(eq(timeBlockGuests.timeBlockId, timeBlockId));
 
   // Process members
   const blockMembers = result
@@ -554,16 +487,10 @@ export async function getTimeBlockWithMembers(
   const fillsResult = await db
     .select()
     .from(timeBlockFills)
-    .where(
-      and(
-        eq(timeBlockFills.clerkOrgId, clerkOrgId),
-        eq(timeBlockFills.timeBlockId, timeBlockId),
-      ),
-    );
+    .where(eq(timeBlockFills.timeBlockId, timeBlockId));
 
   return {
     id: timeBlock.id,
-    clerkOrgId: timeBlock.clerkOrgId,
     teesheetId: timeBlock.teesheetId,
     startTime: timeBlock.startTime,
     endTime: timeBlock.endTime,
@@ -579,7 +506,6 @@ export async function getTimeBlockWithMembers(
       timeBlockId: fill.timeBlockId,
       fillType: fill.fillType as FillType,
       customName: fill.customName,
-      clerkOrgId: fill.clerkOrgId,
       createdAt: fill.createdAt || new Date(),
     })),
     maxMembers: timeBlock.maxMembers || 4, // Use value from database or default

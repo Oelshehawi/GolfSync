@@ -1,6 +1,5 @@
 export interface Member {
   id: number;
-  clerkOrgId: string;
   class: string;
   memberNumber: string;
   firstName: string;
@@ -17,7 +16,6 @@ export interface Member {
 
 export interface TimeBlockMember {
   id: number;
-  clerkOrgId: string;
   timeBlockId: number;
   memberId: number;
   createdAt: Date;

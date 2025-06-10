@@ -9,7 +9,7 @@ import {
   courseInfo,
 } from "~/server/db/schema";
 import { eq, and } from "drizzle-orm";
-import { getOrganizationId } from "~/lib/auth";
+
 import { revalidatePath } from "next/cache";
 import { createTimeBlocksForTeesheet } from "~/server/teesheet/data";
 import { auth } from "@clerk/nextjs/server";
@@ -20,12 +20,6 @@ import type {
 import { ConfigTypes } from "~/app/types/TeeSheetTypes";
 
 export async function createTeesheetConfig(data: TeesheetConfigInput) {
-  const orgId = await getOrganizationId();
-
-  if (!orgId) {
-    return { success: false, error: "No organization selected" };
-  }
-
   try {
     // Create the config
     const [newConfig] = await db
@@ -42,7 +36,6 @@ export async function createTeesheetConfig(data: TeesheetConfigInput) {
         isActive: data.isActive ?? true,
         isSystemConfig: data.isSystemConfig ?? false,
         disallowMemberBooking: data.disallowMemberBooking ?? false,
-        clerkOrgId: orgId,
       })
       .returning();
 
@@ -57,7 +50,6 @@ export async function createTeesheetConfig(data: TeesheetConfigInput) {
           db
             .insert(teesheetConfigRules)
             .values({
-              clerkOrgId: orgId,
               configId: newConfig.id,
               daysOfWeek: rule.daysOfWeek,
               startDate: rule.startDate,
@@ -86,12 +78,6 @@ export async function updateTeesheetConfig(
   id: number,
   data: TeesheetConfigInput,
 ) {
-  const orgId = await getOrganizationId();
-
-  if (!orgId) {
-    return { success: false, error: "No organization selected" };
-  }
-
   try {
     // Update the config
     const [updatedConfig] = await db
@@ -109,9 +95,7 @@ export async function updateTeesheetConfig(
         isSystemConfig: data.isSystemConfig,
         disallowMemberBooking: data.disallowMemberBooking ?? false,
       })
-      .where(
-        and(eq(teesheetConfigs.id, id), eq(teesheetConfigs.clerkOrgId, orgId)),
-      )
+      .where(eq(teesheetConfigs.id, id))
       .returning();
 
     if (!updatedConfig) {
@@ -123,12 +107,7 @@ export async function updateTeesheetConfig(
       await db
         .update(teesheetConfigRules)
         .set({ isActive: data.isActive })
-        .where(
-          and(
-            eq(teesheetConfigRules.configId, id),
-            eq(teesheetConfigRules.clerkOrgId, orgId),
-          ),
-        );
+        .where(eq(teesheetConfigRules.configId, id));
     }
 
     // Update the rules if provided
@@ -136,12 +115,7 @@ export async function updateTeesheetConfig(
       // First delete existing rules
       await db
         .delete(teesheetConfigRules)
-        .where(
-          and(
-            eq(teesheetConfigRules.configId, id),
-            eq(teesheetConfigRules.clerkOrgId, orgId),
-          ),
-        );
+        .where(eq(teesheetConfigRules.configId, id));
 
       // Then create new rules
       const rules = await Promise.all(
@@ -149,7 +123,6 @@ export async function updateTeesheetConfig(
           db
             .insert(teesheetConfigRules)
             .values({
-              clerkOrgId: orgId,
               configId: id,
               daysOfWeek: rule.daysOfWeek,
               startDate: rule.startDate,
@@ -178,16 +151,9 @@ export async function deleteTeesheetConfig(
   configId: number,
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const orgId = await getOrganizationId();
-
     await db
       .delete(teesheetConfigs)
-      .where(
-        and(
-          eq(teesheetConfigs.id, configId),
-          eq(teesheetConfigs.clerkOrgId, orgId),
-        ),
-      );
+      .where(eq(teesheetConfigs.id, configId));
 
     revalidatePath("/settings/teesheet");
     revalidatePath("/settings/teesheet/configuration");
@@ -208,16 +174,9 @@ export async function createTeesheetConfigRule(
     isActive?: boolean;
   },
 ) {
-  const orgId = await getOrganizationId();
-
-  if (!orgId) {
-    return { success: false, error: "No organization selected" };
-  }
-
   const [newRule] = await db
     .insert(teesheetConfigRules)
     .values({
-      clerkOrgId: orgId,
       configId,
       daysOfWeek: rule.daysOfWeek || null,
       startDate: rule.startDate || null,
@@ -244,21 +203,10 @@ export async function updateTeesheetConfigRule(
     isActive?: boolean;
   },
 ) {
-  const orgId = await getOrganizationId();
-
-  if (!orgId) {
-    return { success: false, error: "No organization selected" };
-  }
-
   const [updatedRule] = await db
     .update(teesheetConfigRules)
     .set(updates)
-    .where(
-      and(
-        eq(teesheetConfigRules.id, ruleId),
-        eq(teesheetConfigRules.clerkOrgId, orgId),
-      ),
-    )
+    .where(eq(teesheetConfigRules.id, ruleId))
     .returning();
 
   if (!updatedRule) {
@@ -269,20 +217,9 @@ export async function updateTeesheetConfigRule(
 }
 
 export async function deleteTeesheetConfigRule(ruleId: number) {
-  const orgId = await getOrganizationId();
-
-  if (!orgId) {
-    return { success: false, error: "No organization selected" };
-  }
-
   const [deletedRule] = await db
     .delete(teesheetConfigRules)
-    .where(
-      and(
-        eq(teesheetConfigRules.id, ruleId),
-        eq(teesheetConfigRules.clerkOrgId, orgId),
-      ),
-    )
+    .where(eq(teesheetConfigRules.id, ruleId))
     .returning();
 
   if (!deletedRule) {
@@ -296,20 +233,12 @@ export async function updateTeesheetConfigForDate(
   teesheetId: number,
   configId: number,
 ) {
-  const orgId = await getOrganizationId();
-
-  if (!orgId) {
-    return { success: false, error: "No organization selected" };
-  }
-
   try {
     // First get the teesheet
     const [teesheet] = await db
       .select()
       .from(teesheets)
-      .where(
-        and(eq(teesheets.id, teesheetId), eq(teesheets.clerkOrgId, orgId)),
-      );
+      .where(eq(teesheets.id, teesheetId));
 
     if (!teesheet) {
       return { success: false, error: "Teesheet not found" };
@@ -317,10 +246,7 @@ export async function updateTeesheetConfigForDate(
 
     // Get the config
     const config = await db.query.teesheetConfigs.findFirst({
-      where: and(
-        eq(teesheetConfigs.id, configId),
-        eq(teesheetConfigs.clerkOrgId, orgId),
-      ),
+      where: eq(teesheetConfigs.id, configId),
       with: {
         rules: true,
       },
@@ -334,7 +260,7 @@ export async function updateTeesheetConfigForDate(
     const [updatedTeesheet] = await db
       .update(teesheets)
       .set({ configId })
-      .where(and(eq(teesheets.id, teesheetId), eq(teesheets.clerkOrgId, orgId)))
+      .where(eq(teesheets.id, teesheetId))
       .returning();
 
     if (!updatedTeesheet) {
@@ -344,12 +270,7 @@ export async function updateTeesheetConfigForDate(
     // Delete existing time blocks
     await db
       .delete(timeBlocks)
-      .where(
-        and(
-          eq(timeBlocks.teesheetId, teesheetId),
-          eq(timeBlocks.clerkOrgId, orgId),
-        ),
-      );
+      .where(eq(timeBlocks.teesheetId, teesheetId));
 
     // Create new time blocks with the new config
     const fullConfig = {
@@ -395,7 +316,7 @@ export async function updateCourseInfo(data: {
   try {
     // Check if the course info exists
     const existing = await db.query.courseInfo.findFirst({
-      where: eq(courseInfo.clerkOrgId, orgId),
+      where: eq(courseInfo.id, 1),
     });
 
     if (existing) {
@@ -407,7 +328,7 @@ export async function updateCourseInfo(data: {
           lastUpdatedBy: userId,
           updatedAt: new Date(),
         })
-        .where(eq(courseInfo.clerkOrgId, orgId))
+        .where(eq(courseInfo.id, existing.id))
         .returning();
 
       revalidatePath("/members");
@@ -418,7 +339,6 @@ export async function updateCourseInfo(data: {
       const created = await db
         .insert(courseInfo)
         .values({
-          clerkOrgId: orgId,
           weatherStatus: data.weatherStatus,
           forecast: data.forecast,
           rainfall: data.rainfall,

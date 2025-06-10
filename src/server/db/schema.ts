@@ -35,7 +35,6 @@ export const members = createTable(
   "members",
   {
     id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
-    clerkOrgId: varchar("clerk_org_id", { length: 50 }).notNull(),
     class: varchar("class", { length: 50 }).notNull(),
     memberNumber: varchar("member_number", { length: 20 }).notNull(),
     firstName: varchar("first_name", { length: 50 }).notNull(),
@@ -54,16 +53,10 @@ export const members = createTable(
     ),
   },
   (table) => [
-    // Unique constraints
-    unique("members_org_member_number_unq").on(
-      table.clerkOrgId,
-      table.memberNumber,
-    ),
-    unique("members_org_username_unq").on(table.clerkOrgId, table.username),
-    // Removed email unique constraint temporarily
-    // unique("members_org_email_unq").on(table.clerkOrgId, table.email),
+    // Unique constraints for single-tenant
+    unique("members_member_number_unq").on(table.memberNumber),
+    unique("members_username_unq").on(table.username),
     // Indexes
-    index("members_org_id_idx").on(table.clerkOrgId),
     index("members_first_name_idx").on(table.firstName),
     index("members_last_name_idx").on(table.lastName),
   ],
@@ -92,7 +85,6 @@ export const teesheetConfigs = createTable(
   "teesheet_configs",
   {
     id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
-    clerkOrgId: varchar("clerk_org_id", { length: 50 }).notNull(),
     name: varchar("name", { length: 50 }).notNull(),
     type: varchar("type", { length: 20 }).notNull().default("REGULAR"),
     // Optional fields for REGULAR type
@@ -114,11 +106,7 @@ export const teesheetConfigs = createTable(
       () => new Date(),
     ),
   },
-  (table) => [
-    unique("configs_org_name_unq").on(table.clerkOrgId, table.name),
-    index("configs_org_id_idx").on(table.clerkOrgId),
-    index("configs_template_id_idx").on(table.templateId),
-  ],
+  (table) => [index("configs_template_id_idx").on(table.templateId)],
 );
 
 // Configuration rules for when to apply each config
@@ -126,7 +114,6 @@ export const teesheetConfigRules = createTable(
   "teesheet_config_rules",
   {
     id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
-    clerkOrgId: varchar("clerk_org_id", { length: 50 }).notNull(),
     configId: integer("config_id")
       .references(() => teesheetConfigs.id, { onDelete: "cascade" })
       .notNull(),
@@ -143,7 +130,6 @@ export const teesheetConfigRules = createTable(
     ),
   },
   (table) => [
-    index("rules_org_id_idx").on(table.clerkOrgId),
     index("rules_config_id_idx").on(table.configId),
     index("rules_days_of_week_idx").on(table.daysOfWeek),
   ],
@@ -172,7 +158,6 @@ export const templates = createTable(
   "templates",
   {
     id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
-    clerkOrgId: varchar("clerk_org_id", { length: 50 }).notNull(),
     name: varchar("name", { length: 50 }).notNull(),
     type: varchar("type", { length: 20 }).notNull(), // REGULAR or CUSTOM
     // For REGULAR templates
@@ -189,10 +174,7 @@ export const templates = createTable(
       () => new Date(),
     ),
   },
-  (table) => [
-    unique("templates_org_name_unq").on(table.clerkOrgId, table.name),
-    index("templates_org_id_idx").on(table.clerkOrgId),
-  ],
+  (table) => [],
 );
 
 // Teesheets table
@@ -200,7 +182,6 @@ export const teesheets = createTable(
   "teesheets",
   {
     id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
-    clerkOrgId: varchar("clerk_org_id", { length: 50 }).notNull(),
     date: date("date").notNull(),
     configId: integer("config_id").notNull(),
     generalNotes: text("general_notes"),
@@ -211,11 +192,7 @@ export const teesheets = createTable(
       () => new Date(),
     ),
   },
-  (table) => [
-    unique("teesheets_org_date_unq").on(table.clerkOrgId, table.date),
-    index("teesheets_org_id_idx").on(table.clerkOrgId),
-    index("teesheets_date_idx").on(table.date),
-  ],
+  (table) => [index("teesheets_date_idx").on(table.date)],
 );
 
 // Time blocks
@@ -223,7 +200,6 @@ export const timeBlocks = createTable(
   "time_blocks",
   {
     id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
-    clerkOrgId: varchar("clerk_org_id", { length: 50 }).notNull(),
     teesheetId: integer("teesheet_id").notNull(),
     startTime: varchar("start_time", { length: 5 }).notNull(),
     endTime: varchar("end_time", { length: 5 }).notNull(),
@@ -238,10 +214,7 @@ export const timeBlocks = createTable(
       () => new Date(),
     ),
   },
-  (table) => [
-    index("timeblocks_org_id_idx").on(table.clerkOrgId),
-    index("timeblocks_teesheet_id_idx").on(table.teesheetId),
-  ],
+  (table) => [index("timeblocks_teesheet_id_idx").on(table.teesheetId)],
 );
 
 // Pace of Play table
@@ -249,7 +222,6 @@ export const paceOfPlay = createTable(
   "pace_of_play",
   {
     id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
-    clerkOrgId: varchar("clerk_org_id", { length: 50 }).notNull(),
     timeBlockId: integer("time_block_id")
       .references(() => timeBlocks.id, { onDelete: "cascade" })
       .notNull(),
@@ -276,7 +248,6 @@ export const paceOfPlay = createTable(
     ),
   },
   (table) => [
-    index("pace_of_play_org_id_idx").on(table.clerkOrgId),
     index("pace_of_play_time_block_id_idx").on(table.timeBlockId),
     index("pace_of_play_status_idx").on(table.status),
     unique("pace_of_play_time_block_id_unq").on(table.timeBlockId),
@@ -305,7 +276,6 @@ export const timeBlockMembers = createTable(
   "time_block_members",
   {
     id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
-    clerkOrgId: varchar("clerk_org_id", { length: 50 }).notNull(),
     timeBlockId: integer("time_block_id")
       .references(() => timeBlocks.id, { onDelete: "cascade" })
       .notNull(),
@@ -322,7 +292,6 @@ export const timeBlockMembers = createTable(
       .notNull(),
   },
   (table) => [
-    index("block_members_org_id_idx").on(table.clerkOrgId),
     index("block_members_time_block_id_idx").on(table.timeBlockId),
     index("block_members_member_id_idx").on(table.memberId),
     index("block_members_booking_date_idx").on(table.bookingDate),
@@ -351,7 +320,6 @@ export const guests = createTable(
   "guests",
   {
     id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
-    clerkOrgId: varchar("clerk_org_id", { length: 50 }).notNull(),
     firstName: varchar("first_name", { length: 50 }).notNull(),
     lastName: varchar("last_name", { length: 50 }).notNull(),
     email: varchar("email", { length: 100 }),
@@ -363,10 +331,7 @@ export const guests = createTable(
       () => new Date(),
     ),
   },
-  (table) => [
-    index("guests_org_id_idx").on(table.clerkOrgId),
-    index("guests_name_idx").on(table.firstName, table.lastName),
-  ],
+  (table) => [index("guests_name_idx").on(table.firstName, table.lastName)],
 );
 
 // Payment Method enum
@@ -399,7 +364,6 @@ export const powerCartCharges = createTable(
     isMedical: boolean("is_medical").notNull().default(false),
     charged: boolean("charged").notNull().default(false),
     staffInitials: varchar("staff_initials", { length: 10 }).notNull(),
-    clerkOrgId: varchar("clerk_org_id", { length: 50 }).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .default(sql`CURRENT_TIMESTAMP`)
       .notNull(),
@@ -408,7 +372,6 @@ export const powerCartCharges = createTable(
     ),
   },
   (table) => [
-    index("power_cart_charges_org_id_idx").on(table.clerkOrgId),
     index("power_cart_charges_date_idx").on(table.date),
     index("power_cart_charges_member_id_idx").on(table.memberId),
     index("power_cart_charges_guest_id_idx").on(table.guestId),
@@ -434,7 +397,6 @@ export const generalCharges = createTable(
     paymentMethod: PaymentMethod("payment_method"),
     charged: boolean("charged").notNull().default(false),
     staffInitials: varchar("staff_initials", { length: 10 }).notNull(),
-    clerkOrgId: varchar("clerk_org_id", { length: 50 }).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .default(sql`CURRENT_TIMESTAMP`)
       .notNull(),
@@ -443,7 +405,6 @@ export const generalCharges = createTable(
     ),
   },
   (table) => [
-    index("general_charges_org_id_idx").on(table.clerkOrgId),
     index("general_charges_date_idx").on(table.date),
     index("general_charges_member_id_idx").on(table.memberId),
     index("general_charges_guest_id_idx").on(table.guestId),
@@ -501,7 +462,6 @@ export const timeBlockGuests = createTable(
   "time_block_guests",
   {
     id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
-    clerkOrgId: varchar("clerk_org_id", { length: 50 }).notNull(),
     timeBlockId: integer("time_block_id")
       .references(() => timeBlocks.id, { onDelete: "cascade" })
       .notNull(),
@@ -520,7 +480,6 @@ export const timeBlockGuests = createTable(
       .notNull(),
   },
   (table) => [
-    index("block_guests_org_id_idx").on(table.clerkOrgId),
     index("block_guests_time_block_id_idx").on(table.timeBlockId),
     index("block_guests_guest_id_idx").on(table.guestId),
     index("block_guests_booking_date_idx").on(table.bookingDate),
@@ -595,7 +554,6 @@ export const courseInfo = createTable(
   "course_info",
   {
     id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
-    clerkOrgId: varchar("clerk_org_id", { length: 50 }).notNull(),
     weatherStatus: varchar("weather_status", { length: 30 }), // Fair, Light Rain, etc.
     forecast: varchar("forecast", { length: 50 }), // e.g. "11°C"
     rainfall: varchar("rainfall", { length: 50 }), // e.g. "24 Hour Rainfall Total: 5mm"
@@ -608,10 +566,7 @@ export const courseInfo = createTable(
       () => new Date(),
     ),
   },
-  (table) => [
-    unique("course_info_org_id_unq").on(table.clerkOrgId),
-    index("course_info_org_id_idx").on(table.clerkOrgId),
-  ],
+  (table) => [],
 );
 
 // Timeblock restrictions table - combines member class, guest restrictions, and course availability
@@ -619,7 +574,6 @@ export const timeblockRestrictions = createTable(
   "timeblock_restrictions",
   {
     id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
-    clerkOrgId: varchar("clerk_org_id", { length: 50 }).notNull(),
     name: varchar("name", { length: 100 }).notNull(),
     description: text("description"),
 
@@ -664,7 +618,6 @@ export const timeblockRestrictions = createTable(
     lastUpdatedBy: varchar("last_updated_by", { length: 100 }),
   },
   (table) => [
-    index("timeblock_restrictions_org_id_idx").on(table.clerkOrgId),
     index("timeblock_restrictions_category_idx").on(table.restrictionCategory),
     index("timeblock_restrictions_type_idx").on(table.restrictionType),
     index("timeblock_restrictions_member_classes_idx").on(table.memberClasses),
@@ -676,7 +629,6 @@ export const timeblockOverrides = createTable(
   "timeblock_overrides",
   {
     id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
-    clerkOrgId: varchar("clerk_org_id", { length: 50 }).notNull(),
     restrictionId: integer("restriction_id").references(
       () => timeblockRestrictions.id,
     ),
@@ -690,7 +642,6 @@ export const timeblockOverrides = createTable(
       .notNull(),
   },
   (table) => [
-    index("timeblock_overrides_org_id_idx").on(table.clerkOrgId),
     index("timeblock_overrides_restriction_id_idx").on(table.restrictionId),
     index("timeblock_overrides_time_block_id_idx").on(table.timeBlockId),
   ],
@@ -731,7 +682,6 @@ export const events = createTable(
   "events",
   {
     id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
-    clerkOrgId: varchar("clerk_org_id", { length: 50 }).notNull(),
     name: varchar("name", { length: 100 }).notNull(),
     description: text("description").notNull(),
     eventType: varchar("event_type", { length: 20 }).notNull(), // DINNER, TOURNAMENT, SOCIAL, etc.
@@ -753,7 +703,6 @@ export const events = createTable(
     ),
   },
   (table) => [
-    index("events_org_id_idx").on(table.clerkOrgId),
     index("events_type_idx").on(table.eventType),
     index("events_date_idx").on(table.startDate),
   ],
@@ -764,7 +713,6 @@ export const eventRegistrations = createTable(
   "event_registrations",
   {
     id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
-    clerkOrgId: varchar("clerk_org_id", { length: 50 }).notNull(),
     eventId: integer("event_id")
       .references(() => events.id, { onDelete: "cascade" })
       .notNull(),
@@ -781,7 +729,6 @@ export const eventRegistrations = createTable(
     ),
   },
   (table) => [
-    index("event_registrations_org_id_idx").on(table.clerkOrgId),
     index("event_registrations_event_id_idx").on(table.eventId),
     index("event_registrations_member_id_idx").on(table.memberId),
     unique("event_registrations_event_member_unq").on(
@@ -796,7 +743,6 @@ export const eventDetails = createTable(
   "event_details",
   {
     id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
-    clerkOrgId: varchar("clerk_org_id", { length: 50 }).notNull(),
     eventId: integer("event_id")
       .references(() => events.id, { onDelete: "cascade" })
       .notNull(),
@@ -813,7 +759,6 @@ export const eventDetails = createTable(
     ),
   },
   (table) => [
-    index("event_details_org_id_idx").on(table.clerkOrgId),
     index("event_details_event_id_idx").on(table.eventId),
     unique("event_details_event_id_unq").on(table.eventId),
   ],
@@ -855,7 +800,6 @@ export const timeBlockFills = createTable(
       .references(() => timeBlocks.id, { onDelete: "cascade" }),
     fillType: varchar("fill_type", { length: 20 }).notNull(),
     customName: text("custom_name"),
-    clerkOrgId: varchar("clerk_org_id", { length: 50 }).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .default(sql`CURRENT_TIMESTAMP`)
       .notNull(),
@@ -863,10 +807,7 @@ export const timeBlockFills = createTable(
       () => new Date(),
     ),
   },
-  (table) => [
-    index("timeblock_fills_org_id_idx").on(table.clerkOrgId),
-    index("timeblock_fills_time_block_id_idx").on(table.timeBlockId),
-  ],
+  (table) => [index("timeblock_fills_time_block_id_idx").on(table.timeBlockId)],
 );
 
 export const timeBlockFillsRelations = relations(timeBlockFills, ({ one }) => ({

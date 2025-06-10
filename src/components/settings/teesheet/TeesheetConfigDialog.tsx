@@ -162,7 +162,6 @@ export function TeesheetConfigDialog({
       setPreviewBlocks(
         blocks.map((time, index) => ({
           id: index,
-          clerkOrgId: "",
           teesheetId: 0,
           startTime: time,
           endTime: blocks[index + 1] || endTime,
@@ -177,7 +176,6 @@ export function TeesheetConfigDialog({
       setPreviewBlocks(
         selectedTemplate.blocks.map((block, index) => ({
           id: index,
-          clerkOrgId: "",
           teesheetId: 0,
           startTime: block.startTime,
           endTime: block.startTime,
@@ -404,7 +402,7 @@ export function TeesheetConfigDialog({
                               key={template.id}
                               className={`cursor-pointer rounded-lg border-2 p-3 transition-colors hover:bg-gray-50 ${
                                 selectedTemplate?.id === template.id
-                                  ? "border-[var(--org-primary)] bg-[var(--org-primary)]/5"
+                                  ? "border-org-primary bg-org-primary/5"
                                   : "border-gray-200"
                               }`}
                               onClick={() => handleTemplateSelect(template.id)}

@@ -1,7 +1,6 @@
 import { db } from "~/server/db";
 import { members } from "~/server/db/schema";
 import { eq, sql, and, desc, gte, lte } from "drizzle-orm";
-import { getOrganizationId } from "~/lib/auth";
 import type { Member } from "~/app/types/MemberTypes";
 import { timeBlockMembers as timeBlockMembersSchema } from "~/server/db/schema";
 import { formatDateToYYYYMMDD } from "~/lib/utils";
@@ -13,34 +12,47 @@ export function mapMembersToNames(members: Member[]): string[] {
 
 function convertToMember(row: any): Member {
   return {
-    ...row,
+    id: row.id,
+    class: row.class,
+    memberNumber: row.memberNumber,
+    firstName: row.firstName,
+    lastName: row.lastName,
+    username: row.username,
+    email: row.email,
+    gender: row.gender,
     dateOfBirth: row.dateOfBirth ? new Date(row.dateOfBirth) : null,
+    handicap: row.handicap,
+    bagNumber: row.bagNumber,
     createdAt: new Date(row.createdAt),
     updatedAt: row.updatedAt ? new Date(row.updatedAt) : null,
   };
 }
 
+// Single-tenant: no organization filtering needed
 export async function getMembers(): Promise<Member[]> {
-  const orgId = await getOrganizationId();
   const rows = await db
     .select()
     .from(members)
-    .where(eq(members.clerkOrgId, orgId))
     .orderBy(members.lastName, members.firstName);
 
   return rows.map(convertToMember);
 }
 
+export async function getMemberById(id: number): Promise<Member | null> {
+  const row = await db.query.members.findFirst({
+    where: eq(members.id, id),
+  });
+
+  return row ? convertToMember(row) : null;
+}
+
+// Single-tenant: no organization filtering needed
 export async function searchMembersList(query: string): Promise<Member[]> {
-  const orgId = await getOrganizationId();
   const rows = await db
     .select()
     .from(members)
     .where(
-      and(
-        eq(members.clerkOrgId, orgId),
-        sql`CONCAT(${members.firstName}, ' ', ${members.lastName}) ILIKE ${`%${query}%`} OR ${members.memberNumber} ILIKE ${`%${query}%`}`,
-      ),
+      sql`CONCAT(${members.firstName}, ' ', ${members.lastName}) ILIKE ${`%${query}%`} OR ${members.memberNumber} ILIKE ${`%${query}%`}`,
     )
     .orderBy(members.lastName, members.firstName);
 
@@ -73,6 +85,7 @@ export async function searchMembers(
   return { results: items, hasMore };
 }
 
+// Single-tenant: simplified booking history
 export async function getMemberBookingHistory(
   memberId: number,
   options: {
@@ -82,13 +95,9 @@ export async function getMemberBookingHistory(
   } = {},
 ): Promise<any[]> {
   try {
-    const orgId = await getOrganizationId();
     const { limit = 50, year, month } = options;
 
-    let whereConditions = and(
-      eq(timeBlockMembersSchema.memberId, memberId),
-      eq(timeBlockMembersSchema.clerkOrgId, orgId),
-    );
+    let whereConditions = eq(timeBlockMembersSchema.memberId, memberId);
 
     // Add month filtering if specified
     if (year !== undefined && month !== undefined) {
@@ -102,7 +111,7 @@ export async function getMemberBookingHistory(
         whereConditions,
         gte(timeBlockMembersSchema.bookingDate, monthStartStr),
         lte(timeBlockMembersSchema.bookingDate, monthEndStr),
-      );
+      ) as any; // Type assertion for simplified single-tenant query
     }
 
     const bookings = await db.query.timeBlockMembers.findMany({

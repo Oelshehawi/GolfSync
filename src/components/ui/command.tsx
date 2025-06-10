@@ -131,8 +131,8 @@ const CommandItem = React.forwardRef<
       ref={ref}
       className={cn(
         "relative flex cursor-pointer items-center rounded-sm px-2 py-1.5 text-sm outline-none select-none",
-        "hover:bg-[var(--org-primary)] hover:text-white",
-        "aria-selected:bg-[var(--org-primary)] aria-selected:text-white",
+        "hover:bg-org-primary hover:text-white",
+        "aria-selected:bg-org-primary aria-selected:text-white",
         className,
       )}
       onClick={handleClick}

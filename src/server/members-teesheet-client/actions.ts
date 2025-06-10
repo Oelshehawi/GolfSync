@@ -4,7 +4,7 @@ import { db } from "~/server/db";
 import { timeBlockMembers, timeBlocks, teesheets } from "~/server/db/schema";
 import { eq, and, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
-import { getOrganizationId } from "~/lib/auth";
+
 import { auth } from "@clerk/nextjs/server";
 import { Member } from "~/app/types/MemberTypes";
 import { formatDateToYYYYMMDD } from "~/lib/utils";
@@ -25,7 +25,6 @@ export async function bookTeeTime(
   try {
     // Get member data
     const { userId } = await auth();
-    const organizationId = await getOrganizationId();
 
     if (!userId) {
       return {
@@ -36,10 +35,7 @@ export async function bookTeeTime(
 
     // Get time block info and its teesheet date
     const timeBlock = await db.query.timeBlocks.findFirst({
-      where: and(
-        eq(timeBlocks.id, timeBlockId),
-        eq(timeBlocks.clerkOrgId, organizationId),
-      ),
+      where: eq(timeBlocks.id, timeBlockId),
     });
 
     if (!timeBlock) {
@@ -70,7 +66,6 @@ export async function bookTeeTime(
       where: and(
         eq(timeBlockMembers.timeBlockId, timeBlockId),
         eq(timeBlockMembers.memberId, member.id),
-        eq(timeBlockMembers.clerkOrgId, organizationId),
       ),
     });
 
@@ -86,7 +81,6 @@ export async function bookTeeTime(
       {
         where: and(
           eq(timeBlockMembers.memberId, member.id),
-          eq(timeBlockMembers.clerkOrgId, organizationId),
           eq(timeBlockMembers.bookingDate, bookingDate),
         ),
       },
@@ -103,7 +97,6 @@ export async function bookTeeTime(
     await db.insert(timeBlockMembers).values({
       timeBlockId,
       memberId: member.id,
-      clerkOrgId: organizationId,
       bookingDate,
       bookingTime,
       checkedIn: false,
@@ -130,7 +123,6 @@ export async function cancelTeeTime(
   try {
     // Get member data
     const { userId } = await auth();
-    const organizationId = await getOrganizationId();
 
     if (!userId) {
       return {
@@ -146,7 +138,6 @@ export async function cancelTeeTime(
         and(
           eq(timeBlockMembers.timeBlockId, timeBlockId),
           eq(timeBlockMembers.memberId, member.id),
-          eq(timeBlockMembers.clerkOrgId, organizationId),
         ),
       )
       .returning();

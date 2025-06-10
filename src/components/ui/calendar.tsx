@@ -45,7 +45,7 @@ function Calendar({
             newMonth.setMonth(month.getMonth() - 1);
             setMonth(newMonth);
           }}
-          className="inline-flex h-10 w-10 items-center justify-center rounded-md transition-colors hover:cursor-pointer hover:bg-[var(--org-primary)] hover:text-white"
+          className="inline-flex h-10 w-10 items-center justify-center rounded-md transition-colors hover:cursor-pointer hover:bg-org-primary hover:text-white"
         >
           <ChevronLeft className="h-6 w-6" />
         </button>
@@ -68,16 +68,16 @@ function Calendar({
             caption_label: "text-sm font-medium",
             day: cn(
               "h-7 w-8 sm:h-8 sm:w-10 lg:w-12 p-0 font-normal text-xs sm:text-sm rounded-md",
-              "[&:not([data-outside='true'])]:hover:bg-[var(--org-primary)] [&:not([data-outside='true'])]:hover:cursor-pointer [&:not([data-outside='true'])]:hover:text-white",
+              "[&:not([data-outside='true'])]:hover:bg-org-primary [&:not([data-outside='true'])]:hover:cursor-pointer [&:not([data-outside='true'])]:hover:text-white",
             ),
             day_button: cn(
               "h-7 w-8 sm:h-8 sm:w-10 lg:w-12 p-0 font-normal text-xs sm:text-sm rounded-md",
-              "[&:not([data-outside='true'])]:hover:bg-[var(--org-primary)] [&:not([data-outside='true'])]:hover:cursor-pointer [&:not([data-outside='true'])]:hover:text-white",
+              "[&:not([data-outside='true'])]:hover:bg-org-primary [&:not([data-outside='true'])]:hover:cursor-pointer [&:not([data-outside='true'])]:hover:text-white",
             ),
             today:
-              "[&:not([data-outside='true'])]:bg-[var(--org-secondary)] [&:not([data-outside='true'])]:text-accent-foreground",
+              "[&:not([data-outside='true'])]:bg-org-secondary [&:not([data-outside='true'])]:text-accent-foreground",
             selected:
-              "[&:not([data-outside='true'])]:!bg-[var(--org-primary)] [&:not([data-outside='true'])]:text-white [&:not([data-outside='true'])]:text-primary-foreground",
+              "[&:not([data-outside='true'])]:!bg-org-primary [&:not([data-outside='true'])]:text-white [&:not([data-outside='true'])]:text-primary-foreground",
           }}
         />
         <button
@@ -86,7 +86,7 @@ function Calendar({
             newMonth.setMonth(month.getMonth() + 1);
             setMonth(newMonth);
           }}
-          className="inline-flex h-10 w-10 items-center justify-center rounded-md transition-colors hover:cursor-pointer hover:bg-[var(--org-primary)] hover:text-white"
+          className="inline-flex h-10 w-10 items-center justify-center rounded-md transition-colors hover:cursor-pointer hover:bg-org-primary hover:text-white"
         >
           <ChevronRight className="h-6 w-6" />
         </button>

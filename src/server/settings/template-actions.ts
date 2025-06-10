@@ -3,7 +3,7 @@
 import { db } from "~/server/db";
 import { templates } from "~/server/db/schema";
 import { eq, and } from "drizzle-orm";
-import { getOrganizationId } from "~/lib/auth";
+
 import type { Template, TemplateBlock } from "~/app/types/TeeSheetTypes";
 import { revalidatePath } from "next/cache";
 
@@ -19,12 +19,9 @@ export async function createTemplate(
   },
 ): Promise<{ success: boolean; id?: number }> {
   try {
-    const orgId = await getOrganizationId();
-
     const result = await db
       .insert(templates)
       .values({
-        clerkOrgId: orgId,
         name,
         type,
         startTime: data.startTime,
@@ -62,8 +59,6 @@ export async function updateTemplate(
   },
 ): Promise<{ success: boolean }> {
   try {
-    const orgId = await getOrganizationId();
-
     const result = await db
       .update(templates)
       .set({
@@ -75,7 +70,7 @@ export async function updateTemplate(
         maxMembersPerBlock: data.maxMembersPerBlock,
         blocks: data.blocks ? JSON.stringify(data.blocks) : null,
       })
-      .where(and(eq(templates.id, id), eq(templates.clerkOrgId, orgId)))
+      .where(eq(templates.id, id))
       .returning();
 
     if (!result?.[0]) {
@@ -96,11 +91,9 @@ export async function deleteTemplate(
   id: number,
 ): Promise<{ success: boolean }> {
   try {
-    const orgId = await getOrganizationId();
-
     const result = await db
       .delete(templates)
-      .where(and(eq(templates.id, id), eq(templates.clerkOrgId, orgId)))
+      .where(eq(templates.id, id))
       .returning();
 
     if (!result?.[0]) {
@@ -119,12 +112,9 @@ export async function deleteTemplate(
 
 export async function getTemplates(): Promise<Template[]> {
   try {
-    const orgId = await getOrganizationId();
-
     const result = await db
       .select()
       .from(templates)
-      .where(eq(templates.clerkOrgId, orgId))
       .orderBy(templates.name);
 
     return result.map((template) => ({

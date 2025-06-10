@@ -12,7 +12,7 @@ import {
   isNull,
   type SQL,
 } from "drizzle-orm";
-import { getOrganizationId } from "~/lib/auth";
+
 import {
   Event,
   EventRegistration,
@@ -23,7 +23,6 @@ import {
 // Database event type
 type DbEvent = {
   id: number;
-  clerkOrgId: string;
   name: string;
   description: string;
   eventType: string;
@@ -52,10 +51,7 @@ type DbEvent = {
 export async function getEvents(options?: {
   includeRegistrations?: boolean;
 }): Promise<EventWithRegistrations[]> {
-  const orgId = await getOrganizationId();
-
   const rows = (await db.query.events.findMany({
-    where: eq(events.clerkOrgId, orgId),
     with: {
       details: true,
     },
@@ -72,7 +68,6 @@ export async function getEvents(options?: {
         .where(
           and(
             eq(eventRegistrations.eventId, event.id),
-            eq(eventRegistrations.clerkOrgId, orgId),
           ),
         )
         .then((res) => res[0]?.count || 0);
@@ -84,7 +79,6 @@ export async function getEvents(options?: {
         .where(
           and(
             eq(eventRegistrations.eventId, event.id),
-            eq(eventRegistrations.clerkOrgId, orgId),
             eq(eventRegistrations.status, "PENDING"),
           ),
         )
@@ -116,14 +110,13 @@ export async function getUpcomingEvents(
   limit: number = 5,
   memberClass?: string,
 ): Promise<Event[]> {
-  const orgId = await getOrganizationId();
   const today = new Date().toISOString().split("T")[0];
 
   const memberClassCondition = memberClass
     ? sql`AND (member_classes IS NULL OR ${memberClass} = ANY(member_classes))`
     : sql``;
 
-  const whereClause = sql`clerk_org_id = ${orgId} AND start_date >= ${today} ${memberClassCondition}`;
+  const whereClause = sql`start_date >= ${today} ${memberClassCondition}`;
 
   const rows = (await db.query.events.findMany({
     where: whereClause,
@@ -143,7 +136,6 @@ export async function getUpcomingEvents(
         .where(
           and(
             eq(eventRegistrations.eventId, event.id),
-            eq(eventRegistrations.clerkOrgId, orgId),
           ),
         )
         .then((res) => res[0]?.count || 0);
@@ -161,10 +153,8 @@ export async function getUpcomingEvents(
 
 // Get a single event by ID
 export async function getEventById(eventId: number): Promise<Event | null> {
-  const orgId = await getOrganizationId();
-
   const event = (await db.query.events.findFirst({
-    where: and(eq(events.id, eventId), eq(events.clerkOrgId, orgId)),
+    where: eq(events.id, eventId),
     with: {
       details: true,
     },
@@ -179,7 +169,6 @@ export async function getEventById(eventId: number): Promise<Event | null> {
     .where(
       and(
         eq(eventRegistrations.eventId, eventId),
-        eq(eventRegistrations.clerkOrgId, orgId),
       ),
     )
     .then((res) => res[0]?.count || 0);
@@ -195,12 +184,9 @@ export async function getEventById(eventId: number): Promise<Event | null> {
 export async function getEventRegistrations(
   eventId: number,
 ): Promise<EventRegistration[]> {
-  const orgId = await getOrganizationId();
-
   const registrations = await db.query.eventRegistrations.findMany({
     where: and(
       eq(eventRegistrations.eventId, eventId),
-      eq(eventRegistrations.clerkOrgId, orgId),
     ),
     with: {
       member: true,
@@ -216,13 +202,10 @@ export async function isMemberRegistered(
   eventId: number,
   memberId: number,
 ): Promise<boolean> {
-  const orgId = await getOrganizationId();
-
   const registration = await db.query.eventRegistrations.findFirst({
     where: and(
       eq(eventRegistrations.eventId, eventId),
       eq(eventRegistrations.memberId, memberId),
-      eq(eventRegistrations.clerkOrgId, orgId),
     ),
   });
 
@@ -231,12 +214,9 @@ export async function isMemberRegistered(
 
 // Get a member's event registrations
 export async function getMemberEventRegistrations(memberId: number) {
-  const orgId = await getOrganizationId();
-
   const registrations = await db.query.eventRegistrations.findMany({
     where: and(
       eq(eventRegistrations.memberId, memberId),
-      eq(eventRegistrations.clerkOrgId, orgId),
     ),
     with: {
       event: true,
@@ -248,9 +228,7 @@ export async function getMemberEventRegistrations(memberId: number) {
 }
 
 export async function getEventsForClass(memberClass: string) {
-  const orgId = await getOrganizationId();
-
-  const whereClause = sql`clerk_org_id = ${orgId} AND (member_classes IS NULL OR ${memberClass} = ANY(member_classes))`;
+  const whereClause = sql`(member_classes IS NULL OR ${memberClass} = ANY(member_classes))`;
 
   const dbEvents = (await db.query.events.findMany({
     where: whereClause,

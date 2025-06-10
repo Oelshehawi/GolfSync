@@ -1,6 +1,5 @@
 "use server";
 
-import { getOrganizationId } from "~/lib/auth";
 import { db } from "~/server/db";
 import {
   timeBlockMembers,
@@ -35,8 +34,6 @@ export async function removeTimeBlockMember(
   memberId: number,
 ): Promise<ActionResult> {
   try {
-    const clerkOrgId = await getOrganizationId();
-
     // Delete the time block member
     const result = await db
       .delete(timeBlockMembers)
@@ -44,7 +41,6 @@ export async function removeTimeBlockMember(
         and(
           eq(timeBlockMembers.timeBlockId, timeBlockId),
           eq(timeBlockMembers.memberId, memberId),
-          eq(timeBlockMembers.clerkOrgId, clerkOrgId),
         ),
       )
       .returning();
@@ -72,8 +68,6 @@ export async function removeTimeBlockGuest(
   guestId: number,
 ): Promise<ActionResult> {
   try {
-    const clerkOrgId = await getOrganizationId();
-
     // Delete the time block guest
     const result = await db
       .delete(timeBlockGuests)
@@ -81,7 +75,6 @@ export async function removeTimeBlockGuest(
         and(
           eq(timeBlockGuests.timeBlockId, timeBlockId),
           eq(timeBlockGuests.guestId, guestId),
-          eq(timeBlockGuests.clerkOrgId, clerkOrgId),
         ),
       )
       .returning();
@@ -110,8 +103,6 @@ export async function checkInMember(
   isCheckedIn: boolean,
 ): Promise<ActionResult> {
   try {
-    const clerkOrgId = await getOrganizationId();
-
     const result = await db
       .update(timeBlockMembers)
       .set({
@@ -122,7 +113,6 @@ export async function checkInMember(
         and(
           eq(timeBlockMembers.timeBlockId, timeBlockId),
           eq(timeBlockMembers.memberId, memberId),
-          eq(timeBlockMembers.clerkOrgId, clerkOrgId),
         ),
       )
       .returning();
@@ -141,7 +131,6 @@ export async function checkInMember(
         where: and(
           eq(timeBlockMembers.timeBlockId, timeBlockId),
           eq(timeBlockMembers.memberId, memberId),
-          eq(timeBlockMembers.clerkOrgId, clerkOrgId),
         ),
         with: {
           member: true,
@@ -162,7 +151,6 @@ export async function checkInMember(
         const frequencyRestrictions =
           await db.query.timeblockRestrictions.findMany({
             where: and(
-              eq(timeblockRestrictions.clerkOrgId, clerkOrgId),
               eq(timeblockRestrictions.restrictionCategory, "MEMBER_CLASS"),
               eq(timeblockRestrictions.restrictionType, "FREQUENCY"),
               eq(timeblockRestrictions.isActive, true),
@@ -204,7 +192,6 @@ export async function checkInMember(
               .where(
                 and(
                   eq(timeBlockMembers.memberId, memberId),
-                  eq(timeBlockMembers.clerkOrgId, clerkOrgId),
                   gte(timeBlockMembers.bookingDate, monthStartStr),
                   lte(timeBlockMembers.bookingDate, monthEndStr),
                 ),
@@ -220,7 +207,6 @@ export async function checkInMember(
                 chargeType: "FREQUENCY_FEE",
                 charged: false,
                 staffInitials: "AUTO", // Auto-generated charge from frequency restriction
-                clerkOrgId,
               });
             }
           }
@@ -229,10 +215,7 @@ export async function checkInMember(
 
       // Get the pace of play record for this time block
       const existingPaceOfPlay = await db.query.paceOfPlay.findFirst({
-        where: and(
-          eq(paceOfPlay.timeBlockId, timeBlockId),
-          eq(paceOfPlay.clerkOrgId, clerkOrgId),
-        ),
+        where: eq(paceOfPlay.timeBlockId, timeBlockId),
       });
 
       // Only initialize pace of play if it hasn't been initialized yet
@@ -260,14 +243,11 @@ export async function checkInGuest(
   isCheckedIn: boolean,
 ): Promise<ActionResult> {
   try {
-    const clerkOrgId = await getOrganizationId();
-
     // Get guest and time block details
     const guestDetails = await db.query.timeBlockGuests.findFirst({
       where: and(
         eq(timeBlockGuests.timeBlockId, timeBlockId),
         eq(timeBlockGuests.guestId, guestId),
-        eq(timeBlockGuests.clerkOrgId, clerkOrgId),
       ),
       with: {
         guest: true,
@@ -298,7 +278,6 @@ export async function checkInGuest(
         and(
           eq(timeBlockGuests.timeBlockId, timeBlockId),
           eq(timeBlockGuests.guestId, guestId),
-          eq(timeBlockGuests.clerkOrgId, clerkOrgId),
         ),
       )
       .returning();
@@ -319,7 +298,6 @@ export async function checkInGuest(
         chargeType: "GUEST_FEE",
         charged: false,
         staffInitials: "AUTO", // Auto-generated charge
-        clerkOrgId,
       });
     }
 
@@ -339,8 +317,6 @@ export async function checkInAllTimeBlockParticipants(
   isCheckedIn: boolean,
 ): Promise<ActionResult> {
   try {
-    const clerkOrgId = await getOrganizationId();
-
     // Check in all members
     await db
       .update(timeBlockMembers)
@@ -348,12 +324,7 @@ export async function checkInAllTimeBlockParticipants(
         checkedIn: isCheckedIn,
         checkedInAt: isCheckedIn ? new Date() : null,
       })
-      .where(
-        and(
-          eq(timeBlockMembers.timeBlockId, timeBlockId),
-          eq(timeBlockMembers.clerkOrgId, clerkOrgId),
-        ),
-      );
+      .where(eq(timeBlockMembers.timeBlockId, timeBlockId));
 
     // Check in all guests
     await db
@@ -362,21 +333,13 @@ export async function checkInAllTimeBlockParticipants(
         checkedIn: isCheckedIn,
         checkedInAt: isCheckedIn ? new Date() : null,
       })
-      .where(
-        and(
-          eq(timeBlockGuests.timeBlockId, timeBlockId),
-          eq(timeBlockGuests.clerkOrgId, clerkOrgId),
-        ),
-      );
+      .where(eq(timeBlockGuests.timeBlockId, timeBlockId));
 
     // If checking in, initialize pace of play
     if (isCheckedIn) {
       // Get the pace of play record for this time block
       const existingPaceOfPlay = await db.query.paceOfPlay.findFirst({
-        where: and(
-          eq(paceOfPlay.timeBlockId, timeBlockId),
-          eq(paceOfPlay.clerkOrgId, clerkOrgId),
-        ),
+        where: eq(paceOfPlay.timeBlockId, timeBlockId),
       });
 
       // Only initialize pace of play if it hasn't been initialized yet
@@ -403,17 +366,10 @@ export async function updateTimeBlockNotes(
   notes: string | null,
 ): Promise<ActionResult> {
   try {
-    const clerkOrgId = await getOrganizationId();
-
     const result = await db
       .update(timeBlocks)
       .set({ notes })
-      .where(
-        and(
-          eq(timeBlocks.id, timeBlockId),
-          eq(timeBlocks.clerkOrgId, clerkOrgId),
-        ),
-      )
+      .where(eq(timeBlocks.id, timeBlockId))
       .returning();
 
     if (!result || result.length === 0) {
@@ -440,14 +396,10 @@ export async function populateTimeBlocksWithRandomMembers(
   date: string,
 ) {
   try {
-    const orgId = await getOrganizationId();
-    if (!orgId) {
-      return { success: false, error: "No organization selected" };
-    }
+
 
     // Get all members in the organization
     const allMembers = await db.query.members.findMany({
-      where: eq(members.clerkOrgId, orgId),
     });
 
     if (allMembers.length === 0) {
@@ -456,10 +408,7 @@ export async function populateTimeBlocksWithRandomMembers(
 
     // Get all timeblocks for the teesheet
     const teesheetTimeBlocks = await db.query.timeBlocks.findMany({
-      where: and(
-        eq(timeBlocks.teesheetId, teesheetId),
-        eq(timeBlocks.clerkOrgId, orgId),
-      ),
+      where: eq(timeBlocks.teesheetId, teesheetId),
     });
 
     if (teesheetTimeBlocks.length === 0) {
@@ -472,22 +421,12 @@ export async function populateTimeBlocksWithRandomMembers(
         // Clear existing members first
         await db
           .delete(timeBlockMembers)
-          .where(
-            and(
-              eq(timeBlockMembers.timeBlockId, timeBlock.id),
-              eq(timeBlockMembers.clerkOrgId, orgId),
-            ),
-          );
+          .where(eq(timeBlockMembers.timeBlockId, timeBlock.id));
 
         // Also clear any existing pace of play records
         await db
           .delete(paceOfPlay)
-          .where(
-            and(
-              eq(paceOfPlay.timeBlockId, timeBlock.id),
-              eq(paceOfPlay.clerkOrgId, orgId),
-            ),
-          );
+          .where(eq(paceOfPlay.timeBlockId, timeBlock.id));
 
         // Randomly decide how many members to add (1-4)
         const numMembersToAdd = Math.floor(Math.random() * 3) + 1; // 1-3 members
@@ -509,7 +448,6 @@ export async function populateTimeBlocksWithRandomMembers(
           const isCheckedIn = false;
 
           await db.insert(timeBlockMembers).values({
-            clerkOrgId: orgId,
             timeBlockId: timeBlock.id,
             memberId: member.id,
             bookingDate: date,
@@ -529,10 +467,7 @@ export async function populateTimeBlocksWithRandomMembers(
           if (Math.random() < 0.2) {
             // Get the pace record we just created
             const paceRecord = await db.query.paceOfPlay.findFirst({
-              where: and(
-                eq(paceOfPlay.timeBlockId, timeBlock.id),
-                eq(paceOfPlay.clerkOrgId, orgId),
-              ),
+              where: eq(paceOfPlay.timeBlockId, timeBlock.id),
             });
 
             if (paceRecord) {
@@ -552,12 +487,7 @@ export async function populateTimeBlocksWithRandomMembers(
                   turn9Time: turnTime,
                   lastUpdatedBy: "Debug Populate",
                 })
-                .where(
-                  and(
-                    eq(paceOfPlay.timeBlockId, timeBlock.id),
-                    eq(paceOfPlay.clerkOrgId, orgId),
-                  ),
-                );
+                .where(eq(paceOfPlay.timeBlockId, timeBlock.id));
             }
           }
         }
@@ -593,14 +523,10 @@ export async function updateTeesheetGeneralNotes(
   generalNotes: string | null,
 ): Promise<ActionResult> {
   try {
-    const clerkOrgId = await getOrganizationId();
-
     const result = await db
       .update(teesheets)
       .set({ generalNotes })
-      .where(
-        and(eq(teesheets.id, teesheetId), eq(teesheets.clerkOrgId, clerkOrgId)),
-      )
+      .where(eq(teesheets.id, teesheetId))
       .returning();
 
     if (!result || result.length === 0) {
@@ -629,8 +555,6 @@ export async function addFillToTimeBlock(
   customName?: string,
 ): Promise<FillActionResult> {
   try {
-    const clerkOrgId = await getOrganizationId();
-
     // Create individual fill records instead of using count
     const fillPromises = Array.from({ length: count }, () =>
       db
@@ -639,7 +563,6 @@ export async function addFillToTimeBlock(
           timeBlockId,
           fillType,
           customName: customName || null,
-          clerkOrgId,
         })
         .returning(),
     );
@@ -674,8 +597,6 @@ export async function removeFillFromTimeBlock(
   fillId: number,
 ): Promise<ActionResult> {
   try {
-    const clerkOrgId = await getOrganizationId();
-
     // Delete the fill directly, similar to member removal
     const result = await db
       .delete(timeBlockFills)
@@ -683,7 +604,6 @@ export async function removeFillFromTimeBlock(
         and(
           eq(timeBlockFills.timeBlockId, timeBlockId),
           eq(timeBlockFills.id, fillId),
-          eq(timeBlockFills.clerkOrgId, clerkOrgId),
         ),
       )
       .returning();

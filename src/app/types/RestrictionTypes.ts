@@ -15,7 +15,6 @@ export enum RestrictionType {
 // Base restriction interface
 export interface BaseRestriction {
   id: number;
-  clerkOrgId: string;
   entityType: RestrictedEntityType;
   entityId: string | null; // classId for "CLASS" type, null for "GUEST"
   restrictionType: RestrictionType;

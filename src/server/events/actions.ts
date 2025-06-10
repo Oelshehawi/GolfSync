@@ -4,7 +4,7 @@ import { db } from "~/server/db";
 import { events, eventRegistrations, eventDetails } from "~/server/db/schema";
 import { eq, and } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
-import { getOrganizationId } from "~/lib/auth";
+
 import { isMemberRegistered } from "./data";
 import { z } from "zod";
 
@@ -57,8 +57,6 @@ export async function createEvent(formData: {
   additionalInfo?: string;
 }) {
   try {
-    const orgId = await getOrganizationId();
-
     // Parse and validate event data
     const eventData = eventSchema.parse({
       name: formData.name,
@@ -80,7 +78,6 @@ export async function createEvent(formData: {
     const result = await db
       .insert(events)
       .values({
-        clerkOrgId: orgId,
         name: eventData.name,
         description: eventData.description,
         eventType: eventData.eventType,
@@ -122,7 +119,6 @@ export async function createEvent(formData: {
 
       await db.insert(eventDetails).values({
         eventId: newEvent.id,
-        clerkOrgId: orgId,
         format: detailsData.format || undefined,
         rules: detailsData.rules || undefined,
         prizes: detailsData.prizes || undefined,
@@ -166,8 +162,6 @@ export async function updateEvent(
   },
 ) {
   try {
-    const orgId = await getOrganizationId();
-
     // Parse and validate event data
     const eventData = eventSchema.parse({
       name: formData.name,
@@ -203,14 +197,11 @@ export async function updateEvent(
         isActive: eventData.isActive,
         memberClasses: eventData.memberClasses,
       })
-      .where(and(eq(events.id, eventId), eq(events.clerkOrgId, orgId)));
+      .where(eq(events.id, eventId));
 
     // Check if event details exist
     const existingDetails = await db.query.eventDetails.findFirst({
-      where: and(
-        eq(eventDetails.eventId, eventId),
-        eq(eventDetails.clerkOrgId, orgId),
-      ),
+      where: eq(eventDetails.eventId, eventId),
     });
 
     // Parse details data
@@ -235,16 +226,10 @@ export async function updateEvent(
       await db
         .update(eventDetails)
         .set(detailsToUpsert)
-        .where(
-          and(
-            eq(eventDetails.eventId, eventId),
-            eq(eventDetails.clerkOrgId, orgId),
-          ),
-        );
+        .where(eq(eventDetails.eventId, eventId));
     } else {
       await db.insert(eventDetails).values({
         eventId,
-        clerkOrgId: orgId,
         ...detailsToUpsert,
       });
     }
@@ -263,11 +248,9 @@ export async function updateEvent(
 // Delete an event
 export async function deleteEvent(eventId: number) {
   try {
-    const orgId = await getOrganizationId();
-
     await db
       .delete(events)
-      .where(and(eq(events.id, eventId), eq(events.clerkOrgId, orgId)));
+      .where(eq(events.id, eventId));
 
     revalidatePath("/admin/events");
     revalidatePath("/members/events");
@@ -285,8 +268,6 @@ export async function registerForEvent(
   notes?: string,
 ) {
   try {
-    const orgId = await getOrganizationId();
-
     // Check if already registered
     const isRegistered = await isMemberRegistered(eventId, memberId);
     if (isRegistered) {
@@ -298,7 +279,7 @@ export async function registerForEvent(
 
     // Get the event to check if approval is required
     const event = await db.query.events.findFirst({
-      where: and(eq(events.id, eventId), eq(events.clerkOrgId, orgId)),
+      where: eq(events.id, eventId),
     });
 
     if (!event) {
@@ -312,7 +293,6 @@ export async function registerForEvent(
     await db.insert(eventRegistrations).values({
       eventId,
       memberId,
-      clerkOrgId: orgId,
       status: defaultStatus,
       notes: notes || undefined,
     });
@@ -329,17 +309,9 @@ export async function registerForEvent(
 // Cancel a registration
 export async function cancelRegistration(eventId: number, memberId: number) {
   try {
-    const orgId = await getOrganizationId();
-
     await db
       .delete(eventRegistrations)
-      .where(
-        and(
-          eq(eventRegistrations.eventId, eventId),
-          eq(eventRegistrations.memberId, memberId),
-          eq(eventRegistrations.clerkOrgId, orgId),
-        ),
-      );
+      .where(eq(eventRegistrations.eventId, eventId));
 
     revalidatePath(`/admin/events/${eventId}`);
     revalidatePath(`/members/events/${eventId}`);
@@ -357,20 +329,13 @@ export async function updateRegistrationStatus(
   notes?: string,
 ) {
   try {
-    const orgId = await getOrganizationId();
-
     await db
       .update(eventRegistrations)
       .set({
         status,
         notes: notes || undefined,
       })
-      .where(
-        and(
-          eq(eventRegistrations.id, registrationId),
-          eq(eventRegistrations.clerkOrgId, orgId),
-        ),
-      );
+      .where(eq(eventRegistrations.id, registrationId));
 
     revalidatePath("/admin/events");
     return { success: true };

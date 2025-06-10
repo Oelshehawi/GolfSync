@@ -18,7 +18,6 @@ export interface EventDetails {
 // Base event interface with string dates for component use
 export interface Event {
   id: number;
-  clerkOrgId: string;
   name: string;
   description: string;
   eventType: EventType;

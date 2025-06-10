@@ -21,13 +21,11 @@ export interface TimeBlockFill {
   timeBlockId: number;
   fillType: FillType;
   customName?: string | null;
-  clerkOrgId: string;
   createdAt: Date;
 }
 
 export interface TeeSheet {
   id: number;
-  clerkOrgId: string;
   date: string;
   configId: number;
   generalNotes?: string | null;
@@ -37,7 +35,6 @@ export interface TeeSheet {
 
 export interface TimeBlock {
   id: number;
-  clerkOrgId: string;
   teesheetId: number;
   startTime: string;
   endTime: string;
@@ -85,7 +82,6 @@ export interface TemplateBlock {
 
 export interface TimeBlockTemplate {
   id: number;
-  clerkOrgId: string;
   name: string;
   startTime: string;
   endTime: string;
@@ -99,7 +95,6 @@ export interface TimeBlockTemplate {
 
 export interface Template {
   id: number;
-  clerkOrgId: string;
   name: string;
   type: ConfigTypes;
   // For REGULAR templates
@@ -124,7 +119,6 @@ export interface TeesheetConfigRuleInput {
 export interface TeesheetConfigRule
   extends Omit<TeesheetConfigRuleInput, "startDate" | "endDate"> {
   id: number;
-  clerkOrgId: string;
   configId: number;
   startDate: Date | null;
   endDate: Date | null;
@@ -135,7 +129,6 @@ export interface TeesheetConfigRule
 // Base config interface
 interface BaseConfig {
   id: number;
-  clerkOrgId: string;
   name: string;
   type: ConfigTypes;
   isActive: boolean;

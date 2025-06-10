@@ -566,7 +566,7 @@ export default function TeesheetClient({
             size="sm"
             onClick={goToPreviousDay}
             disabled={loading || swipeLoading}
-            className="h-10 w-10 rounded-full hover:bg-[var(--org-primary)]/10 hover:text-[var(--org-primary)]"
+            className="h-10 w-10 rounded-full hover:bg-org-primary/10 hover:text-org-primary"
             aria-label="Previous day"
           >
             {swipeLoading ? (
@@ -585,7 +585,7 @@ export default function TeesheetClient({
               size="sm"
               onClick={() => dispatch({ type: "TOGGLE_DATE_PICKER" })}
               disabled={loading || swipeLoading}
-              className="h-8 w-8 rounded-full hover:bg-[var(--org-primary)]/10 hover:text-[var(--org-primary)]"
+              className="h-8 w-8 rounded-full hover:bg-org-primary/10 hover:text-org-primary"
               aria-label="Open date picker"
             >
               <CalendarIcon className="h-4 w-4" />
@@ -597,7 +597,7 @@ export default function TeesheetClient({
             size="sm"
             onClick={goToNextDay}
             disabled={loading || swipeLoading}
-            className="h-10 w-10 rounded-full hover:bg-[var(--org-primary)]/10 hover:text-[var(--org-primary)]"
+            className="h-10 w-10 rounded-full hover:bg-org-primary/10 hover:text-org-primary"
             aria-label="Next day"
           >
             {swipeLoading ? (
@@ -611,7 +611,7 @@ export default function TeesheetClient({
         {/* Swipe Loading Indicator */}
         {swipeLoading && (
           <div className="mt-2 flex items-center justify-center">
-            <div className="flex items-center gap-2 text-sm text-[var(--org-primary)]">
+            <div className="flex items-center gap-2 text-sm text-org-primary">
               <Loader2 className="h-4 w-4 animate-spin" />
               <span>Loading new date...</span>
             </div>
@@ -638,9 +638,9 @@ export default function TeesheetClient({
 
       {/* Tee Sheet Grid - No internal scrolling */}
       <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
-        <div className="border-b border-gray-100 bg-[var(--org-primary)]/5 p-4">
+        <div className="border-b border-gray-100 bg-org-primary/5 p-4">
           <h3 className="flex items-center gap-2 text-lg font-bold text-gray-900">
-            <ClockIcon className="h-5 w-5 text-[var(--org-primary)]" />
+            <ClockIcon className="h-5 w-5 text-org-primary" />
             Tee Sheet - {formatDisplayDate(date)}
           </h3>
           {config?.disallowMemberBooking && (
@@ -748,7 +748,7 @@ export default function TeesheetClient({
             <Button
               onClick={handleBookTeeTime}
               disabled={loading}
-              className="flex-1 bg-[var(--org-primary)] hover:bg-[var(--org-primary)]/90"
+              className="flex-1 bg-org-primary hover:bg-org-primary/90"
             >
               {loading ? (
                 <>

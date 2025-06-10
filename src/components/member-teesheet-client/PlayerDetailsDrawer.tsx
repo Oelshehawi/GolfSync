@@ -72,7 +72,7 @@ export function PlayerDetailsDrawer({
         <div className="flex items-center justify-between border-b border-gray-200 p-4">
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2">
-              <Users className="h-5 w-5 text-[var(--org-primary)]" />
+              <Users className="h-5 w-5 text-org-primary" />
               <h3 className="text-lg font-semibold text-gray-900">
                 {startTimeDisplay} Tee Time
               </h3>

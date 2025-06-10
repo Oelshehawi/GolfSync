@@ -24,11 +24,11 @@ export const HeaderNavClient = ({ member }: HeaderNavClientProps) => {
 
   const navButtonClass = `
     relative z-0 flex items-center justify-center overflow-hidden whitespace-nowrap rounded-lg border-[1.5px]
-    border-[var(--org-primary)] px-5 py-1.5 font-semibold text-[var(--org-primary)] bg-white transition-all duration-300
-    hover:scale-105 hover:border-[var(--org-primary)] hover:text-white
-    focus:outline-none focus:ring-2 focus:ring-[var(--org-primary)]
+    border-org-primary px-5 py-1.5 font-semibold text-org-primary bg-white transition-all duration-300
+    hover:scale-105 hover:border-org-primary hover:text-white
+    focus:outline-none focus:ring-2 focus:ring-org-primary
     before:absolute before:inset-0 before:-z-10 before:translate-y-[200%]
-    before:scale-[2.5] before:rounded-[100%] before:bg-[var(--org-primary)]
+    before:scale-[2.5] before:rounded-[100%] before:bg-org-primary
     before:transition-transform before:duration-300 before:content-['']
     hover:before:translate-y-[0%] active:scale-100
   `;
@@ -49,13 +49,13 @@ export const HeaderNavClient = ({ member }: HeaderNavClientProps) => {
         <div className="flex items-center gap-2">
           <Link
             href="/members"
-            className="text-xl font-bold text-[var(--org-primary)]"
+            className="text-xl font-bold text-org-primary"
           >
             GolfSync
           </Link>
           <div className="flex items-center gap-2">
             {member?.firstName && (
-              <span className="ml-2 border-l-2 border-[var(--org-primary)] pl-2 text-sm font-medium text-neutral-600">
+              <span className="ml-2 border-l-2 border-org-primary pl-2 text-sm font-medium text-neutral-600">
                 Welcome, {member.firstName}!
               </span>
             )}
@@ -66,9 +66,9 @@ export const HeaderNavClient = ({ member }: HeaderNavClientProps) => {
         <div className="hidden items-center gap-4 md:flex">
           <Link
             href="/members"
-            className={`text-base transition-colors hover:text-[var(--org-primary)] ${
+            className={`text-base transition-colors hover:text-org-primary ${
               isActive("/members")
-                ? "font-medium text-[var(--org-primary)]"
+                ? "font-medium text-org-primary"
                 : "text-neutral-700"
             }`}
           >
@@ -76,7 +76,7 @@ export const HeaderNavClient = ({ member }: HeaderNavClientProps) => {
           </Link>
           <button
             onClick={() => setIsAccountDialogOpen(true)}
-            className="cursor-pointer text-base text-neutral-700 transition-colors hover:text-[var(--org-primary)]"
+            className="cursor-pointer text-base text-neutral-700 transition-colors hover:text-org-primary"
           >
             My Account
           </button>
@@ -84,7 +84,7 @@ export const HeaderNavClient = ({ member }: HeaderNavClientProps) => {
             href="/members/teesheet"
             className={`${navButtonClass} ${
               isActive("/members/teesheet")
-                ? "bg-[var(--org-primary)] text-[var(--org-primary)] before:translate-y-[0%]"
+                ? "bg-org-primary text-org-primary before:translate-y-[0%]"
                 : ""
             }`}
           >
@@ -92,7 +92,7 @@ export const HeaderNavClient = ({ member }: HeaderNavClientProps) => {
           </Link>
           <button
             onClick={handleSignOut}
-            className="ml-3 flex cursor-pointer items-center gap-1 text-base text-neutral-700 transition-colors hover:text-[var(--org-primary)]"
+            className="ml-3 flex cursor-pointer items-center gap-1 text-base text-neutral-700 transition-colors hover:text-org-primary"
           >
             <LogOut size={16} />
             <span>Sign Out</span>
@@ -101,7 +101,7 @@ export const HeaderNavClient = ({ member }: HeaderNavClientProps) => {
 
         {/* Mobile Menu Button */}
         <button
-          className="rounded-lg p-2 text-[var(--org-primary)] transition-colors hover:bg-[var(--org-primary)] hover:text-white md:hidden"
+          className="rounded-lg p-2 text-org-primary transition-colors hover:bg-org-primary hover:text-white md:hidden"
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
           aria-label="Open navigation menu"
         >
@@ -111,13 +111,13 @@ export const HeaderNavClient = ({ member }: HeaderNavClientProps) => {
 
       {/* Mobile Navigation */}
       {isMobileMenuOpen && (
-        <div className="rounded-b-xl border-t border-[var(--org-primary)]/20 bg-white md:hidden">
+        <div className="rounded-b-xl border-t border-org-primary/20 bg-white md:hidden">
           <div className="space-y-2 py-3">
             <Link
               href="/members"
-              className={`block px-4 py-2 text-base hover:text-[var(--org-primary)] ${
+              className={`block px-4 py-2 text-base hover:text-org-primary ${
                 isActive("/members")
-                  ? "font-medium text-[var(--org-primary)]"
+                  ? "font-medium text-org-primary"
                   : "text-neutral-700"
               }`}
               onClick={() => setIsMobileMenuOpen(false)}
@@ -125,7 +125,7 @@ export const HeaderNavClient = ({ member }: HeaderNavClientProps) => {
               Portal
             </Link>
             <button
-              className="block w-full cursor-pointer px-4 py-2 text-left text-base text-neutral-700 hover:text-[var(--org-primary)]"
+              className="block w-full cursor-pointer px-4 py-2 text-left text-base text-neutral-700 hover:text-org-primary"
               onClick={() => {
                 setIsAccountDialogOpen(true);
                 setIsMobileMenuOpen(false);
@@ -137,15 +137,15 @@ export const HeaderNavClient = ({ member }: HeaderNavClientProps) => {
               href="/members/teesheet"
               className={`block px-4 py-2 text-base font-semibold ${
                 isActive("/members/teesheet")
-                  ? "bg-[var(--org-primary)]/10 text-[var(--org-primary)]"
-                  : "text-[var(--org-primary)]"
+                  ? "bg-org-primary/10 text-org-primary"
+                  : "text-org-primary"
               }`}
               onClick={() => setIsMobileMenuOpen(false)}
             >
               Tee Sheet
             </Link>
             <button
-              className="flex w-full items-center gap-2 px-4 py-2 text-left text-base text-neutral-700 hover:text-[var(--org-primary)]"
+              className="flex w-full items-center gap-2 px-4 py-2 text-left text-base text-neutral-700 hover:text-org-primary"
               onClick={() => {
                 handleSignOut();
                 setIsMobileMenuOpen(false);

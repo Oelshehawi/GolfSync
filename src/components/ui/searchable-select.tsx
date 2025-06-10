@@ -136,7 +136,7 @@ export function SearchableSelect({
                     className={cn(
                       "flex w-full cursor-pointer items-center",
                       option.value === selectedValue &&
-                        "bg-[var(--org-primary)] text-white",
+                        "bg-org-primary text-white",
                     )}
                     onClick={() => handleSelect(option.value)}
                   >

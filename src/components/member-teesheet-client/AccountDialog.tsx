@@ -33,11 +33,11 @@ interface AccountDialogProps {
 
 // Type guard functions
 const isMember = (data: AccountData): data is Member => {
-  return data !== null && "clerkOrgId" in data;
+  return data !== null;
 };
 
 const isTimeBlockMember = (data: AccountData): data is TimeBlockMemberView => {
-  return data !== null && "username" in data && !("clerkOrgId" in data);
+  return data !== null && "username" in data;
 };
 
 const isGuest = (data: AccountData): data is TimeBlockGuest => {

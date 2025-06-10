@@ -1,6 +1,6 @@
 import { and, asc, desc, eq, gte, sql } from "drizzle-orm";
 import { db } from "../db";
-import { getOrganizationId } from "~/lib/auth";
+
 import {
   members,
   paceOfPlay,
@@ -25,15 +25,9 @@ export async function upsertPaceOfPlay(
   timeBlockId: number,
   data: Partial<PaceOfPlayInsert>,
 ) {
-  const orgId = await getOrganizationId();
-  if (!orgId) throw new Error("Organization not found");
-
   // Check if record exists
   const existingRecord = await db.query.paceOfPlay.findFirst({
-    where: and(
-      eq(paceOfPlay.clerkOrgId, orgId),
-      eq(paceOfPlay.timeBlockId, timeBlockId),
-    ),
+    where: eq(paceOfPlay.timeBlockId, timeBlockId),
   });
 
   if (existingRecord) {
@@ -43,14 +37,8 @@ export async function upsertPaceOfPlay(
       .set({
         ...data,
         updatedAt: new Date(),
-        clerkOrgId: orgId,
       })
-      .where(
-        and(
-          eq(paceOfPlay.clerkOrgId, orgId),
-          eq(paceOfPlay.timeBlockId, timeBlockId),
-        ),
-      )
+      .where(eq(paceOfPlay.timeBlockId, timeBlockId))
       .returning();
   } else {
     // Create new record - ensure required fields are present
@@ -58,7 +46,6 @@ export async function upsertPaceOfPlay(
     const insertData = {
       ...data,
       timeBlockId,
-      clerkOrgId: orgId,
       // Ensure required fields have values
       expectedStartTime: data.expectedStartTime || new Date(),
       expectedTurn9Time: data.expectedTurn9Time || new Date(),
@@ -71,19 +58,13 @@ export async function upsertPaceOfPlay(
 
 // Get pace of play by timeBlockId
 export async function getPaceOfPlayByTimeBlockId(timeBlockId: number) {
-  const orgId = await getOrganizationId();
-  if (!orgId) throw new Error("Organization not found");
-
   // First, get the actual timeBlock to see the real tee time
   const timeBlockData = await db.query.timeBlocks.findFirst({
     where: eq(timeBlocks.id, timeBlockId),
   });
 
   const paceData = await db.query.paceOfPlay.findFirst({
-    where: and(
-      eq(paceOfPlay.clerkOrgId, orgId),
-      eq(paceOfPlay.timeBlockId, timeBlockId),
-    ),
+    where: eq(paceOfPlay.timeBlockId, timeBlockId),
   });
 
   return paceData;
@@ -91,9 +72,6 @@ export async function getPaceOfPlayByTimeBlockId(timeBlockId: number) {
 
 // Get all pace of play records for a specific date
 export async function getPaceOfPlayByDate(date: Date) {
-  const orgId = await getOrganizationId();
-  if (!orgId) throw new Error("Organization not found");
-
   const formattedDate = date.toISOString().split("T")[0];
 
   const result = await db
@@ -110,12 +88,7 @@ export async function getPaceOfPlayByDate(date: Date) {
     .leftJoin(members, eq(timeBlockMembers.memberId, members.id))
     .leftJoin(timeBlockGuests, eq(timeBlocks.id, timeBlockGuests.timeBlockId))
     .leftJoin(guests, eq(timeBlockGuests.guestId, guests.id))
-    .where(
-      and(
-        eq(timeBlocks.clerkOrgId, orgId),
-        sql`${teesheets.date} = ${formattedDate}`,
-      ),
-    )
+    .where(sql`${teesheets.date} = ${formattedDate}`)
     .groupBy(timeBlocks.id, paceOfPlay.id)
     .orderBy(asc(timeBlocks.startTime));
 
@@ -131,9 +104,6 @@ export async function getPaceOfPlayByDate(date: Date) {
 
 // Get ongoing pace of play records (for turn and finish pages)
 export async function getOngoingPaceOfPlay(date: Date) {
-  const orgId = await getOrganizationId();
-  if (!orgId) throw new Error("Organization not found");
-
   const formattedDate = date.toISOString().split("T")[0];
 
   return db
@@ -152,7 +122,6 @@ export async function getOngoingPaceOfPlay(date: Date) {
     .leftJoin(guests, eq(timeBlockGuests.guestId, guests.id))
     .where(
       and(
-        eq(timeBlocks.clerkOrgId, orgId),
         sql`${teesheets.date} = ${formattedDate}`,
         sql`${paceOfPlay.startTime} IS NOT NULL`,
         sql`${paceOfPlay.finishTime} IS NULL`,
@@ -164,9 +133,6 @@ export async function getOngoingPaceOfPlay(date: Date) {
 
 // Get active time blocks at the turn (have started but not recorded turn time)
 export async function getTimeBlocksAtTurn(date: Date) {
-  const orgId = await getOrganizationId();
-  if (!orgId) throw new Error("Organization not found");
-
   const formattedDate = date.toISOString().split("T")[0];
 
   const result = await db
@@ -185,7 +151,6 @@ export async function getTimeBlocksAtTurn(date: Date) {
     .leftJoin(guests, eq(timeBlockGuests.guestId, guests.id))
     .where(
       and(
-        eq(timeBlocks.clerkOrgId, orgId),
         sql`${teesheets.date} = ${formattedDate}`,
         sql`${paceOfPlay.startTime} IS NOT NULL`,
         sql`${paceOfPlay.turn9Time} IS NULL`,
@@ -212,14 +177,10 @@ export async function getTimeBlocksAtFinish(
   regular: TimeBlockWithPaceOfPlay[];
   missedTurns: TimeBlockWithPaceOfPlay[];
 }> {
-  const orgId = await getOrganizationId();
-  if (!orgId) throw new Error("Organization not found");
-
   const formattedDate = date.toISOString().split("T")[0];
 
   // Base query conditions
   const baseConditions = [
-    eq(timeBlocks.clerkOrgId, orgId),
     sql`${teesheets.date} = ${formattedDate}`,
     sql`${paceOfPlay.startTime} IS NOT NULL`,
     sql`${paceOfPlay.finishTime} IS NULL`,
@@ -265,9 +226,6 @@ export async function getTimeBlocksAtFinish(
 
 // Get pace of play history for a specific member
 export async function getMemberPaceOfPlayHistory(memberId: number) {
-  const orgId = await getOrganizationId();
-  if (!orgId) throw new Error("Organization not found");
-
   const result = await db
     .select({
       id: paceOfPlay.id,
@@ -291,12 +249,7 @@ export async function getMemberPaceOfPlayHistory(memberId: number) {
       timeBlockMembers,
       eq(timeBlocks.id, timeBlockMembers.timeBlockId),
     )
-    .where(
-      and(
-        eq(paceOfPlay.clerkOrgId, orgId),
-        eq(timeBlockMembers.memberId, memberId),
-      ),
-    )
+    .where(eq(timeBlockMembers.memberId, memberId))
     .orderBy(desc(teesheets.date), asc(timeBlocks.startTime));
 
   return result;

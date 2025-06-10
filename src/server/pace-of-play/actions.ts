@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { getOrganizationId } from "~/lib/auth";
+
 import {
   getPaceOfPlayByTimeBlockId,
   getPaceOfPlayByDate,
@@ -70,18 +70,13 @@ export async function initializePaceOfPlay(
   timeBlockId: number,
   startTime: Date,
 ) {
-  const orgId = await getOrganizationId();
-  if (!orgId) throw new Error("Organization not found");
-
   // Get the timeblock to get the actual scheduled tee time
   const timeBlockRes = await db
     .select({
       startTime: timeBlocks.startTime,
     })
     .from(timeBlocks)
-    .where(
-      and(eq(timeBlocks.id, timeBlockId), eq(timeBlocks.clerkOrgId, orgId)),
-    );
+    .where(eq(timeBlocks.id, timeBlockId));
 
   // Get scheduled tee time as string (e.g. "11:45")
   const scheduledTeeTimeStr = timeBlockRes[0]?.startTime || "";
@@ -135,9 +130,6 @@ export async function updateTurnTime(
   updatedBy: string,
   notes?: string,
 ) {
-  const orgId = await getOrganizationId();
-  if (!orgId) throw new Error("Organization not found");
-
   const currentPace = await getPaceOfPlayByTimeBlockId(timeBlockId);
   if (!currentPace) {
     throw new Error("Pace of play record not found");
@@ -149,11 +141,8 @@ export async function updateTurnTime(
       startTime: timeBlocks.startTime,
     })
     .from(timeBlocks)
-    .where(
-      and(eq(timeBlocks.id, timeBlockId), eq(timeBlocks.clerkOrgId, orgId)),
-    );
+    .where(eq(timeBlocks.id, timeBlockId));
 
-  const scheduledTeeTimeStr = timeBlockRes[0]?.startTime || "";
 
   // Ensure we're using the correct expected time
   const expectedTurn9Time = currentPace.expectedTurn9Time
@@ -182,9 +171,6 @@ export async function updateFinishTime(
   updatedBy: string,
   notes?: string,
 ) {
-  const orgId = await getOrganizationId();
-  if (!orgId) throw new Error("Organization not found");
-
   const currentPace = await getPaceOfPlayByTimeBlockId(timeBlockId);
   if (!currentPace) {
     throw new Error("Pace of play record not found");
@@ -222,9 +208,6 @@ export async function updateTurnAndFinishTime(
   updatedBy: string,
   notes?: string,
 ): Promise<{ success: boolean; error?: string }> {
-  const orgId = await getOrganizationId();
-  if (!orgId) throw new Error("Organization not found");
-
   const currentPace = await getPaceOfPlayByTimeBlockId(timeBlockId);
   if (!currentPace) {
     throw new Error("Pace of play record not found");
@@ -276,9 +259,6 @@ export async function getPaceOfPlayData(
   timeBlockId: number,
 ): Promise<PaceOfPlayRecord | null> {
   try {
-    const orgId = await getOrganizationId();
-    if (!orgId) throw new Error("Organization not found");
-
     const result = await getPaceOfPlayByTimeBlockId(timeBlockId);
     return result || null; // Explicitly return null if result is undefined
   } catch (error) {
@@ -290,9 +270,6 @@ export async function getPaceOfPlayData(
 // Get all pace of play data for a specific date
 export async function getAllPaceOfPlayForDate(date: Date) {
   try {
-    const orgId = await getOrganizationId();
-    if (!orgId) throw new Error("Organization not found");
-
     return await getPaceOfPlayByDate(date);
   } catch (error) {
     console.error("Error fetching pace of play data for date:", error);
@@ -302,9 +279,6 @@ export async function getAllPaceOfPlayForDate(date: Date) {
 
 // Get pace of play history for a specific member
 export async function getMemberPaceOfPlayHistoryAction(memberId: number) {
-  const orgId = await getOrganizationId();
-  if (!orgId) throw new Error("Organization not found");
-
   try {
     const history = await getMemberPaceOfPlayHistory(memberId);
     // Transform the data to match PaceOfPlayHistoryItem interface

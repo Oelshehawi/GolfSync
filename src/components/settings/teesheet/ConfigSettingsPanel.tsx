@@ -255,7 +255,7 @@ export function ConfigSettingsPanel({
                       key={template.id}
                       className={`cursor-pointer rounded-lg border-2 p-3 transition-colors hover:bg-gray-50 ${
                         selectedTemplateId === template.id
-                          ? "border-[var(--org-primary)] bg-[var(--org-primary)]/5"
+                          ? "border-org-primary bg-org-primary/5"
                           : "border-gray-200"
                       }`}
                       onClick={() => {

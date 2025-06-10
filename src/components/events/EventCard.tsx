@@ -167,7 +167,7 @@ export function EventCard({
               <div>
                 <CardTitle className="text-lg">{event.name}</CardTitle>
                 <div className="mt-1 flex items-center gap-2 text-sm">
-                  <Calendar className="h-4 w-4 text-[var(--org-primary)]" />
+                  <Calendar className="h-4 w-4 text-org-primary" />
                   <span>{dateDisplay}</span>
                   {timeDisplay && (
                     <>
@@ -256,7 +256,7 @@ export function EventCard({
               <div className="rounded-lg border bg-gray-50/50 p-4">
                 <div className="grid grid-cols-1 gap-3">
                   <div className="flex items-center gap-2">
-                    <Calendar className="h-5 w-5 shrink-0 text-[var(--org-primary)]" />
+                    <Calendar className="h-5 w-5 shrink-0 text-org-primary" />
                     <div>
                       <span className="text-xs font-medium text-gray-600">
                         Date
@@ -267,7 +267,7 @@ export function EventCard({
 
                   {timeDisplay && (
                     <div className="flex items-center gap-2">
-                      <Clock className="h-5 w-5 shrink-0 text-[var(--org-primary)]" />
+                      <Clock className="h-5 w-5 shrink-0 text-org-primary" />
                       <div>
                         <span className="text-xs font-medium text-gray-600">
                           Time
@@ -279,7 +279,7 @@ export function EventCard({
 
                   {event.location && (
                     <div className="flex items-center gap-2">
-                      <MapPin className="h-5 w-5 shrink-0 text-[var(--org-primary)]" />
+                      <MapPin className="h-5 w-5 shrink-0 text-org-primary" />
                       <div>
                         <span className="text-xs font-medium text-gray-600">
                           Location
@@ -291,7 +291,7 @@ export function EventCard({
 
                   {event.capacity && (
                     <div className="flex items-center gap-2">
-                      <Users className="h-5 w-5 shrink-0 text-[var(--org-primary)]" />
+                      <Users className="h-5 w-5 shrink-0 text-org-primary" />
                       <div>
                         <span className="text-xs font-medium text-gray-600">
                           Capacity
@@ -420,18 +420,18 @@ export function EventCard({
               </CardTitle>
               <div className="mt-2 rounded-md bg-gray-50 px-3 py-2 sm:bg-transparent sm:px-0 sm:py-0">
                 <div className="flex items-center gap-2 text-sm">
-                  <Calendar className="h-4 w-4 text-[var(--org-primary)]" />
+                  <Calendar className="h-4 w-4 text-org-primary" />
                   <span className="font-medium">{dateDisplay}</span>
                 </div>
                 {timeDisplay && (
                   <div className="mt-1 flex items-center gap-2 text-sm">
-                    <Clock className="h-4 w-4 text-[var(--org-primary)]" />
+                    <Clock className="h-4 w-4 text-org-primary" />
                     <span>{timeDisplay}</span>
                   </div>
                 )}
                 {event.location && (
                   <div className="mt-1 flex items-center gap-2 text-sm">
-                    <MapPin className="h-4 w-4 text-[var(--org-primary)]" />
+                    <MapPin className="h-4 w-4 text-org-primary" />
                     <span>{event.location}</span>
                   </div>
                 )}
@@ -473,7 +473,7 @@ export function EventCard({
           {(event.capacity !== undefined ||
             event.registrationsCount !== undefined) && (
             <div className="mt-2 flex items-center gap-2 text-sm">
-              <Users className="h-4 w-4 text-[var(--org-primary)]" />
+              <Users className="h-4 w-4 text-org-primary" />
               <span>
                 {event.registrationsCount || 0}
                 {event.capacity !== null &&
@@ -594,7 +594,7 @@ export function EventCard({
             <div className="rounded-lg border bg-gray-50/50 p-4 sm:hidden">
               <div className="grid grid-cols-1 gap-3">
                 <div className="flex items-center gap-2">
-                  <Calendar className="h-5 w-5 shrink-0 text-[var(--org-primary)]" />
+                  <Calendar className="h-5 w-5 shrink-0 text-org-primary" />
                   <div>
                     <span className="text-xs font-medium text-gray-600">
                       Date
@@ -605,7 +605,7 @@ export function EventCard({
 
                 {timeDisplay && (
                   <div className="flex items-center gap-2">
-                    <Clock className="h-5 w-5 shrink-0 text-[var(--org-primary)]" />
+                    <Clock className="h-5 w-5 shrink-0 text-org-primary" />
                     <div>
                       <span className="text-xs font-medium text-gray-600">
                         Time
@@ -617,7 +617,7 @@ export function EventCard({
 
                 {event.location && (
                   <div className="flex items-center gap-2">
-                    <MapPin className="h-5 w-5 shrink-0 text-[var(--org-primary)]" />
+                    <MapPin className="h-5 w-5 shrink-0 text-org-primary" />
                     <div>
                       <span className="text-xs font-medium text-gray-600">
                         Location
@@ -629,7 +629,7 @@ export function EventCard({
 
                 {event.capacity && (
                   <div className="flex items-center gap-2">
-                    <Users className="h-5 w-5 shrink-0 text-[var(--org-primary)]" />
+                    <Users className="h-5 w-5 shrink-0 text-org-primary" />
                     <div>
                       <span className="text-xs font-medium text-gray-600">
                         Capacity

@@ -2,7 +2,7 @@
 
 import { db } from "~/server/db";
 import { eq, and, or, isNull, gte, lte, ilike, desc, sql } from "drizzle-orm";
-import { getOrganizationId } from "~/lib/auth";
+
 import {
   timeblockRestrictions,
   members,
@@ -22,13 +22,8 @@ type ResultType<T> = { success: false; error: string } | T;
 // Get all timeblock restrictions for the current organization
 export async function getTimeblockRestrictions(): Promise<ResultType<any[]>> {
   try {
-    const orgId = await getOrganizationId();
-    if (!orgId) {
-      return { success: false, error: "No organization selected" };
-    }
 
     const restrictions = await db.query.timeblockRestrictions.findMany({
-      where: eq(timeblockRestrictions.clerkOrgId, orgId),
       orderBy: [
         timeblockRestrictions.restrictionCategory,
         timeblockRestrictions.name,
@@ -47,15 +42,10 @@ export async function getTimeblockRestrictions(): Promise<ResultType<any[]>> {
  */
 export async function getMemberClasses(): Promise<ResultType<string[]>> {
   try {
-    const orgId = await getOrganizationId();
-    if (!orgId) {
-      return { success: false, error: "No organization selected" };
-    }
 
     const result = await db
       .selectDistinct({ class: members.class })
       .from(members)
-      .where(eq(members.clerkOrgId, orgId));
 
     return result.map((row) => row.class);
   } catch (error) {
@@ -69,16 +59,9 @@ export async function getTimeblockRestrictionsByCategory(
   category: "MEMBER_CLASS" | "GUEST" | "COURSE_AVAILABILITY",
 ): Promise<ResultType<any[]>> {
   try {
-    const orgId = await getOrganizationId();
-    if (!orgId) {
-      return { success: false, error: "No organization selected" };
-    }
 
     const restrictions = await db.query.timeblockRestrictions.findMany({
-      where: and(
-        eq(timeblockRestrictions.clerkOrgId, orgId),
-        eq(timeblockRestrictions.restrictionCategory, category),
-      ),
+      where: eq(timeblockRestrictions.restrictionCategory, category),
       orderBy: [timeblockRestrictions.name],
     });
 
@@ -94,16 +77,9 @@ export async function getTimeblockRestrictionById(
   id: number,
 ): Promise<ResultType<any>> {
   try {
-    const orgId = await getOrganizationId();
-    if (!orgId) {
-      return { success: false, error: "No organization selected" };
-    }
 
     const restriction = await db.query.timeblockRestrictions.findFirst({
-      where: and(
-        eq(timeblockRestrictions.id, id),
-        eq(timeblockRestrictions.clerkOrgId, orgId),
-      ),
+      where: eq(timeblockRestrictions.id, id),
     });
 
     if (!restriction) {
@@ -140,10 +116,6 @@ export async function checkBatchTimeblockRestrictions(params: {
   >
 > {
   try {
-    const orgId = await getOrganizationId();
-    if (!orgId) {
-      return { success: false, error: "No organization selected" };
-    }
 
     const { timeBlocks, memberId, memberClass, guestId } = params;
     const results: Array<{
@@ -325,7 +297,6 @@ export async function checkBatchTimeblockRestrictions(params: {
                 .where(
                   and(
                     eq(timeBlockMembers.memberId, memberId),
-                    eq(timeBlockMembers.clerkOrgId, orgId),
                     gte(timeBlockMembers.bookingDate, monthStartStr),
                     lte(timeBlockMembers.bookingDate, monthEndStr),
                   ),
@@ -464,13 +435,9 @@ export async function getTimeblockOverrides(params?: {
   searchTerm?: string;
 }): Promise<ResultType<any[]>> {
   try {
-    const orgId = await getOrganizationId();
-    if (!orgId) {
-      return { success: false, error: "No organization selected" };
-    }
 
     // Start with the base query conditions
-    let conditions = [eq(timeblockOverrides.clerkOrgId, orgId)];
+    let conditions = [];
 
     // Add optional filters
     if (params?.restrictionId) {

@@ -3,6 +3,7 @@ import { getGuests } from "~/server/guests/data";
 import { MembersGuestsHandler } from "~/components/members/MembersGuestsHandler";
 import { PageHeader } from "~/components/ui/page-header";
 
+
 export default async function MembersPage() {
   const [members, guests] = await Promise.all([getMembers(), getGuests()]);
 

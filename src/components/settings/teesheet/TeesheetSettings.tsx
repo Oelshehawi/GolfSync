@@ -93,7 +93,6 @@ export function TeesheetSettings({
             ? configInput.rules.map((rule) => ({
                 ...rule,
                 id: 0, // New rules will get IDs from the database
-                clerkOrgId: selectedConfig.clerkOrgId,
                 configId: selectedConfig.id,
                 createdAt: new Date(),
                 updatedAt: null,
@@ -153,7 +152,6 @@ export function TeesheetSettings({
             ? configInput.rules.map((rule) => ({
                 ...rule,
                 id: 0,
-                clerkOrgId: result.data.clerkOrgId,
                 configId: result.data.id,
                 createdAt: new Date(),
                 updatedAt: null,

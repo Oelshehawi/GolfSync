@@ -1,35 +1,27 @@
 import { db } from "~/server/db";
 import { guests, timeBlockGuests, members } from "~/server/db/schema";
 import { eq, and, desc, gte, lte } from "drizzle-orm";
-import { getOrganizationId } from "~/lib/auth";
+
 import { formatDateToYYYYMMDD } from "~/lib/utils";
 
 export async function getGuests() {
-  const orgId = await getOrganizationId();
-  if (!orgId) return [];
 
   return db.query.guests.findMany({
-    where: eq(guests.clerkOrgId, orgId),
     orderBy: [guests.lastName, guests.firstName],
   });
 }
 
 export async function getGuestById(id: number) {
-  const orgId = await getOrganizationId();
-  if (!orgId) return null;
 
   return db.query.guests.findFirst({
-    where: (guest) => and(eq(guest.id, id), eq(guest.clerkOrgId, orgId)),
+    where: (guest) => eq(guest.id, id),
   });
 }
 
 export async function getTimeBlockGuests(timeBlockId: number) {
-  const orgId = await getOrganizationId();
-  if (!orgId) return [];
 
   const result = await db.query.timeBlockGuests.findMany({
-    where: (tbg) =>
-      and(eq(tbg.timeBlockId, timeBlockId), eq(tbg.clerkOrgId, orgId)),
+    where: (tbg) => eq(tbg.timeBlockId, timeBlockId),
     with: {
       guest: true,
       invitedByMember: true,
@@ -40,14 +32,11 @@ export async function getTimeBlockGuests(timeBlockId: number) {
 }
 
 export async function searchGuests(searchTerm: string) {
-  const orgId = await getOrganizationId();
-  if (!orgId) return [];
 
   const lowerSearchTerm = searchTerm.toLowerCase();
 
-  // Get all guests from the organization
+  // Get all guests
   const allGuests = await db.query.guests.findMany({
-    where: eq(guests.clerkOrgId, orgId),
   });
 
   // Filter guests based on the search term
@@ -72,13 +61,9 @@ export async function getGuestBookingHistory(
   } = {},
 ): Promise<any[]> {
   try {
-    const orgId = await getOrganizationId();
     const { limit = 50, year, month } = options;
 
-    let whereConditions = and(
-      eq(timeBlockGuests.guestId, guestId),
-      eq(timeBlockGuests.clerkOrgId, orgId),
-    );
+    let whereConditions = and(eq(timeBlockGuests.guestId, guestId));
 
     // Add month filtering if specified
     if (year !== undefined && month !== undefined) {

@@ -1,6 +1,6 @@
 import { and, desc, eq, gte, lte, sql, or, ilike } from "drizzle-orm";
 import { db } from "../db";
-import { getOrganizationId } from "~/lib/auth";
+
 import {
   powerCartCharges,
   generalCharges,
@@ -24,9 +24,6 @@ export interface ChargeFilters {
 
 // Get pending power cart charges
 export async function getPendingPowerCartCharges(date?: Date) {
-  const orgId = await getOrganizationId();
-  if (!orgId) throw new Error("Organization not found");
-
   const memberTable = members;
   const splitMemberTable = alias(members, "split_members");
 
@@ -66,7 +63,6 @@ export async function getPendingPowerCartCharges(date?: Date) {
     )
     .where(
       and(
-        eq(powerCartCharges.clerkOrgId, orgId),
         eq(powerCartCharges.charged, false),
         date ? eq(powerCartCharges.date, formatCalendarDate(date)) : undefined,
       ),
@@ -78,9 +74,6 @@ export async function getPendingPowerCartCharges(date?: Date) {
 
 // Get pending general charges
 export async function getPendingGeneralCharges(date?: Date) {
-  const orgId = await getOrganizationId();
-  if (!orgId) throw new Error("Organization not found");
-
   const memberTable = members;
   const sponsorMemberTable = alias(members, "sponsor_members");
 
@@ -119,7 +112,6 @@ export async function getPendingGeneralCharges(date?: Date) {
     )
     .where(
       and(
-        eq(generalCharges.clerkOrgId, orgId),
         eq(generalCharges.charged, false),
         date ? eq(generalCharges.date, formatCalendarDate(date)) : undefined,
       ),
@@ -131,9 +123,6 @@ export async function getPendingGeneralCharges(date?: Date) {
 
 // Get charge history with filters
 export async function getChargeHistory(filters: ChargeFilters) {
-  const orgId = await getOrganizationId();
-  if (!orgId) throw new Error("Organization not found");
-
   // Power cart charges
   const powerCartQuery = db
     .select({
@@ -168,7 +157,6 @@ export async function getChargeHistory(filters: ChargeFilters) {
     )
     .where(
       and(
-        eq(powerCartCharges.clerkOrgId, orgId),
         filters.charged !== undefined
           ? eq(powerCartCharges.charged, filters.charged)
           : undefined,
@@ -223,7 +211,6 @@ export async function getChargeHistory(filters: ChargeFilters) {
     )
     .where(
       and(
-        eq(generalCharges.clerkOrgId, orgId),
         filters.charged !== undefined
           ? eq(generalCharges.charged, filters.charged)
           : undefined,
@@ -259,28 +246,15 @@ export async function getChargeHistory(filters: ChargeFilters) {
 
 // Get pending charges count for notifications
 export async function getPendingChargesCount() {
-  const orgId = await getOrganizationId();
-  if (!orgId) throw new Error("Organization not found");
-
   const [powerCartCount, generalCount] = await Promise.all([
     db
       .select({ count: sql<number>`cast(count(*) as integer)` })
       .from(powerCartCharges)
-      .where(
-        and(
-          eq(powerCartCharges.clerkOrgId, orgId),
-          eq(powerCartCharges.charged, false),
-        ),
-      ),
+      .where(and(eq(powerCartCharges.charged, false))),
     db
       .select({ count: sql<number>`cast(count(*) as integer)` })
       .from(generalCharges)
-      .where(
-        and(
-          eq(generalCharges.clerkOrgId, orgId),
-          eq(generalCharges.charged, false),
-        ),
-      ),
+      .where(and(eq(generalCharges.charged, false))),
   ]);
 
   const powerCartTotal = Number(powerCartCount[0]?.count) || 0;
@@ -294,9 +268,6 @@ export async function getPendingChargesCount() {
 }
 
 export async function getFilteredCharges(filters: ChargeFilters) {
-  const orgId = await getOrganizationId();
-  if (!orgId) throw new Error("Organization not found");
-
   const { page = 1, pageSize = 10 } = filters;
   const offset = (page - 1) * pageSize;
 
@@ -380,7 +351,6 @@ export async function getFilteredCharges(filters: ChargeFilters) {
     )
     .where(
       and(
-        eq(powerCartCharges.clerkOrgId, orgId),
         eq(powerCartCharges.charged, true),
         filters.startDate
           ? gte(powerCartCharges.date, formatCalendarDate(filters.startDate))
@@ -431,7 +401,6 @@ export async function getFilteredCharges(filters: ChargeFilters) {
     )
     .where(
       and(
-        eq(generalCharges.clerkOrgId, orgId),
         eq(generalCharges.charged, true),
         filters.startDate
           ? gte(generalCharges.date, formatCalendarDate(filters.startDate))
@@ -451,21 +420,11 @@ export async function getFilteredCharges(filters: ChargeFilters) {
     db
       .select({ count: sql<number>`cast(count(*) as integer)` })
       .from(powerCartCharges)
-      .where(
-        and(
-          eq(powerCartCharges.clerkOrgId, orgId),
-          eq(powerCartCharges.charged, true),
-        ),
-      ),
+      .where(and(eq(powerCartCharges.charged, true))),
     db
       .select({ count: sql<number>`cast(count(*) as integer)` })
       .from(generalCharges)
-      .where(
-        and(
-          eq(generalCharges.clerkOrgId, orgId),
-          eq(generalCharges.charged, true),
-        ),
-      ),
+      .where(and(eq(generalCharges.charged, true))),
   ]);
 
   const [powerCartResults, generalResults] = await Promise.all([

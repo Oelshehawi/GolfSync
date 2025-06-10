@@ -21,15 +21,12 @@ interface TimeBlockTemplateListProps {
   templates: TimeBlockTemplate[];
   configId: number;
   onCreateTemplate: (
-    template: Omit<
-      TimeBlockTemplate,
-      "id" | "clerkOrgId" | "createdAt" | "updatedAt"
-    >,
+    template: Omit<TimeBlockTemplate, "id" | "createdAt" | "updatedAt">,
   ) => Promise<void>;
   onUpdateTemplate: (
     templateId: number,
     template: Partial<
-      Omit<TimeBlockTemplate, "id" | "clerkOrgId" | "createdAt" | "updatedAt">
+      Omit<TimeBlockTemplate, "id" | "createdAt" | "updatedAt">
     >,
   ) => Promise<void>;
   onDeleteTemplate: (templateId: number) => Promise<void>;
@@ -60,10 +57,7 @@ export function TimeBlockTemplateList({
   };
 
   const handleSaveTemplate = async (
-    template: Omit<
-      TimeBlockTemplate,
-      "id" | "clerkOrgId" | "createdAt" | "updatedAt"
-    >,
+    template: Omit<TimeBlockTemplate, "id" | "createdAt" | "updatedAt">,
   ) => {
     if (selectedTemplate) {
       await onUpdateTemplate(selectedTemplate.id, template);

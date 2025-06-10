@@ -70,7 +70,6 @@ export default async function MembersHome() {
                   key={event.id}
                   event={{
                     id: event.id,
-                    clerkOrgId: event.clerkOrgId,
                     name: event.name,
                     description: event.description,
                     eventType: event.eventType as EventType,

@@ -9,7 +9,7 @@ import {
 } from "~/server/db/schema";
 import { and, eq, or, gt, asc, inArray, gte } from "drizzle-orm";
 import { auth } from "@clerk/nextjs/server";
-import { getOrganizationId } from "~/lib/auth";
+
 import { checkBatchTimeblockRestrictions } from "~/server/timeblock-restrictions/data";
 import { formatCalendarDate, formatDateToYYYYMMDD } from "~/lib/utils";
 import { Member } from "~/app/types/MemberTypes";
@@ -47,7 +47,6 @@ export async function getMemberTeesheetData(date: Date, id: string) {
  */
 export async function getMemberTeesheet(date: Date) {
   const { userId } = await auth();
-  const organizationId = await getOrganizationId();
 
   if (!userId) {
     throw new Error("Not authenticated");
@@ -76,7 +75,6 @@ export async function getMemberTeesheet(date: Date) {
  */
 export async function getMemberBookings() {
   const { userId } = await auth();
-  const organizationId = await getOrganizationId();
 
   if (!userId) {
     throw new Error("Not authenticated");
@@ -90,10 +88,7 @@ export async function getMemberBookings() {
   }
 
   const bookings = await db.query.timeBlockMembers.findMany({
-    where: and(
-      eq(timeBlockMembers.clerkOrgId, organizationId),
-      eq(timeBlockMembers.memberId, member.id),
-    ),
+    where: eq(timeBlockMembers.memberId, member.id),
     with: {
       timeBlock: true,
     },
@@ -108,7 +103,6 @@ export async function getMemberBookings() {
  */
 export async function getMemberData(id?: string) {
   const { userId } = await auth();
-  const organizationId = await getOrganizationId();
 
   if (!userId) {
     throw new Error("Not authenticated");
@@ -116,7 +110,6 @@ export async function getMemberData(id?: string) {
   const user = await db.query.members.findFirst({
     where: and(
       eq(members.id, Number(id)),
-      eq(members.clerkOrgId, organizationId),
     ),
   });
 
@@ -230,7 +223,6 @@ export async function getMemberTeesheetDataWithRestrictions(
  */
 export async function getUpcomingTeeTimes(member: Member) {
   const { userId } = await auth();
-  const organizationId = await getOrganizationId();
 
   if (!userId) {
     throw new Error("Not authenticated");
@@ -250,7 +242,6 @@ export async function getUpcomingTeeTimes(member: Member) {
   // Get bookings with accurate time filtering
   const bookings = await db.query.timeBlockMembers.findMany({
     where: and(
-      eq(timeBlockMembers.clerkOrgId, organizationId),
       eq(timeBlockMembers.memberId, member.id),
       or(
         // Future dates

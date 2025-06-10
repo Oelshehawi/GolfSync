@@ -217,7 +217,7 @@ export function TimeBlockItem({
                 </div>
               ))}
               {hasMorePlayers && (
-                <div className="mt-1 flex items-center text-sm text-[var(--org-primary)]">
+                <div className="mt-1 flex items-center text-sm text-org-primary">
                   <Info className="mr-1 h-4 w-4" />
                   <span className="font-medium">
                     +{totalPeople - 2} more players
@@ -303,7 +303,7 @@ export function TimeBlockItem({
               variant="default"
               size="sm"
               onClick={onBook}
-              className="h-9 w-full bg-[var(--org-primary)] text-sm font-semibold hover:bg-[var(--org-primary)]/90"
+              className="h-9 w-full bg-org-primary text-sm font-semibold hover:bg-org-primary/90"
               disabled={isButtonDisabled}
             >
               Book Now*
@@ -321,7 +321,7 @@ export function TimeBlockItem({
             variant="default"
             size="sm"
             onClick={onBook}
-            className="h-9 w-full bg-[var(--org-primary)] text-sm font-semibold hover:bg-[var(--org-primary)]/90"
+            className="h-9 w-full bg-org-primary text-sm font-semibold hover:bg-org-primary/90"
             disabled={isButtonDisabled}
           >
             Book Now

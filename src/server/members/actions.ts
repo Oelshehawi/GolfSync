@@ -9,7 +9,7 @@ import {
 } from "~/server/db/schema";
 import { eq, and } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
-import { getOrganizationId } from "~/lib/auth";
+
 import { searchMembers, getMemberBookingHistory } from "./data";
 import { formatDateToYYYYMMDD } from "~/lib/utils";
 
@@ -19,11 +19,7 @@ export async function addMemberToTimeBlock(
   memberId: number,
 ) {
   try {
-    const orgId = await getOrganizationId();
 
-    if (!orgId) {
-      return { success: false, error: "No organization selected" };
-    }
 
     // Check if member is already in the time block
     const existingMember = await db.query.timeBlockMembers.findFirst({
@@ -72,7 +68,6 @@ export async function addMemberToTimeBlock(
       where: and(
         eq(timeBlockMembers.memberId, memberId),
         eq(timeBlockMembers.bookingDate, bookingDate),
-        eq(timeBlockMembers.clerkOrgId, orgId),
       ),
     });
 
@@ -85,7 +80,6 @@ export async function addMemberToTimeBlock(
 
     // Add member to time block
     await db.insert(timeBlockMembers).values({
-      clerkOrgId: orgId,
       timeBlockId,
       memberId,
       bookingDate,
@@ -120,8 +114,6 @@ export async function createMember(data: {
   handicap?: string;
   bagNumber?: string;
 }) {
-  const orgId = await getOrganizationId();
-
   // Handle empty date string by converting it to null
   const processedData = {
     ...data,
@@ -130,7 +122,6 @@ export async function createMember(data: {
 
   await db.insert(members).values({
     ...processedData,
-    clerkOrgId: orgId,
   });
 
   revalidatePath("/admin/members");
@@ -151,8 +142,6 @@ export async function updateMember(
     bagNumber?: string;
   },
 ) {
-  const orgId = await getOrganizationId();
-
   // Handle empty date string by converting it to null
   const processedData = {
     ...data,
@@ -162,16 +151,15 @@ export async function updateMember(
   await db
     .update(members)
     .set(processedData)
-    .where(and(eq(members.id, id), eq(members.clerkOrgId, orgId)));
+    .where(eq(members.id, id));
 
   revalidatePath("/admin/members");
 }
 
 export async function deleteMember(id: number) {
-  const orgId = await getOrganizationId();
   await db
     .delete(members)
-    .where(and(eq(members.id, id), eq(members.clerkOrgId, orgId)));
+    .where(eq(members.id, id));
 
   revalidatePath("/admin/members");
 }

@@ -130,7 +130,7 @@ export function TeesheetControlPanel({
               key={config.id}
               onClick={() => handleConfigChange(config.id)}
               disabled={config.id === teesheet.configId || isUpdating}
-              className="cursor-pointer transition-colors hover:bg-[var(--org-primary)] hover:text-white"
+              className="cursor-pointer transition-colors hover:bg-org-primary hover:text-white"
             >
               {config.name}
               {config.id === teesheet.configId && " (Current)"}

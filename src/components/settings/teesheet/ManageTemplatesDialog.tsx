@@ -174,7 +174,6 @@ export function ManageTemplatesDialog({
             name: templateData.name,
             type: templateData.type,
             blocks: templateData.blocks,
-            clerkOrgId: "",
           };
           const updatedTemplates = [...localTemplates, newTemplate];
           setLocalTemplates(updatedTemplates);
@@ -287,7 +286,7 @@ export function ManageTemplatesDialog({
                       key={template.id}
                       className={`group relative rounded-lg border p-1.5 transition-colors hover:bg-gray-50 ${
                         selectedTemplateId === template.id
-                          ? "border-[var(--org-primary)] bg-[var(--org-primary)]/5"
+                          ? "border-org-primary bg-org-primary/5"
                           : "border-gray-200"
                       }`}
                       onClick={() => onTemplateSelect?.(template.id)}
@@ -499,7 +498,6 @@ export function ManageTemplatesDialog({
                           id: -1,
                           name: "New Template",
                           blocks: [],
-                          clerkOrgId: "",
                           type: ConfigTypes.CUSTOM,
                         };
                         handleEdit(newTemplate);

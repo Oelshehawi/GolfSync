@@ -394,7 +394,7 @@ export function TeesheetView({
                     <tr>
                       <td
                         colSpan={4}
-                        className="border-b border-[var(--org-primary-light)] p-0"
+                        className="border-b border-org-primary-light p-0"
                       >
                         <TimeBlockNote
                           notes={block.notes}

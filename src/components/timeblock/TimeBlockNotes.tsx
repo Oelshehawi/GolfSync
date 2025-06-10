@@ -86,7 +86,7 @@ export function TimeBlockNote({
 
   return (
     <>
-      <div className="group border-l-4 border-[var(--org-primary)] bg-[var(--org-primary-light)] px-4 py-3 transition-colors hover:bg-[var(--org-primary-lighter)]">
+      <div className="group border-l-4 border-org-primary bg-org-primary-light px-4 py-3 transition-colors hover:bg-org-primary-lighter">
         <div className="flex items-center justify-between">
           <div className="flex-1 text-sm text-gray-700">{notes}</div>
           <div className="flex space-x-1">
@@ -94,7 +94,7 @@ export function TimeBlockNote({
               variant="ghost"
               size="sm"
               onClick={() => setShowDeleteConfirmation(true)}
-              className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 hover:bg-[var(--org-primary-light)] hover:text-red-500"
+              className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 hover:bg-org-primary-light hover:text-red-500"
             >
               <Trash2 className="h-4 w-4" />
             </Button>
@@ -105,7 +105,7 @@ export function TimeBlockNote({
                 e.stopPropagation();
                 onEditClick();
               }}
-              className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 hover:bg-[var(--org-primary-light)]"
+              className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 hover:bg-org-primary-light"
             >
               <Edit className="h-4 w-4" />
             </Button>

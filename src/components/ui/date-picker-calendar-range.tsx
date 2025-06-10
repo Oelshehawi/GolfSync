@@ -108,7 +108,7 @@ export function DatePickerCalendarRange({
           onClick={previousMonth}
           className={cn(
             buttonVariants({ variant: "outline" }),
-            "hover:bg-opacity-20 absolute left-1 h-7 w-7 cursor-pointer bg-transparent p-0 !text-black opacity-50 hover:border-[var(--org-primary)] hover:bg-[var(--org-secondary)] hover:opacity-100",
+            "hover:bg-opacity-20 absolute left-1 h-7 w-7 cursor-pointer bg-transparent p-0 !text-black opacity-50 hover:border-org-primary hover:bg-org-secondary hover:opacity-100",
           )}
         >
           <ChevronLeft className="h-4 w-4" />
@@ -120,7 +120,7 @@ export function DatePickerCalendarRange({
           onClick={nextMonth}
           className={cn(
             buttonVariants({ variant: "outline" }),
-            "hover:bg-opacity-20 absolute right-1 h-7 w-7 cursor-pointer bg-transparent p-0 !text-black opacity-50 hover:border-[var(--org-primary)] hover:bg-[var(--org-secondary)] hover:opacity-100",
+            "hover:bg-opacity-20 absolute right-1 h-7 w-7 cursor-pointer bg-transparent p-0 !text-black opacity-50 hover:border-org-primary hover:bg-org-secondary hover:opacity-100",
           )}
         >
           <ChevronRight className="h-4 w-4" />
@@ -158,21 +158,21 @@ export function DatePickerCalendarRange({
                 isCurrentMonth
                   ? "text-foreground"
                   : "text-muted-foreground opacity-50",
-                isStart && "rounded-l-md bg-[var(--org-primary)] text-white",
-                isEnd && "rounded-r-md bg-[var(--org-primary)] text-white",
+                isStart && "rounded-l-md bg-org-primary text-white",
+                isEnd && "rounded-r-md bg-org-primary text-white",
                 isWithinSelectedRange &&
                   !isStart &&
                   !isEnd &&
-                  "text-foreground bg-opacity-30 bg-[var(--org-secondary)]",
+                  "text-foreground bg-opacity-30 bg-org-secondary",
                 isCurrentDay &&
                   !isWithinSelectedRange &&
                   !isStart &&
                   !isEnd &&
-                  "border border-[var(--org-secondary)]",
+                  "border border-org-secondary",
                 !isWithinSelectedRange &&
                   !isStart &&
                   !isEnd &&
-                  "hover:text-foreground hover:bg-opacity-20 hover:bg-[var(--org-secondary)]",
+                  "hover:text-foreground hover:bg-opacity-20 hover:bg-org-secondary",
                 // Add extra styling to create connected range appearance
                 isWithinSelectedRange && "rounded-none",
               )}

@@ -94,7 +94,7 @@ export function TeesheetGeneralNotes({ teesheet }: TeesheetGeneralNotesProps) {
       ) : (
         <div className="rounded-md bg-white p-3 shadow-sm">
           {generalNotes ? (
-            <div className="border-l-4 border-[var(--org-primary)] pl-2 text-sm text-gray-600">
+            <div className="border-l-4 border-org-primary pl-2 text-sm text-gray-600">
               {generalNotes}
             </div>
           ) : (

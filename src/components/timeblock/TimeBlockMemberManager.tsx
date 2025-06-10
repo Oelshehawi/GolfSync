@@ -242,6 +242,8 @@ export function TimeBlockMemberManager({
                 // Add member to local state for immediate UI update
                 const newMember: TimeBlockMemberView = {
                   id: memberToAdd.id,
+                  username: memberToAdd.username,
+                  email: memberToAdd.email,
                   firstName: memberToAdd.firstName,
                   lastName: memberToAdd.lastName,
                   memberNumber: memberToAdd.memberNumber,
@@ -272,6 +274,8 @@ export function TimeBlockMemberManager({
           // Add member to local state for immediate UI update
           const newMember: TimeBlockMemberView = {
             id: memberToAdd.id,
+            username: memberToAdd.username,
+            email: memberToAdd.email,
             firstName: memberToAdd.firstName,
             lastName: memberToAdd.lastName,
             memberNumber: memberToAdd.memberNumber,
@@ -461,7 +465,6 @@ export function TimeBlockMemberManager({
           timeBlockId: timeBlock.id,
           fillType,
           customName: customName || null,
-          clerkOrgId: result.fill?.clerkOrgId ?? "",
         } as TimeBlockFill; // Schema will add createdAt with defaultNow()
         setLocalFills((prev) => [...prev, newFill]);
       } else {

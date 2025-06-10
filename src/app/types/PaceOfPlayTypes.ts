@@ -26,7 +26,6 @@ export interface PaceOfPlayHistoryItem {
 
 export interface PaceOfPlayRecord {
   id: number;
-  clerkOrgId: string;
   timeBlockId: number;
   startTime: Date | null;
   turn9Time: Date | null;

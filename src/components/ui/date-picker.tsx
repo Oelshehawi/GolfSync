@@ -61,7 +61,7 @@ export function DatePicker({
           className={cn(
             "w-full cursor-pointer justify-start text-left font-normal",
             !date && !dateRange?.from && "text-muted-foreground",
-            "hover:bg-opacity-20 hover:border-[var(--org-primary)] hover:bg-[var(--org-secondary)]",
+            "hover:bg-opacity-20 hover:border-org-primary hover:bg-org-secondary",
             className,
           )}
         >

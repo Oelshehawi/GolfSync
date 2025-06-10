@@ -28,7 +28,7 @@ export default async function AdminLayout({
 
   return (
     <div className={GeistSans.variable}>
-      <div className="min-h-screen bg-[var(--org-secondary)]">
+      <div className="min-h-screen bg-org-secondary">
         <Navigation
           logoUrl={organization.imageUrl}
           organizationName={organization.name}

@@ -108,7 +108,7 @@ export function MultiSelect({
           role="combobox"
           aria-expanded={open}
           className={cn(
-            "w-full justify-between hover:bg-[var(--org-secondary)]",
+            "w-full justify-between hover:bg-org-secondary",
             className,
           )}
           disabled={disabled}
@@ -169,7 +169,7 @@ export function MultiSelect({
                 className={cn(
                   "flex cursor-pointer items-center",
                   selectedSet.has(option.value) &&
-                    "bg-[var(--org-primary-light)]",
+                    "bg-org-primary-light",
                 )}
                 onSelect={() => handleSelect(option.value)}
               >
@@ -177,8 +177,8 @@ export function MultiSelect({
                   className={cn(
                     "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border",
                     selectedSet.has(option.value)
-                      ? "border-[var(--org-primary)] bg-[var(--org-primary)] text-white"
-                      : "border-[var(--org-primary-light)]",
+                      ? "border-org-primary bg-org-primary text-white"
+                      : "border-org-primary-light",
                   )}
                 >
                   {selectedSet.has(option.value) && (

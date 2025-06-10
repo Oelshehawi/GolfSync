@@ -8,20 +8,18 @@ import {
   teesheets,
 } from "~/server/db/schema";
 import { eq, and, like, or } from "drizzle-orm";
-import { getOrganizationId } from "~/lib/auth";
+
 import { revalidatePath } from "next/cache";
 import { getGuestBookingHistory } from "./data";
 import { formatDateToYYYYMMDD } from "~/lib/utils";
 
 export async function searchGuestsAction(searchTerm: string) {
-  const orgId = await getOrganizationId();
-  if (!orgId || !searchTerm.trim()) return [];
+
 
   const lowerSearchTerm = `%${searchTerm.toLowerCase()}%`;
 
   return await db.query.guests.findMany({
     where: and(
-      eq(guests.clerkOrgId, orgId),
       or(
         like(guests.firstName, lowerSearchTerm),
         like(guests.lastName, lowerSearchTerm),
@@ -38,16 +36,10 @@ export async function createGuest(data: {
   email?: string;
   phone?: string;
 }) {
-  const orgId = await getOrganizationId();
-  if (!orgId) {
-    return { success: false, error: "No organization selected" };
-  }
-
   try {
     const [newGuest] = await db
       .insert(guests)
       .values({
-        clerkOrgId: orgId,
         firstName: data.firstName,
         lastName: data.lastName,
         email: data.email || null,
@@ -72,16 +64,11 @@ export async function updateGuest(
     phone?: string;
   },
 ) {
-  const orgId = await getOrganizationId();
-  if (!orgId) {
-    return { success: false, error: "No organization selected" };
-  }
-
   try {
     const [updatedGuest] = await db
       .update(guests)
       .set(data)
-      .where(and(eq(guests.id, id), eq(guests.clerkOrgId, orgId)))
+      .where(eq(guests.id, id))
       .returning();
 
     revalidatePath("/admin/members");
@@ -93,15 +80,10 @@ export async function updateGuest(
 }
 
 export async function deleteGuest(id: number) {
-  const orgId = await getOrganizationId();
-  if (!orgId) {
-    return { success: false, error: "No organization selected" };
-  }
-
   try {
     const [deletedGuest] = await db
       .delete(guests)
-      .where(and(eq(guests.id, id), eq(guests.clerkOrgId, orgId)))
+      .where(eq(guests.id, id))
       .returning();
 
     revalidatePath("/admin/members");
@@ -118,11 +100,7 @@ export async function addGuestToTimeBlock(
   invitedByMemberId: number,
 ) {
   try {
-    const orgId = await getOrganizationId();
 
-    if (!orgId) {
-      return { success: false, error: "No organization selected" };
-    }
 
     // Get the time block to get its teesheet
     const timeBlock = await db.query.timeBlocks.findFirst({
@@ -160,7 +138,6 @@ export async function addGuestToTimeBlock(
 
     // Add guest to time block
     await db.insert(timeBlockGuests).values({
-      clerkOrgId: orgId,
       timeBlockId,
       guestId,
       invitedByMemberId,
@@ -180,11 +157,6 @@ export async function removeGuestFromTimeBlock(
   timeBlockId: number,
   guestId: number,
 ) {
-  const orgId = await getOrganizationId();
-  if (!orgId) {
-    return { success: false, error: "No organization selected" };
-  }
-
   try {
     const [removedGuest] = await db
       .delete(timeBlockGuests)
@@ -192,7 +164,6 @@ export async function removeGuestFromTimeBlock(
         and(
           eq(timeBlockGuests.timeBlockId, timeBlockId),
           eq(timeBlockGuests.guestId, guestId),
-          eq(timeBlockGuests.clerkOrgId, orgId),
         ),
       )
       .returning();

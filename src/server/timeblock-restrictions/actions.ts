@@ -2,7 +2,7 @@
 
 import { db } from "~/server/db";
 import { eq, and, or, isNull, sql, gte, lte, desc } from "drizzle-orm";
-import { getOrganizationId } from "~/lib/auth";
+
 import { revalidatePath } from "next/cache";
 import {
   timeblockRestrictions,
@@ -29,11 +29,6 @@ export async function createTimeblockRestriction(data: any) {
     ) {
       console.error("Missing required data for creation:", data);
       return { error: "Missing required fields for restriction creation" };
-    }
-
-    const orgId = await getOrganizationId();
-    if (!orgId) {
-      return { error: "No organization selected" };
     }
 
     // Get the user information for audit
@@ -74,7 +69,6 @@ export async function createTimeblockRestriction(data: any) {
       .insert(timeblockRestrictions)
       .values({
         ...processedData,
-        clerkOrgId: orgId,
         lastUpdatedBy,
       })
       .returning();
@@ -101,11 +95,6 @@ export async function updateTimeblockRestriction(data: {
     if (!data || !data.id) {
       console.error("Missing required data for update:", data);
       return { error: "Missing required data for update" };
-    }
-
-    const orgId = await getOrganizationId();
-    if (!orgId) {
-      return { error: "No organization selected" };
     }
 
     // Get the user information for audit
@@ -149,12 +138,7 @@ export async function updateTimeblockRestriction(data: {
         lastUpdatedBy,
         updatedAt: new Date(),
       })
-      .where(
-        and(
-          eq(timeblockRestrictions.id, id),
-          eq(timeblockRestrictions.clerkOrgId, orgId),
-        ),
-      )
+      .where(eq(timeblockRestrictions.id, id))
       .returning();
 
     if (!result || result.length === 0) {
@@ -174,30 +158,15 @@ export async function updateTimeblockRestriction(data: {
 
 export async function deleteTimeblockRestriction(id: number) {
   try {
-    const orgId = await getOrganizationId();
-    if (!orgId) {
-      return { error: "No organization selected" };
-    }
-
     // First, delete any override records that reference this restriction
     await db
       .delete(timeblockOverrides)
-      .where(
-        and(
-          eq(timeblockOverrides.restrictionId, id),
-          eq(timeblockOverrides.clerkOrgId, orgId),
-        ),
-      );
+      .where(eq(timeblockOverrides.restrictionId, id));
 
     // Now delete the restriction
     const result = await db
       .delete(timeblockRestrictions)
-      .where(
-        and(
-          eq(timeblockRestrictions.id, id),
-          eq(timeblockRestrictions.clerkOrgId, orgId),
-        ),
-      )
+      .where(eq(timeblockRestrictions.id, id))
       .returning();
 
     if (!result || result.length === 0) {
@@ -225,11 +194,6 @@ export async function recordTimeblockRestrictionOverride(params: {
   reason: string;
 }) {
   try {
-    const orgId = await getOrganizationId();
-    if (!orgId) {
-      return { error: "No organization selected" };
-    }
-
     const authData = await auth();
     const userId = authData.userId;
 
@@ -241,7 +205,6 @@ export async function recordTimeblockRestrictionOverride(params: {
     const result = await db
       .insert(timeblockOverrides)
       .values({
-        clerkOrgId: orgId,
         restrictionId: params.restrictionId,
         // Convert entity ID to member or guest ID based on category
         memberId:
@@ -281,11 +244,6 @@ export async function checkTimeblockRestrictionsAction(params: {
   bookingTime?: string; // Changed to string HH:MM format
 }) {
   try {
-    const orgId = await getOrganizationId();
-    if (!orgId) {
-      return { success: false, error: "No organization selected" };
-    }
-
     const { memberId, memberClass, guestId, bookingDateString, bookingTime } =
       params;
 
@@ -325,10 +283,8 @@ export async function checkTimeblockRestrictionsAction(params: {
     // Check course availability restrictions (if any)
     const courseRestrictions = await db.query.timeblockRestrictions.findMany({
       where: and(
-        eq(timeblockRestrictions.clerkOrgId, orgId),
         eq(timeblockRestrictions.restrictionCategory, "COURSE_AVAILABILITY"),
-        eq(timeblockRestrictions.isActive, true),
-      ),
+        eq(timeblockRestrictions.isActive, true))
     });
 
     // Check course availability (date-based) restrictions
@@ -377,7 +333,6 @@ export async function checkTimeblockRestrictionsAction(params: {
     if (memberId && memberClass) {
       const memberRestrictions = await db.query.timeblockRestrictions.findMany({
         where: and(
-          eq(timeblockRestrictions.clerkOrgId, orgId),
           eq(timeblockRestrictions.restrictionCategory, "MEMBER_CLASS"),
           eq(timeblockRestrictions.isActive, true),
         ),
@@ -460,7 +415,6 @@ export async function checkTimeblockRestrictionsAction(params: {
               .where(
                 and(
                   eq(timeBlockMembers.memberId, memberId),
-                  eq(timeBlockMembers.clerkOrgId, orgId),
                   gte(timeBlockMembers.bookingDate, monthStartStr),
                   lte(timeBlockMembers.bookingDate, monthEndStr),
                 ),
@@ -500,7 +454,6 @@ export async function checkTimeblockRestrictionsAction(params: {
     if (guestId) {
       const guestRestrictions = await db.query.timeblockRestrictions.findMany({
         where: and(
-          eq(timeblockRestrictions.clerkOrgId, orgId),
           eq(timeblockRestrictions.restrictionCategory, "GUEST"),
           eq(timeblockRestrictions.isActive, true),
         ),
