@@ -35,11 +35,13 @@ export default async function AdminPage({ searchParams }: PageProps) {
       }
     } else {
       // No date parameter - get today's date as a string in YYYY-MM-DD format
+      // Use UTC date components directly to create the string to avoid timezone issues
       const now = new Date();
-      const localYear = now.getFullYear();
-      const localMonth = (now.getMonth() + 1).toString().padStart(2, "0");
-      const localDay = now.getDate().toString().padStart(2, "0");
-      dateString = `${localYear}-${localMonth}-${localDay}`;
+      console.log("now", now);
+      const utcYear = now.getUTCFullYear();
+      const utcMonth = (now.getUTCMonth() + 1).toString().padStart(2, "0");
+      const utcDay = now.getUTCDate().toString().padStart(2, "0");
+      dateString = `${utcYear}-${utcMonth}-${utcDay}`;
     }
 
     // Create a Date object from the string using preserveDate to handle timezone consistently
