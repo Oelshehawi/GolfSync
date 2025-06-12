@@ -1,0 +1,306 @@
+/**
+ * Standardized Date Handling for Golf Course (BC, Canada)
+ *
+ * Core Principles:
+ * - Database: Store everything in UTC
+ * - Display: Always show in BC time (America/Vancouver)
+ * - Calculations: Use BC timezone for "today", business logic, etc.
+ *
+ * This replaces the mess of date functions in utils.ts with a clean, consistent API
+ */
+
+import { format } from "date-fns";
+import { toZonedTime, fromZonedTime, formatInTimeZone } from "date-fns-tz";
+
+// Hardcoded timezone for BC, Canada (handles PST/PDT automatically)
+const BC_TIMEZONE = "America/Vancouver";
+
+// ============================================================================
+// CORE TIMEZONE FUNCTIONS
+// ============================================================================
+
+/**
+ * Gets today's date in BC timezone as YYYY-MM-DD string
+ * This is what should be used for "today" calculations
+ *
+ * Example: If it's 1am UTC on Jan 2nd but still 5pm Jan 1st in BC,
+ * this will return Jan 1st as the BC date.
+ */
+export function getBCToday(): string {
+  // First get current time in UTC
+  const utcNow = new Date();
+
+  // Format it in BC timezone to get the correct local date
+  return formatInTimeZone(utcNow, BC_TIMEZONE, "yyyy-MM-dd");
+}
+
+/**
+ * Gets current time as a Date object representing BC local time
+ * The Date object will have UTC time internally that represents the BC local time
+ */
+export function getBCNow(): Date {
+  const utcNow = new Date();
+  return toZonedTime(utcNow, BC_TIMEZONE);
+}
+
+/**
+ * Converts a UTC date to BC timezone
+ */
+export function toBCTime(utcDate: Date): Date {
+  return toZonedTime(utcDate, BC_TIMEZONE);
+}
+
+/**
+ * Converts a BC timezone date to UTC for database storage
+ */
+export function toUTC(bcDate: Date): Date {
+  return fromZonedTime(bcDate, BC_TIMEZONE);
+}
+
+// ============================================================================
+// PARSING & CREATING DATES
+// ============================================================================
+
+/**
+ * Parses a YYYY-MM-DD string into a Date object
+ * The input string is assumed to be in BC timezone
+ * Returns a Date object with the UTC time that corresponds to midnight in BC
+ */
+export function parseDate(dateString: string): Date {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+    throw new Error(`Invalid date format: ${dateString}. Expected YYYY-MM-DD`);
+  }
+
+  // Parse the date components
+  const [yearStr, monthStr, dayStr] = dateString.split("-");
+  if (!yearStr || !monthStr || !dayStr) {
+    throw new Error(`Invalid date components in: ${dateString}`);
+  }
+
+  const year = parseInt(yearStr, 10);
+  const month = parseInt(monthStr, 10) - 1; // JS months are 0-indexed
+  const day = parseInt(dayStr, 10);
+
+  // Create a Date representing midnight in BC timezone
+  // We'll use formatInTimeZone to get the exact UTC time that represents midnight in BC
+  const bcMidnight = `${dateString}T00:00:00`;
+
+  // This gives us the UTC time that represents midnight in BC
+  return fromZonedTime(bcMidnight, BC_TIMEZONE);
+}
+
+/**
+ * Parses a YYYY-MM-DD and HH:mm into a Date object
+ * The input is assumed to be in BC timezone
+ * Returns a Date object with the UTC time that corresponds to the BC local time
+ */
+export function parseDateTime(dateString: string, timeString: string): Date {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+    throw new Error(`Invalid date format: ${dateString}. Expected YYYY-MM-DD`);
+  }
+  if (!/^\d{2}:\d{2}$/.test(timeString)) {
+    throw new Error(`Invalid time format: ${timeString}. Expected HH:MM`);
+  }
+
+  // Create an ISO string in BC timezone
+  const bcDateTime = `${dateString}T${timeString}:00`;
+
+  // Convert BC time to UTC
+  return fromZonedTime(bcDateTime, BC_TIMEZONE);
+}
+
+// ============================================================================
+// FORMATTING FOR DISPLAY (Always in BC time)
+// ============================================================================
+
+/**
+ * Formats a date for display in BC timezone
+ */
+export function formatDate(
+  date: Date | string,
+  formatString: string = "MMMM do, yyyy",
+): string {
+  if (typeof date === "string") {
+    // If it's a YYYY-MM-DD string, parse it to UTC first
+    const utcDate = parseDate(date);
+    return formatInTimeZone(utcDate, BC_TIMEZONE, formatString);
+  }
+
+  return formatInTimeZone(date, BC_TIMEZONE, formatString);
+}
+
+/**
+ * Formats time for display in BC timezone
+ */
+export function formatTime(time: string | Date): string {
+  if (typeof time === "string") {
+    // Handle HH:MM format
+    if (!/^\d{2}:\d{2}$/.test(time)) {
+      throw new Error(`Invalid time format: ${time}. Expected HH:MM`);
+    }
+    return time; // Already in HH:MM format
+  }
+
+  return formatInTimeZone(time, BC_TIMEZONE, "HH:mm");
+}
+
+/**
+ * Formats date and time together for display in BC timezone
+ */
+export function formatDateTime(date: Date | string, time?: string): string {
+  if (time) {
+    // Handle separate date and time
+    return `${formatDate(date, "MMMM do")} at ${formatTime(time)}, ${formatDate(date, "yyyy")}`;
+  }
+
+  // Handle Date object with time component
+  if (typeof date === "string") {
+    return formatDate(date);
+  }
+
+  return formatInTimeZone(date, BC_TIMEZONE, "MMMM do 'at' h:mm a, yyyy");
+}
+
+/**
+ * Formats date as day of week + date (e.g., "Monday, January 15, 2024")
+ */
+export function formatDateWithDay(date: Date | string): string {
+  return formatDate(date, "EEEE, MMMM do, yyyy");
+}
+
+// ============================================================================
+// DATABASE HELPERS
+// ============================================================================
+
+/**
+ * Converts a Date object to YYYY-MM-DD string for database storage
+ * If the input is already a YYYY-MM-DD string, validates and returns it
+ * The output string represents the date in BC timezone
+ */
+export function getDateForDB(date: Date | string): string {
+  if (typeof date === "string") {
+    // Already in YYYY-MM-DD format, just validate
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      throw new Error(`Invalid date format: ${date}. Expected YYYY-MM-DD`);
+    }
+    return date;
+  }
+
+  // Convert the UTC Date to BC timezone and format as YYYY-MM-DD
+  return formatInTimeZone(date, BC_TIMEZONE, "yyyy-MM-dd");
+}
+
+/**
+ * Converts a BC local time to UTC for database timestamp storage
+ */
+export function getDateTimeForDB(date: Date): Date {
+  return fromZonedTime(date, BC_TIMEZONE);
+}
+
+// ============================================================================
+// BUSINESS LOGIC HELPERS
+// ============================================================================
+
+/**
+ * Checks if a date is today in BC timezone
+ */
+export function isToday(date: Date | string): boolean {
+  const today = getBCToday();
+  const dateString = typeof date === "string" ? date : getDateForDB(date);
+  return dateString === today;
+}
+
+/**
+ * Checks if a date/time is in the past in BC timezone
+ */
+export function isPast(date: Date | string, time?: string): boolean {
+  const now = getBCNow();
+
+  if (typeof date === "string") {
+    if (time) {
+      // Compare date + time
+      const dateTime = parseDateTime(date, time);
+      return dateTime < now;
+    } else {
+      // Compare just date (end of day)
+      const endOfDay = parseDateTime(date, "23:59");
+      return endOfDay < now;
+    }
+  }
+
+  return date < now;
+}
+
+/**
+ * Checks if two dates are the same day in BC timezone
+ */
+export function isSameDay(date1: Date | string, date2: Date | string): boolean {
+  const dateString1 = typeof date1 === "string" ? date1 : getDateForDB(date1);
+  const dateString2 = typeof date2 === "string" ? date2 : getDateForDB(date2);
+  return dateString1 === dateString2;
+}
+
+/**
+ * Gets day of week (0 = Sunday, 6 = Saturday) for date in BC timezone
+ */
+export function getDayOfWeek(date: Date | string): number {
+  const utcDate = typeof date === "string" ? parseDate(date) : date;
+  const bcDate = toZonedTime(utcDate, BC_TIMEZONE);
+  return bcDate.getDay();
+}
+
+// ============================================================================
+// UTILITY FUNCTIONS
+// ============================================================================
+
+/**
+ * Generates time blocks for tee times (in 24h format)
+ */
+export function generateTimeBlocks(
+  startTime: string,
+  endTime: string,
+  intervalMinutes: number,
+): string[] {
+  if (!/^\d{2}:\d{2}$/.test(startTime) || !/^\d{2}:\d{2}$/.test(endTime)) {
+    throw new Error("Time must be in HH:MM format");
+  }
+
+  const blocks: string[] = [];
+  let currentTime = new Date(`2000-01-01T${startTime}`);
+  const endDateTime = new Date(`2000-01-01T${endTime}`);
+
+  while (currentTime <= endDateTime) {
+    blocks.push(format(currentTime, "HH:mm"));
+    currentTime = new Date(currentTime.getTime() + intervalMinutes * 60000);
+  }
+
+  return blocks;
+}
+
+/**
+ * Formats an array of day numbers (0-6) to readable text
+ */
+export function formatDaysOfWeek(days: number[]): string {
+  if (!days?.length) return "None";
+
+  const dayNames = [
+    "Sunday",
+    "Monday",
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday",
+  ];
+
+  if (days.length === 7) return "Every day";
+  if (days.length === 5 && !days.includes(0) && !days.includes(6))
+    return "Weekdays";
+  if (days.length === 2 && days.includes(0) && days.includes(6))
+    return "Weekends";
+
+  return days
+    .sort((a, b) => a - b)
+    .map((day) => dayNames[day])
+    .join(", ");
+}

@@ -8,10 +8,8 @@ import {
   guests,
   timeBlockFills,
   templates,
-  teesheetConfigs,
-  teesheetConfigRules,
 } from "~/server/db/schema";
-import { eq, and, inArray, sql, isNull, or, lte, gte, desc } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 
 import type {
   TeeSheet,
@@ -23,8 +21,8 @@ import type {
 } from "~/app/types/TeeSheetTypes";
 import { ConfigTypes } from "~/app/types/TeeSheetTypes";
 import { getConfigForDate } from "~/server/settings/data";
-import { generateTimeBlocks, formatDateToYYYYMMDD } from "~/lib/utils";
-import { format } from "date-fns";
+import { generateTimeBlocks } from "~/lib/utils";
+import { getDateForDB } from "~/lib/dates";
 
 export async function createTimeBlocksForTeesheet(
   teesheetId: number,
@@ -46,9 +44,7 @@ export async function createTimeBlocksForTeesheet(
   }
 
   // Delete existing time blocks for this teesheet
-  await db
-    .delete(timeBlocks)
-    .where(and(eq(timeBlocks.teesheetId, teesheetId)));
+  await db.delete(timeBlocks).where(and(eq(timeBlocks.teesheetId, teesheetId)));
 
   // For custom configurations, fetch the template and create blocks based on it
   if (config.type === ConfigTypes.CUSTOM) {
@@ -118,8 +114,8 @@ export async function createTimeBlocksForTeesheet(
 export async function getOrCreateTeesheet(
   date: Date,
 ): Promise<{ teesheet: TeeSheet; config: TeesheetConfig }> {
-  // Format date as YYYY-MM-DD string in local time to ensure consistency
-  const formattedDate = formatDateToYYYYMMDD(date);
+  // Format date as YYYY-MM-DD string using BC timezone
+  const formattedDate = getDateForDB(date);
 
   // Try to find existing teesheet for the date
   const existingTeesheet = await db.query.teesheets.findFirst({
@@ -296,7 +292,9 @@ export async function getTimeBlocksForTeesheet(
     .from(timeBlockGuests)
     .innerJoin(guests, eq(timeBlockGuests.guestId, guests.id))
     .innerJoin(members, eq(timeBlockGuests.invitedByMemberId, members.id))
-    .where(inArray(timeBlockGuests.timeBlockId, Array.from(timeBlocksMap.keys())));
+    .where(
+      inArray(timeBlockGuests.timeBlockId, Array.from(timeBlocksMap.keys())),
+    );
 
   // Add guests to the corresponding time blocks
   guestsResult.forEach((row) => {
@@ -326,7 +324,9 @@ export async function getTimeBlocksForTeesheet(
   const fillsResult = await db
     .select()
     .from(timeBlockFills)
-    .where(inArray(timeBlockFills.timeBlockId, Array.from(timeBlocksMap.keys())));
+    .where(
+      inArray(timeBlockFills.timeBlockId, Array.from(timeBlocksMap.keys())),
+    );
 
   // Add fills to the corresponding time blocks
   fillsResult.forEach((fill) => {

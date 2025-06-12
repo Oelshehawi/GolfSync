@@ -96,11 +96,9 @@ export async function getConfigForDate(date: Date): Promise<TeesheetConfig> {
   await initializeDefaultConfigs();
 
   // Use UTC date for consistent day of week calculation
-  const utcDate = new Date(
-    Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()),
-  );
-  const dayOfWeek = utcDate.getUTCDay();
-  const formattedDate = format(utcDate, "yyyy-MM-dd");
+
+  const dayOfWeek = date.getUTCDay();
+  const formattedDate = format(date, "yyyy-MM-dd");
 
   // First check for specific date rules
   const specificDateRules = await db.query.teesheetConfigRules.findMany({

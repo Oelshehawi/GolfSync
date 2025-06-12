@@ -14,24 +14,13 @@ export const metadata: Metadata = {
 export default async function AdminLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
-  const session = await auth();
 
-  if (!session.userId || !session.orgId) {
-    return <div>Not authenticated or no organization selected</div>;
-  }
-
-  const organization = await (
-    await clerkClient()
-  ).organizations.getOrganization({
-    organizationId: session.orgId,
-  });
 
   return (
     <div className={GeistSans.variable}>
       <div className="min-h-screen bg-org-secondary">
         <Navigation
-          logoUrl={organization.imageUrl}
-          organizationName={organization.name}
+
         />
         <main className="container mx-auto px-4 py-8">{children}</main>
       </div>

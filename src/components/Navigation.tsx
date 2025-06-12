@@ -1,15 +1,8 @@
 import NavigationClient from "~/components/NavigationClient";
 import { getPendingChargesCount } from "~/server/charges/data";
 
-interface NavigationProps {
-  logoUrl?: string;
-  organizationName: string;
-}
 
-export default async function Navigation({
-  logoUrl,
-  organizationName,
-}: NavigationProps) {
+export default async function Navigation() {
   // Fetch pending charges count
   const pendingCounts = await getPendingChargesCount();
 
@@ -27,8 +20,8 @@ export default async function Navigation({
 
   return (
     <NavigationClient
-      logoUrl={logoUrl}
-      organizationName={organizationName}
+      logoUrl={"/quilchena_logo.png"}
+      organizationName={"Quilchena Golf Club"}
       navItems={navItems}
     />
   );

@@ -685,14 +685,14 @@ export const events = createTable(
     name: varchar("name", { length: 100 }).notNull(),
     description: text("description").notNull(),
     eventType: varchar("event_type", { length: 20 }).notNull(), // DINNER, TOURNAMENT, SOCIAL, etc.
-    startDate: varchar("start_date").notNull(),
-    endDate: varchar("end_date").notNull(),
+    startDate: date("start_date").notNull(),
+    endDate: date("end_date").notNull(),
     startTime: varchar("start_time", { length: 5 }),
     endTime: varchar("end_time", { length: 5 }),
     location: varchar("location", { length: 100 }),
     capacity: integer("capacity"),
     requiresApproval: boolean("requires_approval").default(false),
-    registrationDeadline: varchar("registration_deadline"),
+    registrationDeadline: date("registration_deadline"),
     isActive: boolean("is_active").default(true),
     memberClasses: varchar("member_classes", { length: 50 }).array(),
     createdAt: timestamp("created_at", { withTimezone: true })

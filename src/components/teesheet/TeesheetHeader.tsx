@@ -1,6 +1,6 @@
 "use client";
 
-import { parse, isSameDay } from "date-fns";
+import { isSameDay } from "date-fns";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "~/components/ui/button";
 import { Card } from "~/components/ui/card";
@@ -10,34 +10,16 @@ import {
   ChevronRight,
   Calendar as CalendarIcon,
   X,
-  Settings,
-  Activity,
-  RotateCw,
-  Bug,
 } from "lucide-react";
 import { ConfigInfo } from "../settings/teesheet/ConfigInfo";
 import type {
   TeesheetConfig,
   TimeBlockWithMembers,
 } from "~/app/types/TeeSheetTypes";
-import { formatCalendarDate, formatDisplayDate } from "~/lib/utils";
-import { useEffect, useState } from "react";
-import Link from "next/link";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "~/components/ui/dropdown-menu";
-import { updateTeesheetConfigForDate } from "~/server/settings/actions";
-import toast from "react-hot-toast";
-import { populateTimeBlocksWithRandomMembers } from "~/server/teesheet/actions";
-
-// Check if we're in development mode
-const isDev = process.env.NODE_ENV === "development";
+import { formatDate } from "~/lib/dates";
 
 interface TeesheetHeaderProps {
-  dateString: string;
+  teesheetDate: Date;
   config: TeesheetConfig;
   teesheetId: number;
   timeBlocks: TimeBlockWithMembers[];
@@ -45,7 +27,7 @@ interface TeesheetHeaderProps {
 }
 
 export function TeesheetHeader({
-  dateString: initialDateString,
+  teesheetDate,
   config,
   teesheetId,
   timeBlocks,
@@ -53,24 +35,12 @@ export function TeesheetHeader({
 }: TeesheetHeaderProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [isUpdating, setIsUpdating] = useState(false);
-  const [isPopulating, setIsPopulating] = useState(false);
-
-  // Use search params date if available, otherwise use initial date string
-  const dateFromParams = searchParams.get("date");
-
-  // Determine the active date string
-  const activeDateString = dateFromParams || initialDateString;
-
-  // Parse the string to a Date object for display purposes only
-  const date = parse(activeDateString, "yyyy-MM-dd", new Date());
 
   const handleDateChange = (days: number) => {
-    const newDate = new Date(date);
-    newDate.setDate(date.getDate() + days);
+    const newDate = new Date(teesheetDate);
+    newDate.setDate(teesheetDate.getDate() + days);
     const params = new URLSearchParams(searchParams.toString());
-    const formattedDate = formatCalendarDate(newDate);
-    params.set("date", formattedDate);
+    params.set("date", formatDate(newDate, "yyyy-MM-dd"));
     router.push(`?${params.toString()}`);
   };
 
@@ -78,49 +48,7 @@ export function TeesheetHeader({
 
   const modifiers = {
     today: (day: Date) => isSameDay(day, today),
-    selected: (day: Date) => isSameDay(day, date),
-  };
-
-  const handleConfigChange = async (configId: number) => {
-    if (configId === config.id) return;
-
-    setIsUpdating(true);
-    try {
-      const result = await updateTeesheetConfigForDate(teesheetId, configId);
-      if (result.success) {
-        toast.success("Teesheet configuration updated successfully");
-      } else {
-        toast.error(result.error || "Failed to update teesheet configuration");
-      }
-    } catch (error) {
-      toast.error("An unexpected error occurred");
-    } finally {
-      setIsUpdating(false);
-    }
-  };
-
-  // DEBUG: Populate timeblocks with random members
-  const handlePopulateTimeBlocks = async () => {
-    if (!teesheetId || !activeDateString) return;
-
-    setIsPopulating(true);
-    try {
-      const result = await populateTimeBlocksWithRandomMembers(
-        teesheetId,
-        activeDateString,
-      );
-
-      if (result.success) {
-        toast.success(result.message || "Successfully populated timeblocks");
-      } else {
-        toast.error(result.error || "Failed to populate timeblocks");
-      }
-    } catch (error) {
-      toast.error("An unexpected error occurred while populating timeblocks");
-      console.error(error);
-    } finally {
-      setIsPopulating(false);
-    }
+    selected: (day: Date) => isSameDay(day, teesheetDate),
   };
 
   // Determine if calendar should be shown
@@ -147,7 +75,7 @@ export function TeesheetHeader({
           >
             <ChevronLeft className="h-4 w-4" />
           </Button>
-          <h1 className="text-2xl font-bold">{formatDisplayDate(date)}</h1>
+          <h1 className="text-2xl font-bold">{formatDate(teesheetDate)}</h1>
           <Button
             variant="outline"
             size="icon"
@@ -169,7 +97,7 @@ export function TeesheetHeader({
           ) : (
             <CalendarIcon className="mr-2 h-4 w-4" />
           )}
-          {activeDateString}
+          {formatDate(teesheetDate, "yyyy-MM-dd")}
         </Button>
       </div>
 
@@ -182,13 +110,12 @@ export function TeesheetHeader({
       {isCalendarVisible && (
         <Card className="mt-4 p-4">
           <Calendar
-            selected={date}
+            selected={teesheetDate}
             modifiers={modifiers}
             onSelect={(newDate: Date | undefined) => {
               if (newDate) {
                 const params = new URLSearchParams(searchParams.toString());
-                const formattedDate = formatCalendarDate(newDate);
-                params.set("date", formattedDate);
+                params.set("date", formatDate(newDate, "yyyy-MM-dd"));
                 router.push(`?${params.toString()}`);
               }
             }}

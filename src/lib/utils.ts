@@ -400,7 +400,6 @@ export function getOrganizationColors(theme?: {
     },
   };
 }
-
 /**
  * Checks if a timeblock is in the past based on its date and time
  * @param date The date of the timeblock in "YYYY-MM-DD" format or Date object

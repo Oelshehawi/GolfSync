@@ -6,10 +6,8 @@ import { TeesheetView } from "~/components/teesheet/TeesheetView";
 import { TeesheetHeader } from "~/components/teesheet/TeesheetHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { getTeesheetConfigs } from "~/server/settings/data";
-import { formatCalendarDate, preserveDate } from "~/lib/utils";
 import { getAllPaceOfPlayForDate } from "~/server/pace-of-play/actions";
-
-// This page is now fully static - no dynamic dependencies!
+import { getBCToday, parseDate } from "~/lib/dates";
 
 interface PageProps {
   searchParams: Promise<{
@@ -21,36 +19,14 @@ export default async function AdminPage({ searchParams }: PageProps) {
   try {
     // Get the date parameter as a string
     const params = await searchParams;
-    const dateParam = params?.date;
 
-    // Determine the date string to use
-    let dateString: string;
+    // If no date provided, use today in BC timezone
+    const dateString = params?.date ?? getBCToday();
 
-    if (dateParam) {
-      // If date parameter is provided
-      if (/^\d{4}-\d{2}-\d{2}$/.test(dateParam)) {
-        // It's already in YYYY-MM-DD format, use directly
-        dateString = dateParam;
-      } else {
-        // It's in another format, convert it
-        const paramDate = new Date(dateParam);
-        dateString = formatCalendarDate(paramDate);
-      }
-    } else {
-      // No date parameter - get today's date as a string in YYYY-MM-DD format
-      // Use UTC date components directly to create the string to avoid timezone issues
-      const now = new Date();
-      console.log("now", now);
-      const utcYear = now.getUTCFullYear();
-      const utcMonth = (now.getUTCMonth() + 1).toString().padStart(2, "0");
-      const utcDay = now.getUTCDate().toString().padStart(2, "0");
-      dateString = `${utcYear}-${utcMonth}-${utcDay}`;
-    }
+    // Parse the string into a Date object (will be in BC timezone)
+    const date = parseDate(dateString);
 
-    // Create a Date object from the string using preserveDate to handle timezone consistently
-    const date = preserveDate(dateString) || new Date();
-
-    // Rest of the code accessing database, etc.
+    // Get teesheet data - pass the Date object
     const { teesheet, config } = await getOrCreateTeesheet(date);
 
     if (!teesheet) {
@@ -71,18 +47,18 @@ export default async function AdminPage({ searchParams }: PageProps) {
     const timeBlocks = await getTimeBlocksForTeesheet(teesheet.id);
     const configsResult = await getTeesheetConfigs();
 
-    // Fetch pace of play data for all time blocks
+    // Fetch pace of play data for all time blocks - pass the Date object
     const paceOfPlayData = await getAllPaceOfPlayForDate(date);
 
     if (!Array.isArray(configsResult)) {
       throw new Error("Failed to load configurations");
     }
 
-    // Pass the date string to the client component
+    // Pass the Date object to the client component
     return (
       <div className="container mx-auto space-y-2 p-6">
         <TeesheetHeader
-          dateString={dateString}
+          teesheetDate={date}
           config={config}
           teesheetId={teesheet.id}
           timeBlocks={timeBlocks}
