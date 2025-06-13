@@ -45,6 +45,11 @@ export const members = createTable(
     dateOfBirth: date("date_of_birth"),
     handicap: varchar("handicap", { length: 20 }),
     bagNumber: varchar("bag_number", { length: 10 }),
+    // Push notification fields
+    pushNotificationsEnabled: boolean("push_notifications_enabled").default(
+      false,
+    ),
+    pushSubscription: jsonb("push_subscription"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .default(sql`CURRENT_TIMESTAMP`)
       .notNull(),

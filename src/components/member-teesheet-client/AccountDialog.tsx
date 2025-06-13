@@ -21,7 +21,9 @@ import {
   UserCircle,
   Hash,
   Users,
+  LogOut,
 } from "lucide-react";
+import { useClerk } from "@clerk/nextjs";
 
 type AccountData = Member | TimeBlockMemberView | TimeBlockGuest | null;
 
@@ -29,10 +31,11 @@ interface AccountDialogProps {
   member: AccountData;
   isOpen: boolean;
   onClose: () => void;
+  isMember: boolean;
 }
 
 // Type guard functions
-const isMember = (data: AccountData): data is Member => {
+const isMemberData = (data: AccountData): data is Member => {
   return data !== null;
 };
 
@@ -44,15 +47,28 @@ const isGuest = (data: AccountData): data is TimeBlockGuest => {
   return data !== null && "invitedByMember" in data;
 };
 
-export function AccountDialog({ member, isOpen, onClose }: AccountDialogProps) {
+export function AccountDialog({
+  member,
+  isOpen,
+  onClose,
+  isMember,
+}: AccountDialogProps) {
+  const { signOut } = useClerk();
+
+  const handleSignOut = () => {
+    signOut(() => {
+      window.location.href = "/";
+    });
+  };
+
   if (!member) return null;
 
   const isGuestAccount = isGuest(member);
-  const isMemberAccount = isMember(member) || isTimeBlockMember(member);
+  const isMemberAccount = isMemberData(member) || isTimeBlockMember(member);
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="mx-4 max-w-sm sm:max-w-lg">
+    <Dialog open={isOpen} onOpenChange={onClose}  >
+      <DialogContent className="mx-4 max-w-sm sm:max-w-lg m-0">
         <DialogHeader className="space-y-2 pb-2">
           <DialogTitle className="flex items-center gap-2 text-lg sm:text-xl">
             {isGuestAccount ? (
@@ -302,8 +318,21 @@ export function AccountDialog({ member, isOpen, onClose }: AccountDialogProps) {
             </Card>
           )}
 
-          {/* Close Button */}
-          <div className="sticky bottom-0 flex justify-end bg-white pt-2">
+          {/* Action Buttons */}
+          <div className="sticky bottom-0 flex justify-between bg-white pt-2">
+            <div className="flex gap-2">
+              {/* Sign Out Button - Only for members */}
+              {isMember && (
+                <Button
+                  variant="outline"
+                  onClick={handleSignOut}
+                  className="flex items-center gap-2 px-4 text-sm text-red-600 hover:bg-red-50 hover:text-red-700"
+                >
+                  <LogOut className="h-4 w-4" />
+                  Sign Out
+                </Button>
+              )}
+            </div>
             <Button variant="ghost" onClick={onClose} className="px-6 text-sm">
               Close
             </Button>

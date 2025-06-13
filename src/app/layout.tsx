@@ -7,8 +7,8 @@ import { ClerkProvider } from "@clerk/nextjs";
 import { Toaster } from "react-hot-toast";
 
 export const metadata: Metadata = {
-  title: "GolfSync",
-  description: "Golf club management system",
+  title: "Quilchena Golf Club",
+  description: "Quilchena Golf Club",
   icons: [{ rel: "icon", url: "/favicon.ico" }],
 };
 

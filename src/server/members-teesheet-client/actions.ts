@@ -8,6 +8,8 @@ import { revalidatePath } from "next/cache";
 import { auth } from "@clerk/nextjs/server";
 import { Member } from "~/app/types/MemberTypes";
 import { formatDateToYYYYMMDD } from "~/lib/utils";
+import { formatTime, formatDate } from "~/lib/dates";
+import { sendNotificationToMember } from "~/server/pwa/actions";
 
 type ActionResult = {
   success: boolean;
@@ -101,6 +103,24 @@ export async function bookTeeTime(
       bookingTime,
       checkedIn: false,
     });
+
+    // Send push notification to the member
+    try {
+      if (member.id && bookingTime) {
+        // Use the new date utility functions for proper BC timezone handling
+        const formattedTime = formatTime(bookingTime);
+        const formattedDate = formatDate(bookingDate, "EEEE, MMMM do");
+
+        await sendNotificationToMember(
+          member.id,
+          "Tee Time Confirmed! ⛳",
+          `Your tee time is booked for ${formattedDate} at ${formattedTime}. See you on the course!`,
+        );
+      }
+    } catch (notificationError) {
+      // Don't fail the booking if notification fails - just log it
+      console.error("Failed to send booking notification:", notificationError);
+    }
 
     revalidatePath("/members/teesheet");
     return { success: true };

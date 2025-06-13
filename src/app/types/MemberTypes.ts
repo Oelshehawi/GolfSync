@@ -10,6 +10,8 @@ export interface Member {
   dateOfBirth: Date | string | null;
   handicap: string | null;
   bagNumber: string | null;
+  pushNotificationsEnabled?: boolean;
+  pushSubscription?: any;
   createdAt: Date;
   updatedAt: Date | null;
 }

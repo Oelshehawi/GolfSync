@@ -14,6 +14,7 @@ import { Member } from "~/app/types/MemberTypes";
 import { EventCard } from "~/components/events/EventCard";
 import { EventType } from "~/app/types/events";
 import Link from "next/link";
+import { InstallPrompt } from "~/components/pwa/InstallPrompt";
 
 export default async function MembersHome() {
   const { sessionClaims } = await auth();
@@ -41,7 +42,23 @@ export default async function MembersHome() {
   });
 
   return (
-    <div className="flex flex-col gap-6 px-4 py-16 sm:px-12 md:pt-24">
+    <div className="flex flex-col gap-6 px-4 pt-6 pb-24 sm:px-12">
+      <InstallPrompt />
+
+      {/* Welcome Header */}
+      {member?.firstName && (
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-org-primary text-2xl font-bold">
+              Quilchena Golf Course
+            </h1>
+            <p className="text-lg text-gray-600">
+              Welcome, {member.firstName}!
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Course Info */}
       {courseInfo && !("success" in courseInfo) && (
         <CourseInfoClient data={courseInfo} />
