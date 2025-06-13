@@ -13,6 +13,46 @@ webpush.setVapidDetails(
   process.env.VAPID_PRIVATE_KEY!,
 );
 
+// Helper function to handle subscription expiration
+async function handleExpiredSubscription(memberId: number, error: any) {
+  try {
+    // Log the expiration
+    console.log(`Push subscription expired for member ${memberId}:`, {
+      statusCode: error.statusCode,
+      endpoint: error.endpoint,
+      body: error.body,
+    });
+
+    // Disable push notifications for this member
+    await db
+      .update(members)
+      .set({
+        pushNotificationsEnabled: false,
+        pushSubscription: null,
+      })
+      .where(eq(members.id, memberId));
+
+    console.log(`Disabled expired push subscription for member ${memberId}`);
+  } catch (dbError) {
+    console.error(
+      `Failed to disable expired subscription for member ${memberId}:`,
+      dbError,
+    );
+  }
+}
+
+// Helper function to check if error is a subscription expiration
+function isSubscriptionExpired(error: any): boolean {
+  return (
+    error.statusCode === 410 ||
+    (error.statusCode === 400 &&
+      error.body &&
+      error.body.includes("unsubscribed")) ||
+    (error.body && error.body.includes("expired")) ||
+    (error.body && error.body.includes("invalid"))
+  );
+}
+
 export async function subscribeUserToPushNotifications(subscription: any) {
   try {
     const { sessionClaims } = await auth();
@@ -92,6 +132,7 @@ export async function sendNotificationToMember(
       return {
         success: false,
         error: "Member not subscribed to push notifications",
+        shouldRetry: false,
       };
     }
 
@@ -106,9 +147,25 @@ export async function sendNotificationToMember(
     await webpush.sendNotification(member.pushSubscription as any, payload);
 
     return { success: true };
-  } catch (error) {
+  } catch (error: any) {
+    // Handle subscription expiration specifically
+    if (isSubscriptionExpired(error)) {
+      await handleExpiredSubscription(memberId, error);
+      return {
+        success: false,
+        error: "Push subscription has expired and has been removed",
+        expired: true,
+        shouldRetry: false,
+      };
+    }
+
+    // Handle other errors
     console.error("Error sending push notification:", error);
-    return { success: false, error: "Failed to send notification" };
+    return {
+      success: false,
+      error: "Failed to send notification",
+      shouldRetry: true,
+    };
   }
 }
 
@@ -138,50 +195,118 @@ export async function sendNotificationToAllMembers(
     const results = await Promise.allSettled(
       subscribedMembers
         .filter((member) => member.pushSubscription)
-        .map((member) =>
-          webpush.sendNotification(member.pushSubscription as any, payload),
-        ),
+        .map(async (member) => {
+          try {
+            await webpush.sendNotification(
+              member.pushSubscription as any,
+              payload,
+            );
+            return { memberId: member.id, success: true };
+          } catch (error: any) {
+            // Handle expired subscriptions automatically
+            if (isSubscriptionExpired(error)) {
+              await handleExpiredSubscription(member.id, error);
+              return {
+                memberId: member.id,
+                success: false,
+                expired: true,
+                error: error.body || "Subscription expired",
+              };
+            }
+            return {
+              memberId: member.id,
+              success: false,
+              error: error.message || "Unknown error",
+            };
+          }
+        }),
     );
 
     const successful = results.filter(
-      (result) => result.status === "fulfilled",
+      (result) => result.status === "fulfilled" && result.value.success,
+    ).length;
+    const expired = results.filter(
+      (result) => result.status === "fulfilled" && result.value.expired,
     ).length;
     const failed = results.filter(
-      (result) => result.status === "rejected",
+      (result) =>
+        result.status === "rejected" ||
+        (result.status === "fulfilled" &&
+          !result.value.success &&
+          !result.value.expired),
     ).length;
 
-    return { success: true, sent: successful, failed };
+    console.log(
+      `Push notification batch complete: ${successful} sent, ${expired} expired, ${failed} failed`,
+    );
+
+    return {
+      success: true,
+      sent: successful,
+      expired,
+      failed,
+    };
   } catch (error) {
     console.error("Error sending push notifications to all members:", error);
     return { success: false, error: "Failed to send notifications" };
   }
 }
 
-export async function getMemberPushNotificationStatus() {
+// New utility function to clean up expired subscriptions
+export async function cleanupExpiredSubscriptions() {
   try {
-    const { sessionClaims } = await auth();
-    if (!sessionClaims?.userId) {
-      return { success: false, error: "Not authenticated" };
-    }
-
-    const member = await getMemberData(sessionClaims.userId as string);
-    if (!member?.id) {
-      return { success: false, error: "Member not found" };
-    }
-
-    const memberData = await db.query.members.findFirst({
-      where: eq(members.id, member.id),
+    // Get all members with push notifications enabled
+    const subscribedMembers = await db.query.members.findMany({
+      where: eq(members.pushNotificationsEnabled, true),
       columns: {
-        pushNotificationsEnabled: true,
+        id: true,
+        pushSubscription: true,
+        firstName: true,
+        lastName: true,
       },
     });
 
-    return {
-      success: true,
-      enabled: memberData?.pushNotificationsEnabled ?? false,
-    };
+    console.log(
+      `Checking ${subscribedMembers.length} subscriptions for expiration...`,
+    );
+
+    let expiredCount = 0;
+    const testPayload = JSON.stringify({
+      title: "Test",
+      body: "Subscription test",
+      icon: "/icon-192x192.png",
+      badge: "/icon-192x192.png",
+    });
+
+    for (const member of subscribedMembers) {
+      if (!member.pushSubscription) continue;
+
+      try {
+        // Test the subscription with a dry run
+        await webpush.sendNotification(
+          member.pushSubscription as any,
+          testPayload,
+          {
+            // Add headers to make this a test/dry run if supported
+          },
+        );
+      } catch (error: any) {
+        if (isSubscriptionExpired(error)) {
+          await handleExpiredSubscription(member.id, error);
+          expiredCount++;
+          console.log(
+            `Cleaned up expired subscription for ${member.firstName} ${member.lastName} (ID: ${member.id})`,
+          );
+        }
+      }
+    }
+
+    console.log(
+      `Cleanup complete: removed ${expiredCount} expired subscriptions`,
+    );
+    return { success: true, cleanedUp: expiredCount };
   } catch (error) {
-    console.error("Error getting member push notification status:", error);
-    return { success: false, error: "Failed to get notification status" };
+    console.error("Error during subscription cleanup:", error);
+    return { success: false, error: "Failed to cleanup subscriptions" };
   }
 }

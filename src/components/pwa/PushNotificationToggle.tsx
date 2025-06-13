@@ -5,8 +5,8 @@ import { Bell, BellOff } from "lucide-react";
 import {
   subscribeUserToPushNotifications,
   unsubscribeUserFromPushNotifications,
-  getMemberPushNotificationStatus,
 } from "~/server/pwa/actions";
+import { getMemberPushNotificationStatus } from "~/server/pwa/data";
 import { urlBase64ToUint8Array } from "~/lib/utils";
 
 export function PushNotificationToggle() {

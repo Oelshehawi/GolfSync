@@ -1,7 +1,6 @@
 import NavigationClient from "~/components/NavigationClient";
 import { getPendingChargesCount } from "~/server/charges/data";
 
-
 export default async function Navigation() {
   // Fetch pending charges count
   const pendingCounts = await getPendingChargesCount();
@@ -15,6 +14,7 @@ export default async function Navigation() {
       href: "/admin/charges",
       count: pendingCounts.total > 0 ? pendingCounts.total : undefined,
     },
+    { name: "Notifications", href: "/admin/notifications" },
     { name: "Settings", href: "/admin/settings" },
   ];
 

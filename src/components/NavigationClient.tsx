@@ -28,7 +28,7 @@ const NavigationClient = ({
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   return (
-    <div className="relative bg-org-primary">
+    <div className="bg-org-primary relative">
       <div className="mx-auto max-w-7xl px-4">
         <div className="flex h-16 items-center justify-between gap-8">
           {/* Logo */}
@@ -41,11 +41,12 @@ const NavigationClient = ({
                   width={140}
                   height={40}
                   className="object-contain"
+                  style={{ height: "auto" }}
                   priority
                 />
               </div>
             ) : (
-              <div className="h-10 w-10 rounded bg-org-tertiary" />
+              <div className="bg-org-tertiary h-10 w-10 rounded" />
             )}
           </Link>
 
@@ -99,7 +100,7 @@ const NavigationClient = ({
 
       {/* Mobile Navigation */}
       <div
-        className={`absolute inset-x-0 top-full transform bg-org-primary transition-all duration-300 md:hidden ${
+        className={`bg-org-primary absolute inset-x-0 top-full transform transition-all duration-300 md:hidden ${
           isMobileMenuOpen
             ? "translate-y-0 opacity-100"
             : "pointer-events-none -translate-y-2 opacity-0"

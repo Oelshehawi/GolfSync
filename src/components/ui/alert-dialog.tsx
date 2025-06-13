@@ -27,8 +27,10 @@ AlertDialogOverlay.displayName = AlertDialogPrimitive.Overlay.displayName;
 
 const AlertDialogContent = React.forwardRef<
   React.ElementRef<typeof AlertDialogPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof AlertDialogPrimitive.Content> & {}
->(({ className, ...props }, ref) => {
+  React.ComponentPropsWithoutRef<typeof AlertDialogPrimitive.Content> & {
+    hideDescription?: boolean;
+  }
+>(({ className, hideDescription = false, ...props }, ref) => {
   return (
     <AlertDialogPortal>
       <AlertDialogOverlay />
@@ -39,7 +41,14 @@ const AlertDialogContent = React.forwardRef<
           className,
         )}
         {...props}
-      />
+      >
+        {!hideDescription && (
+          <AlertDialogPrimitive.Description className="sr-only">
+            Alert dialog content
+          </AlertDialogPrimitive.Description>
+        )}
+        {props.children}
+      </AlertDialogPrimitive.Content>
     </AlertDialogPortal>
   );
 });
@@ -106,7 +115,7 @@ const AlertDialogAction = React.forwardRef<
     <AlertDialogPrimitive.Action
       ref={ref}
       className={cn(
-        "inline-flex h-10 w-full items-center justify-center rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:cursor-pointer hover:bg-red-800 focus-visible:ring-2 focus-visible:ring-org-primary focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto",
+        "focus-visible:ring-org-primary inline-flex h-10 w-full items-center justify-center rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:cursor-pointer hover:bg-red-800 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto",
         className,
       )}
       {...props}
@@ -123,7 +132,7 @@ const AlertDialogCancel = React.forwardRef<
     <AlertDialogPrimitive.Cancel
       ref={ref}
       className={cn(
-        "mt-2 inline-flex h-10 w-full items-center justify-center rounded-md border px-4 py-2 text-sm font-semibold transition-colors hover:cursor-pointer hover:bg-gray-300 hover:text-org-primary focus-visible:ring-2 focus-visible:ring-org-primary focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 sm:mt-0 sm:w-auto",
+        "hover:text-org-primary focus-visible:ring-org-primary mt-2 inline-flex h-10 w-full items-center justify-center rounded-md border px-4 py-2 text-sm font-semibold transition-colors hover:cursor-pointer hover:bg-gray-300 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 sm:mt-0 sm:w-auto",
         className,
       )}
       {...props}

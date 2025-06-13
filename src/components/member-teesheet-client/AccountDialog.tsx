@@ -24,6 +24,7 @@ import {
   LogOut,
 } from "lucide-react";
 import { useClerk } from "@clerk/nextjs";
+import { NotificationPreferences } from "./NotificationPreferences";
 
 type AccountData = Member | TimeBlockMemberView | TimeBlockGuest | null;
 
@@ -67,8 +68,8 @@ export function AccountDialog({
   const isMemberAccount = isMemberData(member) || isTimeBlockMember(member);
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}  >
-      <DialogContent className="mx-4 max-w-sm sm:max-w-lg m-0">
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="m-0 mx-4 max-w-sm sm:max-w-lg">
         <DialogHeader className="space-y-2 pb-2">
           <DialogTitle className="flex items-center gap-2 text-lg sm:text-xl">
             {isGuestAccount ? (
@@ -316,6 +317,11 @@ export function AccountDialog({
                 </div>
               </CardContent>
             </Card>
+          )}
+
+          {/* Notification Preferences - Only for members */}
+          {isMember && isMemberAccount && !isGuestAccount && (
+            <NotificationPreferences />
           )}
 
           {/* Action Buttons */}

@@ -94,16 +94,36 @@ export async function addMemberToTimeBlock(
         const formattedTime = formatTime12Hour(bookingTime);
         const formattedDate = formatDate(bookingDate, "EEEE, MMMM do");
 
-        await sendNotificationToMember(
+        const notificationResult = await sendNotificationToMember(
           memberId,
           "Tee Time Confirmed! ⛳",
           `Your tee time has been booked for ${formattedDate} at ${formattedTime}. See you on the course!`,
         );
+
+        if (!notificationResult.success) {
+          if (notificationResult.expired) {
+            console.log(
+              `Push subscription expired for member ${memberId} - cleaned up automatically`,
+            );
+          } else if (notificationResult.shouldRetry) {
+            console.warn(
+              `Failed to send admin booking notification to member ${memberId}: ${notificationResult.error}`,
+            );
+          } else {
+            console.log(
+              `Member ${memberId} not subscribed to push notifications`,
+            );
+          }
+        } else {
+          console.log(
+            `Successfully sent booking notification to member ${memberId}`,
+          );
+        }
       }
     } catch (notificationError) {
       // Don't fail the booking if notification fails - just log it
       console.error(
-        "Failed to send admin booking notification:",
+        "Unexpected error sending admin booking notification:",
         notificationError,
       );
     }

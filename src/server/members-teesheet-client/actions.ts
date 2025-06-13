@@ -111,15 +111,38 @@ export async function bookTeeTime(
         const formattedTime = formatTime12Hour(bookingTime);
         const formattedDate = formatDate(bookingDate, "EEEE, MMMM do");
 
-        await sendNotificationToMember(
+        const notificationResult = await sendNotificationToMember(
           member.id,
           "Tee Time Confirmed! ⛳",
           `Your tee time is booked for ${formattedDate} at ${formattedTime}. See you on the course!`,
         );
+
+        if (!notificationResult.success) {
+          if (notificationResult.expired) {
+            console.log(
+              `Push subscription expired for member ${member.id} - cleaned up automatically`,
+            );
+          } else if (notificationResult.shouldRetry) {
+            console.warn(
+              `Failed to send booking notification to member ${member.id}: ${notificationResult.error}`,
+            );
+          } else {
+            console.log(
+              `Member ${member.id} not subscribed to push notifications`,
+            );
+          }
+        } else {
+          console.log(
+            `Successfully sent booking notification to member ${member.id}`,
+          );
+        }
       }
     } catch (notificationError) {
       // Don't fail the booking if notification fails - just log it
-      console.error("Failed to send booking notification:", notificationError);
+      console.error(
+        "Unexpected error sending booking notification:",
+        notificationError,
+      );
     }
 
     revalidatePath("/members/teesheet");
