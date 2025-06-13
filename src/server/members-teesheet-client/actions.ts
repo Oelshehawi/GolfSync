@@ -8,7 +8,7 @@ import { revalidatePath } from "next/cache";
 import { auth } from "@clerk/nextjs/server";
 import { Member } from "~/app/types/MemberTypes";
 import { formatDateToYYYYMMDD } from "~/lib/utils";
-import { formatTime, formatDate } from "~/lib/dates";
+import { formatTime12Hour, formatDate } from "~/lib/dates";
 import { sendNotificationToMember } from "~/server/pwa/actions";
 
 type ActionResult = {
@@ -107,8 +107,8 @@ export async function bookTeeTime(
     // Send push notification to the member
     try {
       if (member.id && bookingTime) {
-        // Use the new date utility functions for proper BC timezone handling
-        const formattedTime = formatTime(bookingTime);
+        // Use the BC timezone date utility functions for proper formatting
+        const formattedTime = formatTime12Hour(bookingTime);
         const formattedDate = formatDate(bookingDate, "EEEE, MMMM do");
 
         await sendNotificationToMember(

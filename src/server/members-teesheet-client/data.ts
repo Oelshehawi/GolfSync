@@ -7,12 +7,13 @@ import {
   timeBlocks,
   teesheetConfigs,
 } from "~/server/db/schema";
-import { and, eq, or, gt, asc, inArray, gte } from "drizzle-orm";
+import { and, eq, or, gt, asc, gte } from "drizzle-orm";
 import { auth } from "@clerk/nextjs/server";
 
 import { checkBatchTimeblockRestrictions } from "~/server/timeblock-restrictions/data";
-import { formatCalendarDate, formatDateToYYYYMMDD } from "~/lib/utils";
+import { formatCalendarDate } from "~/lib/utils";
 import { Member } from "~/app/types/MemberTypes";
+import { getBCToday, getBCNow } from "~/lib/dates";
 
 /**
  * Get teesheet data for members
@@ -108,9 +109,7 @@ export async function getMemberData(id?: string) {
     throw new Error("Not authenticated");
   }
   const user = await db.query.members.findFirst({
-    where: and(
-      eq(members.id, Number(id)),
-    ),
+    where: and(eq(members.id, Number(id))),
   });
 
   return user;
@@ -232,14 +231,12 @@ export async function getUpcomingTeeTimes(member: Member) {
     throw new Error("Member not found");
   }
 
-  // Current date for filtering
-  const now = new Date();
-  const today = formatDateToYYYYMMDD(now);
-  const currentHour = now.getHours();
-  const currentMinute = now.getMinutes();
-  const currentTimeString = `${currentHour.toString().padStart(2, "0")}:${currentMinute.toString().padStart(2, "0")}`;
+  // Get current BC date and time for filtering
+  const today = getBCToday();
+  const now = getBCNow();
+  const currentTimeString = `${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}`;
 
-  // Get bookings with accurate time filtering
+  // Get bookings with accurate time filtering using BC timezone
   const bookings = await db.query.timeBlockMembers.findMany({
     where: and(
       eq(timeBlockMembers.memberId, member.id),

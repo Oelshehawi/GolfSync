@@ -1,9 +1,10 @@
 import Link from "next/link";
 import {
-  formatDateStringToWords,
-  formatTimeStringTo12Hour,
-  formatCalendarDate,
-} from "~/lib/utils";
+  formatDate,
+  formatTime12Hour,
+  getBCToday,
+  getDateForDB,
+} from "~/lib/dates";
 
 type UpcomingTeeTime = {
   id: number;
@@ -42,28 +43,28 @@ export function UpcomingTeeTimes({ teeTimes }: UpcomingTeeTimesProps) {
         // Use the date string directly from the database - avoid creating Date objects
         const bookingDateStr = teeTime.date;
 
-        // Get today and tomorrow's date strings in YYYY-MM-DD format
-        // Using formatCalendarDate to ensure consistent formatting
-        const today = new Date();
-        const todayStr = formatCalendarDate(today);
+        // Get today and tomorrow's date strings in BC timezone
+        const today = getBCToday();
 
-        const tomorrow = new Date(today);
+        // Calculate tomorrow in BC timezone
+        const todayDate = new Date();
+        const tomorrow = new Date(todayDate);
         tomorrow.setDate(tomorrow.getDate() + 1);
-        const tomorrowStr = formatCalendarDate(tomorrow);
+        const tomorrowStr = getDateForDB(tomorrow);
 
         // Compare date strings directly to avoid timezone issues
         let dateDisplay;
-        if (bookingDateStr === todayStr) {
+        if (bookingDateStr === today) {
           dateDisplay = "Today";
         } else if (bookingDateStr === tomorrowStr) {
           dateDisplay = "Tomorrow";
         } else {
-          // Use our timezone-safe function for dates
-          dateDisplay = formatDateStringToWords(bookingDateStr);
+          // Use BC timezone-aware date formatting
+          dateDisplay = formatDate(bookingDateStr, "EEEE, MMMM do");
         }
 
-        // Format the time using our timezone-safe function for times
-        const displayTime = formatTimeStringTo12Hour(teeTime.startTime);
+        // Format the time using BC timezone-aware 12-hour format
+        const displayTime = formatTime12Hour(teeTime.startTime);
 
         return (
           <div

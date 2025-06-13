@@ -493,6 +493,7 @@ export function TeesheetView({
         member={selectedAccountData}
         isOpen={isAccountDialogOpen}
         onClose={handleCloseAccountDialog}
+        isMember={false}
       />
     </div>
   );

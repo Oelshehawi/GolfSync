@@ -12,6 +12,8 @@ import { revalidatePath } from "next/cache";
 
 import { searchMembers, getMemberBookingHistory } from "./data";
 import { formatDateToYYYYMMDD } from "~/lib/utils";
+import { formatTime12Hour, formatDate } from "~/lib/dates";
+import { sendNotificationToMember } from "~/server/pwa/actions";
 
 // Time block related functions
 export async function addMemberToTimeBlock(
@@ -19,8 +21,6 @@ export async function addMemberToTimeBlock(
   memberId: number,
 ) {
   try {
-
-
     // Check if member is already in the time block
     const existingMember = await db.query.timeBlockMembers.findFirst({
       where: and(
@@ -87,6 +87,27 @@ export async function addMemberToTimeBlock(
       bagNumber: member?.bagNumber,
     });
 
+    // Send push notification to the member (for admin bookings)
+    try {
+      if (memberId && bookingTime) {
+        // Use BC timezone date utility functions for proper formatting
+        const formattedTime = formatTime12Hour(bookingTime);
+        const formattedDate = formatDate(bookingDate, "EEEE, MMMM do");
+
+        await sendNotificationToMember(
+          memberId,
+          "Tee Time Confirmed! ⛳",
+          `Your tee time has been booked for ${formattedDate} at ${formattedTime}. See you on the course!`,
+        );
+      }
+    } catch (notificationError) {
+      // Don't fail the booking if notification fails - just log it
+      console.error(
+        "Failed to send admin booking notification:",
+        notificationError,
+      );
+    }
+
     revalidatePath(`/admin/timeblock/${timeBlockId}`);
     revalidatePath("/members/teesheet");
     return { success: true };
@@ -148,18 +169,13 @@ export async function updateMember(
     dateOfBirth: data.dateOfBirth === "" ? null : data.dateOfBirth,
   };
 
-  await db
-    .update(members)
-    .set(processedData)
-    .where(eq(members.id, id));
+  await db.update(members).set(processedData).where(eq(members.id, id));
 
   revalidatePath("/admin/members");
 }
 
 export async function deleteMember(id: number) {
-  await db
-    .delete(members)
-    .where(eq(members.id, id));
+  await db.delete(members).where(eq(members.id, id));
 
   revalidatePath("/admin/members");
 }

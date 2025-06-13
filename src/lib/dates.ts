@@ -145,6 +145,36 @@ export function formatTime(time: string | Date): string {
 }
 
 /**
+ * Formats time for display in 12-hour format
+ */
+export function formatTime12Hour(time: string | Date): string {
+  if (typeof time === "string") {
+    // Handle HH:MM format - convert to 12-hour
+    if (!/^\d{2}:\d{2}$/.test(time)) {
+      throw new Error(`Invalid time format: ${time}. Expected HH:MM`);
+    }
+
+    const parts = time.split(":");
+    const hourStr = parts[0] || "";
+    const minuteStr = parts[1] || "";
+
+    if (!hourStr || !minuteStr) {
+      return time; // Return original if any part is missing
+    }
+
+    const hour = parseInt(hourStr, 10);
+
+    // Convert to 12-hour format
+    const hour12 = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
+    const ampm = hour >= 12 ? "PM" : "AM";
+
+    return `${hour12}:${minuteStr} ${ampm}`;
+  }
+
+  return formatInTimeZone(time, BC_TIMEZONE, "h:mm a");
+}
+
+/**
  * Formats date and time together for display in BC timezone
  */
 export function formatDateTime(date: Date | string, time?: string): string {
