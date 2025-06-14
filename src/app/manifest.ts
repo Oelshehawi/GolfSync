@@ -6,12 +6,12 @@ export default function manifest(): MetadataRoute.Manifest {
     short_name: "Quilchena Golf",
     description:
       "Golf club management system for booking tee times and managing your membership",
-    start_url: "/",
+    start_url: "/members",
     display: "standalone",
     background_color: "#ffffff",
     theme_color: "#06466c",
     orientation: "portrait-primary",
-    scope: "/",
+    scope: "/members",
     icons: [
       {
         src: "/icon-192x192.png",

@@ -1,6 +1,7 @@
 import { Metadata } from "next";
 import { Card, CardContent, CardHeader } from "~/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
+import { PageHeader } from "~/components/ui/page-header";
 import { PendingChargesList } from "~/components/charges/PendingChargesList";
 import { ChargeHistoryList } from "~/components/charges/ChargeHistoryList";
 import {
@@ -49,13 +50,11 @@ export default async function ChargesDashboard({ searchParams }: PageProps) {
   ]);
 
   return (
-    <div className="container mx-auto py-6">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold">Charges Dashboard</h1>
-        <p className="text-muted-foreground">
-          Manage power cart and general charges
-        </p>
-      </div>
+    <div className="space-y-6">
+      <PageHeader
+        title="Charges Dashboard"
+        description="Manage power cart and general charges"
+      />
 
       <Tabs defaultValue="pending" className="space-y-4">
         <TabsList>

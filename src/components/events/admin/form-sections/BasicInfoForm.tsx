@@ -20,7 +20,7 @@ import {
 } from "~/components/ui/select";
 import { DatePicker } from "~/components/ui/date-picker";
 import { EventFormValues } from "../EventForm";
-import { preserveDate } from "~/lib/utils";
+import { getDateForDB, parseDate, getBCToday } from "~/lib/dates";
 import { MultiSelect } from "~/components/ui/multi-select";
 import { MEMBER_CLASSES } from "~/lib/constants/memberClasses";
 
@@ -105,8 +105,10 @@ export function BasicInfoForm({ form }: BasicInfoFormProps) {
             <FormItem className="flex flex-col">
               <FormLabel>Start Date</FormLabel>
               <DatePicker
-                date={field.value}
-                setDate={(date) => field.onChange(date || new Date())}
+                date={field.value || getBCToday()}
+                setDate={(date) =>
+                  field.onChange(date ? getDateForDB(date) : getBCToday())
+                }
               />
               <FormMessage />
             </FormItem>
@@ -120,8 +122,10 @@ export function BasicInfoForm({ form }: BasicInfoFormProps) {
             <FormItem className="flex flex-col">
               <FormLabel>End Date</FormLabel>
               <DatePicker
-                date={field.value}
-                setDate={(date) => field.onChange(date || new Date())}
+                date={field.value || getBCToday()}
+                setDate={(date) =>
+                  field.onChange(date ? getDateForDB(date) : getBCToday())
+                }
               />
               <FormMessage />
             </FormItem>

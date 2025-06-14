@@ -13,7 +13,7 @@ import { Input } from "~/components/ui/input";
 import { Switch } from "~/components/ui/switch";
 import { DatePicker } from "~/components/ui/date-picker";
 import { EventFormValues } from "../EventForm";
-import { preserveDate } from "~/lib/utils";
+import { getDateForDB, getBCToday } from "~/lib/dates";
 
 interface EventSettingsFormProps {
   form: UseFormReturn<EventFormValues>;
@@ -76,7 +76,9 @@ export function EventSettingsForm({ form }: EventSettingsFormProps) {
             <FormLabel>Registration Deadline</FormLabel>
             <DatePicker
               date={field.value}
-              setDate={(date) => field.onChange(preserveDate(date))}
+              setDate={(date) =>
+                field.onChange(date ? getDateForDB(date) : undefined)
+              }
             />
             <FormDescription>
               Optional. After this date, registration will be closed.

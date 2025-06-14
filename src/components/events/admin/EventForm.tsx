@@ -14,7 +14,6 @@ import { EventFormProps } from "~/app/types/events";
 import { BasicInfoForm } from "./form-sections/BasicInfoForm";
 import { EventDetailsForm } from "./form-sections/EventDetailsForm";
 import { EventSettingsForm } from "./form-sections/EventSettingsForm";
-import { preserveDate } from "~/lib/utils";
 
 // Event types
 const EVENT_TYPES = [
@@ -85,9 +84,22 @@ export function EventForm({ existingEvent, onSuccess }: EventFormProps) {
   const handleSubmit = form.handleSubmit(async (data: EventFormValues) => {
     setIsSubmitting(true);
     try {
+      // Convert empty strings to undefined to ensure proper null handling
+      const cleanedData = {
+        ...data,
+        startTime: data.startTime || undefined,
+        endTime: data.endTime || undefined,
+        location: data.location || undefined,
+        registrationDeadline: data.registrationDeadline || undefined,
+        format: data.format || undefined,
+        rules: data.rules || undefined,
+        prizes: data.prizes || undefined,
+        additionalInfo: data.additionalInfo || undefined,
+      };
+
       if (existingEvent) {
         // Update existing event
-        const result = await updateEvent(existingEvent.id, data);
+        const result = await updateEvent(existingEvent.id, cleanedData);
         if (result.success) {
           toast.success("Event updated successfully");
           if (onSuccess) {
@@ -100,7 +112,7 @@ export function EventForm({ existingEvent, onSuccess }: EventFormProps) {
         }
       } else {
         // Create new event
-        const result = await createEvent(data);
+        const result = await createEvent(cleanedData);
         if (result.success) {
           toast.success("Event created successfully");
           form.reset();

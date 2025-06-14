@@ -122,7 +122,7 @@ export function TimeBlockMemberManager({
         updatedAt: member.updatedAt ? new Date(member.updatedAt) : null,
       }));
 
-      setMemberSearchResults(transformedResults);
+      setMemberSearchResults(transformedResults as Member[]);
     } finally {
       setIsMemberSearching(false);
     }

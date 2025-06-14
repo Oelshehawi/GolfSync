@@ -1,8 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { format } from "date-fns";
 import { Calendar as CalendarIcon } from "lucide-react";
+import { formatDate, getBCToday, parseDate } from "~/lib/dates";
 import { Button } from "~/components/ui/button";
 import {
   Popover,
@@ -15,7 +15,7 @@ import { DatePickerCalendar } from "./date-picker-calendar";
 import { DatePickerCalendarRange } from "./date-picker-calendar-range";
 
 export interface DatePickerProps {
-  date?: Date;
+  date?: Date | string;
   setDate: (date?: Date) => void;
   placeholder?: string;
   className?: string;
@@ -36,11 +36,24 @@ export function DatePicker({
   // State to track if the popover is open
   const [isOpen, setIsOpen] = React.useState(false);
 
+  // Convert string date to Date object if needed
+  const getDateObject = (dateInput?: Date | string): Date | undefined => {
+    if (!dateInput) return undefined;
+    if (typeof dateInput === "string") {
+      return parseDate(dateInput);
+    }
+    return dateInput;
+  };
+
   // Formatting function for various date displays
   const getFormattedDate = () => {
     if (isRangePicker && dateRange) {
-      const fromDate = dateRange.from ? format(dateRange.from, "PPP") : "";
-      const toDate = dateRange.to ? format(dateRange.to, "PPP") : "";
+      const fromDate = dateRange.from
+        ? formatDate(dateRange.from, "MMMM do, yyyy")
+        : "";
+      const toDate = dateRange.to
+        ? formatDate(dateRange.to, "MMMM do, yyyy")
+        : "";
 
       if (fromDate && toDate) {
         return `${fromDate} - ${toDate}`;
@@ -50,7 +63,8 @@ export function DatePicker({
       return placeholder;
     }
 
-    return date ? format(date, "PPP") : placeholder;
+    const dateObj = getDateObject(date);
+    return dateObj ? formatDate(dateObj, "MMMM do, yyyy") : placeholder;
   };
 
   return (
@@ -60,7 +74,7 @@ export function DatePicker({
           variant={"outline"}
           className={cn(
             "w-full cursor-pointer justify-start text-left font-normal",
-            !date && !dateRange?.from && "text-muted-foreground",
+            !getDateObject(date) && !dateRange?.from && "text-muted-foreground",
             "hover:bg-opacity-20 hover:border-org-primary hover:bg-org-secondary",
             className,
           )}
@@ -82,7 +96,7 @@ export function DatePicker({
           />
         ) : (
           <DatePickerCalendar
-            selected={date}
+            selected={getDateObject(date)}
             onSelect={(selectedDate?: Date) => {
               setDate(selectedDate);
               setIsOpen(false);

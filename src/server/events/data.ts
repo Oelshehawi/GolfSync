@@ -19,6 +19,7 @@ import {
   EventType,
   EventWithRegistrations,
 } from "~/app/types/events";
+import { getBCToday } from "~/lib/dates";
 
 // Database event type
 type DbEvent = {
@@ -61,13 +62,17 @@ export async function getEvents(options?: {
   // Get registration counts for each event
   const results = await Promise.all(
     rows.map(async (event) => {
-      // Get total registrations count
+      // Get active registrations count (approved + pending only, not rejected)
       const registrationsCount = await db
         .select({ count: sql<number>`count(*)` })
         .from(eventRegistrations)
         .where(
           and(
             eq(eventRegistrations.eventId, event.id),
+            or(
+              eq(eventRegistrations.status, "APPROVED"),
+              eq(eventRegistrations.status, "PENDING"),
+            ),
           ),
         )
         .then((res) => res[0]?.count || 0);
@@ -110,7 +115,7 @@ export async function getUpcomingEvents(
   limit: number = 5,
   memberClass?: string,
 ): Promise<Event[]> {
-  const today = new Date().toISOString().split("T")[0];
+  const today = getBCToday();
 
   const memberClassCondition = memberClass
     ? sql`AND (member_classes IS NULL OR ${memberClass} = ANY(member_classes))`
@@ -136,6 +141,10 @@ export async function getUpcomingEvents(
         .where(
           and(
             eq(eventRegistrations.eventId, event.id),
+            or(
+              eq(eventRegistrations.status, "APPROVED"),
+              eq(eventRegistrations.status, "PENDING"),
+            ),
           ),
         )
         .then((res) => res[0]?.count || 0);
@@ -162,13 +171,17 @@ export async function getEventById(eventId: number): Promise<Event | null> {
 
   if (!event) return null;
 
-  // Get registration count
+  // Get active registration count (approved + pending only)
   const registrationsCount = await db
     .select({ count: sql<number>`count(*)` })
     .from(eventRegistrations)
     .where(
       and(
         eq(eventRegistrations.eventId, eventId),
+        or(
+          eq(eventRegistrations.status, "APPROVED"),
+          eq(eventRegistrations.status, "PENDING"),
+        ),
       ),
     )
     .then((res) => res[0]?.count || 0);
@@ -185,9 +198,7 @@ export async function getEventRegistrations(
   eventId: number,
 ): Promise<EventRegistration[]> {
   const registrations = await db.query.eventRegistrations.findMany({
-    where: and(
-      eq(eventRegistrations.eventId, eventId),
-    ),
+    where: and(eq(eventRegistrations.eventId, eventId)),
     with: {
       member: true,
     },
@@ -215,9 +226,7 @@ export async function isMemberRegistered(
 // Get a member's event registrations
 export async function getMemberEventRegistrations(memberId: number) {
   const registrations = await db.query.eventRegistrations.findMany({
-    where: and(
-      eq(eventRegistrations.memberId, memberId),
-    ),
+    where: and(eq(eventRegistrations.memberId, memberId)),
     with: {
       event: true,
     },
@@ -238,8 +247,42 @@ export async function getEventsForClass(memberClass: string) {
     },
   })) as DbEvent[];
 
-  return dbEvents.map((event) => ({
-    ...event,
-    eventType: event.eventType as EventType,
-  })) as Event[];
+  // Get registration counts for each event
+  const results = await Promise.all(
+    dbEvents.map(async (event) => {
+      const registrationsCount = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(eventRegistrations)
+        .where(
+          and(
+            eq(eventRegistrations.eventId, event.id),
+            or(
+              eq(eventRegistrations.status, "APPROVED"),
+              eq(eventRegistrations.status, "PENDING"),
+            ),
+          ),
+        )
+        .then((res) => res[0]?.count || 0);
+
+      const pendingRegistrationsCount = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(eventRegistrations)
+        .where(
+          and(
+            eq(eventRegistrations.eventId, event.id),
+            eq(eventRegistrations.status, "PENDING"),
+          ),
+        )
+        .then((res) => res[0]?.count || 0);
+
+      return {
+        ...event,
+        eventType: event.eventType as EventType,
+        registrationsCount,
+        pendingRegistrationsCount,
+      } as Event;
+    }),
+  );
+
+  return results;
 }

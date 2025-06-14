@@ -108,7 +108,7 @@ export function MultiSelect({
           role="combobox"
           aria-expanded={open}
           className={cn(
-            "w-full justify-between hover:bg-org-secondary",
+            "hover:bg-org-secondary w-full justify-between",
             className,
           )}
           disabled={disabled}
@@ -117,7 +117,7 @@ export function MultiSelect({
           <div className="flex flex-wrap gap-1">
             {selected.length === 0 ? (
               <span className="text-muted">{placeholder}</span>
-            ) : (
+            ) : selected.length <= 4 ? (
               <div className="flex flex-wrap gap-1">
                 {selected.map((value, i) => {
                   const option = options.find((o) => o.value === value);
@@ -136,6 +136,20 @@ export function MultiSelect({
                   );
                 })}
               </div>
+            ) : (
+              <div className="flex items-center gap-1">
+                <Badge variant="secondary" className="px-2 py-1">
+                  {selected.length} selected
+                </Badge>
+                <X
+                  className="text-muted-foreground hover:text-foreground h-3 w-3 cursor-pointer"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onChange([]);
+                  }}
+                />
+              </div>
             )}
           </div>
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -149,6 +163,10 @@ export function MultiSelect({
             : "auto",
         }}
         align="start"
+        onWheel={(e) => {
+          // Allow wheel events to bubble to the scrollable content
+          e.stopPropagation();
+        }}
       >
         <Command>
           <CommandInput
@@ -168,8 +186,7 @@ export function MultiSelect({
                 value={option.value}
                 className={cn(
                   "flex cursor-pointer items-center",
-                  selectedSet.has(option.value) &&
-                    "bg-org-primary-light",
+                  selectedSet.has(option.value) && "bg-org-primary-light",
                 )}
                 onSelect={() => handleSelect(option.value)}
               >

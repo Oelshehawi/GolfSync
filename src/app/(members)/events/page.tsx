@@ -1,6 +1,9 @@
 import { auth } from "@clerk/nextjs/server";
 import { getMemberData } from "~/server/members-teesheet-client/data";
-import { getEventsForClass } from "~/server/events/data";
+import {
+  getEventsForClass,
+  getMemberEventRegistrations,
+} from "~/server/events/data";
 import { EventCard } from "~/components/events/EventCard";
 import { EventType } from "~/app/types/events";
 import { Member } from "~/app/types/MemberTypes";
@@ -11,6 +14,17 @@ export default async function EventsPage() {
 
   // Get all events for the member's class
   const events = await getEventsForClass(member?.class as string);
+
+  // Get member registrations for these events
+  const memberRegistrations = member?.id
+    ? await getMemberEventRegistrations(member.id)
+    : [];
+
+  // Create a map of eventIds to registration status
+  const registrationMap = new Map();
+  memberRegistrations.forEach((reg: { eventId: number; status: string }) => {
+    registrationMap.set(reg.eventId, reg.status);
+  });
 
   return (
     <div className="flex flex-col gap-6 px-4 py-16 sm:px-12 md:pt-24">
@@ -41,9 +55,13 @@ export default async function EventsPage() {
                       additionalInfo: event.details.additionalInfo ?? undefined,
                     }
                   : undefined,
+                registrationsCount: event.registrationsCount,
+                pendingRegistrationsCount: event.pendingRegistrationsCount,
               }}
               isMember={true}
               memberId={member?.id}
+              isRegistered={registrationMap.has(event.id)}
+              registrationStatus={registrationMap.get(event.id)}
               className="bg-white shadow-md"
               variant="compact"
             />

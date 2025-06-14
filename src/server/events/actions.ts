@@ -213,25 +213,35 @@ export async function updateEvent(
       additionalInfo: formData.additionalInfo || null,
     });
 
-    const detailsToUpsert = {
-      format: detailsData.format || undefined,
-      rules: detailsData.rules || undefined,
-      prizes: detailsData.prizes || undefined,
-      entryFee: detailsData.entryFee || undefined,
-      additionalInfo: detailsData.additionalInfo || undefined,
-    };
+    // Only include fields that have values
+    const detailsToUpsert: any = {};
+    if (detailsData.format !== null)
+      detailsToUpsert.format = detailsData.format || undefined;
+    if (detailsData.rules !== null)
+      detailsToUpsert.rules = detailsData.rules || undefined;
+    if (detailsData.prizes !== null)
+      detailsToUpsert.prizes = detailsData.prizes || undefined;
+    if (detailsData.entryFee !== null)
+      detailsToUpsert.entryFee = detailsData.entryFee || undefined;
+    if (detailsData.additionalInfo !== null)
+      detailsToUpsert.additionalInfo = detailsData.additionalInfo || undefined;
 
-    // Update or insert details
-    if (existingDetails) {
-      await db
-        .update(eventDetails)
-        .set(detailsToUpsert)
-        .where(eq(eventDetails.eventId, eventId));
-    } else {
-      await db.insert(eventDetails).values({
-        eventId,
-        ...detailsToUpsert,
-      });
+    // Update or insert details only if there are values to set
+    if (Object.keys(detailsToUpsert).length > 0) {
+      if (existingDetails) {
+        await db
+          .update(eventDetails)
+          .set(detailsToUpsert)
+          .where(eq(eventDetails.eventId, eventId));
+      } else {
+        await db.insert(eventDetails).values({
+          eventId,
+          ...detailsToUpsert,
+        });
+      }
+    } else if (existingDetails) {
+      // If no details provided but details exist, delete them
+      await db.delete(eventDetails).where(eq(eventDetails.eventId, eventId));
     }
 
     revalidatePath("/admin/events");
@@ -248,9 +258,7 @@ export async function updateEvent(
 // Delete an event
 export async function deleteEvent(eventId: number) {
   try {
-    await db
-      .delete(events)
-      .where(eq(events.id, eventId));
+    await db.delete(events).where(eq(events.id, eventId));
 
     revalidatePath("/admin/events");
     revalidatePath("/members/events");

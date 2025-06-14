@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { format } from "date-fns";
 import {
   Calendar,
   Clock,
@@ -33,7 +32,7 @@ import {
   DialogTrigger,
 } from "~/components/ui/dialog";
 import { Separator } from "~/components/ui/separator";
-import { cn, formatTimeStringTo12Hour, preserveDate } from "~/lib/utils";
+import { cn } from "~/lib/utils";
 import Link from "next/link";
 import { EventDialog } from "./admin/EventDialog";
 import { useMediaQuery } from "~/hooks/use-media-query";
@@ -41,6 +40,14 @@ import RegisterForEventButton from "./members/RegisterForEventButton";
 import RegistrationsDialog from "./admin/RegistrationsDialog";
 import DeleteEventButton from "./admin/DeleteEventButton";
 import { EventCardProps } from "~/app/types/events";
+import {
+  formatDate,
+  formatTime12Hour,
+  formatDateWithDay,
+  isPast,
+  isSameDay,
+  parseDate,
+} from "~/lib/dates";
 
 // Helper function to get event type badge details
 function getEventTypeBadge(eventType: string) {
@@ -56,6 +63,19 @@ function getEventTypeBadge(eventType: string) {
     default:
       return { label: "Event", variant: "outline", icon: Calendar };
   }
+}
+
+// Helper function to format member classes display
+function formatMemberClasses(memberClasses: string[]): string {
+  if (!memberClasses || memberClasses.length === 0) return "";
+
+  // If 3 or fewer classes, show them all
+  if (memberClasses.length <= 3) {
+    return memberClasses.join(", ");
+  }
+
+  // If more than 3, show count
+  return `${memberClasses.length} Classes`;
 }
 
 export function EventCard({
@@ -80,13 +100,13 @@ export function EventCard({
   } = getEventTypeBadge(event.eventType);
 
   // Ensure we have proper Date objects using the utility function
-  const startDate = preserveDate(event.startDate) || new Date();
-  const endDate = preserveDate(event.endDate) || new Date();
+  const startDate = parseDate(event.startDate) || new Date();
+  const endDate = parseDate(event.endDate) || new Date();
   const registrationDeadline = event.registrationDeadline
-    ? preserveDate(event.registrationDeadline)
+    ? parseDate(event.registrationDeadline)
     : undefined;
 
-  const isSingleDay = startDate.toDateString() === endDate.toDateString();
+  const isSingleDay = isSameDay(startDate, endDate);
 
   // Create a truncated description
   const truncatedDescription =
@@ -97,12 +117,10 @@ export function EventCard({
 
   // Format event times
   const startTimeFormatted = event.startTime
-    ? formatTimeStringTo12Hour(event.startTime)
+    ? formatTime12Hour(event.startTime)
     : "";
 
-  const endTimeFormatted = event.endTime
-    ? formatTimeStringTo12Hour(event.endTime)
-    : "";
+  const endTimeFormatted = event.endTime ? formatTime12Hour(event.endTime) : "";
 
   const timeDisplay = startTimeFormatted
     ? endTimeFormatted
@@ -112,12 +130,17 @@ export function EventCard({
 
   // Format event dates
   const dateDisplay = isSingleDay
-    ? format(startDate, "EEE, MMMM d, yyyy")
-    : `${format(startDate, "MMM d")} - ${format(endDate, "MMM d, yyyy")}`;
+    ? formatDateWithDay(startDate)
+    : `${formatDate(startDate)} - ${formatDate(endDate)}`;
 
   // Check if registration deadline is past
   const isRegistrationClosed = registrationDeadline
-    ? new Date() > registrationDeadline
+    ? isPast(registrationDeadline)
+    : false;
+
+  // Check if event is at capacity (both approved and pending count)
+  const isAtCapacity = event.capacity
+    ? (event.registrationsCount || 0) >= event.capacity
     : false;
 
   // Has pending registrations that need approval
@@ -161,88 +184,151 @@ export function EventCard({
   if (variant === "compact") {
     return (
       <>
-        <Card className={cn("w-full", className)}>
-          <CardHeader className="pb-2">
-            <div className="flex items-start justify-between">
-              <div>
-                <CardTitle className="text-lg">{event.name}</CardTitle>
-                <div className="mt-1 flex items-center gap-2 text-sm">
-                  <Calendar className="h-4 w-4 text-org-primary" />
-                  <span>{dateDisplay}</span>
+        <Card
+          className={cn(
+            "w-full overflow-hidden transition-all duration-200 hover:shadow-lg",
+            className,
+          )}
+        >
+          <CardHeader className="pb-3">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0 flex-1">
+                <CardTitle className="text-org-primary mb-2 text-lg leading-tight font-semibold">
+                  {event.name}
+                </CardTitle>
+
+                {/* Event Meta Info */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <Calendar className="text-org-primary h-4 w-4 flex-shrink-0" />
+                    <span className="font-medium">{dateDisplay}</span>
+                  </div>
+
                   {timeDisplay && (
-                    <>
-                      <span className="text-muted-foreground">•</span>
+                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                      <Clock className="text-org-primary h-4 w-4 flex-shrink-0" />
                       <span>{timeDisplay}</span>
-                    </>
+                    </div>
+                  )}
+
+                  {event.location && (
+                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                      <MapPin className="text-org-primary h-4 w-4 flex-shrink-0" />
+                      <span className="truncate">{event.location}</span>
+                    </div>
                   )}
                 </div>
+
+                {/* Description Preview */}
+                {event.description && (
+                  <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-gray-500">
+                    {truncatedDescription}
+                  </p>
+                )}
               </div>
-              <Badge
-                variant={badgeVariant as any}
-                className="flex items-center gap-1"
-              >
-                <Icon className="h-3 w-3" />
-                <span>{label}</span>
-              </Badge>
+
+              {/* Event Type Badge */}
+              <div className="flex flex-col items-end gap-2">
+                <Badge
+                  variant={badgeVariant as any}
+                  className="flex items-center gap-1.5 px-2.5 py-1 font-medium"
+                >
+                  <Icon className="h-3.5 w-3.5" />
+                  <span className="text-xs">{label}</span>
+                </Badge>
+
+                {/* Registration Status for registered members */}
+                {isRegistered && registrationStatus && (
+                  <Badge
+                    variant={
+                      getRegistrationStatusBadge(registrationStatus)
+                        .variant as any
+                    }
+                    className={cn(
+                      "px-2 py-1 text-xs font-medium",
+                      getRegistrationStatusBadge(registrationStatus).className,
+                    )}
+                  >
+                    {getRegistrationStatusText(registrationStatus)}
+                  </Badge>
+                )}
+
+                {/* Capacity indicator */}
+                {isAtCapacity && (
+                  <Badge
+                    variant="outline"
+                    className="border-red-200 bg-red-50 px-2 py-1 text-xs font-medium text-red-600"
+                  >
+                    Event Full
+                  </Badge>
+                )}
+              </div>
             </div>
           </CardHeader>
 
-          <CardFooter className="flex justify-between gap-2 pt-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setDialogOpen(true)}
-              className="flex-1"
-            >
-              <Eye className="mr-2 h-4 w-4" />
-              View Details
-            </Button>
-            {isMember && !isRegistered && memberId && (
-              <RegisterForEventButton
-                eventId={event.id}
-                memberId={memberId}
-                disabled={!event.isActive || isRegistrationClosed}
-                requiresApproval={event.requiresApproval}
-                className="flex-1"
-              />
-            )}
-            {isRegistered && registrationStatus && (
-              <Badge
-                variant={
-                  getRegistrationStatusBadge(registrationStatus).variant as any
-                }
-                className={cn(
-                  "px-2 py-1 text-xs font-medium",
-                  getRegistrationStatusBadge(registrationStatus).className,
-                )}
+          <CardFooter className="pt-0 pb-4">
+            <div className="flex w-full gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setDialogOpen(true)}
+                className="h-9 flex-1 text-sm font-medium"
               >
-                {getRegistrationStatusText(registrationStatus)}
-              </Badge>
-            )}
+                <Eye className="mr-2 h-4 w-4" />
+                View Details
+              </Button>
+
+              {isMember && !isRegistered && memberId && (
+                <RegisterForEventButton
+                  eventId={event.id}
+                  memberId={memberId}
+                  disabled={
+                    !event.isActive || isRegistrationClosed || isAtCapacity
+                  }
+                  requiresApproval={event.requiresApproval}
+                  className="h-9 flex-1"
+                />
+              )}
+            </div>
           </CardFooter>
         </Card>
 
         {/* Event Detail Dialog */}
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogContent className="max-h-[90vh] max-w-4xl overflow-y-auto">
-            <DialogHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <DialogTitle className="text-2xl">{event.name}</DialogTitle>
-                  <DialogDescription>Event Details</DialogDescription>
+            <DialogHeader className="space-y-3">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div className="flex-1">
+                  <DialogTitle className="text-org-primary text-xl leading-tight font-bold sm:text-2xl">
+                    {event.name}
+                  </DialogTitle>
+                  <DialogDescription className="mt-1 text-base">
+                    Event Details
+                  </DialogDescription>
                 </div>
-                <div className="flex items-center gap-3">
-                  <Badge variant={badgeVariant as any}>{event.eventType}</Badge>
-                  {!event.isActive && <Badge variant="outline">Inactive</Badge>}
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge variant={badgeVariant as any} className="font-medium">
+                    {event.eventType}
+                  </Badge>
+                  {!event.isActive && (
+                    <Badge
+                      variant="outline"
+                      className="border-red-200 text-red-600"
+                    >
+                      Inactive
+                    </Badge>
+                  )}
                   {isRegistered && registrationStatus && (
                     <Badge
                       variant={
                         getRegistrationStatusBadge(registrationStatus)
                           .variant as any
                       }
-                      className={
-                        getRegistrationStatusBadge(registrationStatus).className
-                      }
+                      className={cn(
+                        "font-medium",
+                        getRegistrationStatusBadge(registrationStatus)
+                          .className,
+                      )}
                     >
                       {getRegistrationStatusText(registrationStatus)}
                     </Badge>
@@ -253,51 +339,71 @@ export function EventCard({
 
             <div className="space-y-6 pt-4">
               {/* Mobile-optimized event info card */}
-              <div className="rounded-lg border bg-gray-50/50 p-4">
-                <div className="grid grid-cols-1 gap-3">
-                  <div className="flex items-center gap-2">
-                    <Calendar className="h-5 w-5 shrink-0 text-org-primary" />
-                    <div>
-                      <span className="text-xs font-medium text-gray-600">
+              <div className="from-org-primary/5 rounded-lg border bg-gradient-to-br to-transparent p-5">
+                <div className="grid grid-cols-1 gap-4">
+                  <div className="flex items-start gap-3">
+                    <Calendar className="text-org-primary mt-0.5 h-5 w-5 flex-shrink-0" />
+                    <div className="flex-1">
+                      <span className="text-xs font-semibold tracking-wide text-gray-600 uppercase">
                         Date
                       </span>
-                      <p className="font-medium">{dateDisplay}</p>
+                      <p className="mt-1 font-semibold text-gray-900">
+                        {dateDisplay}
+                      </p>
                     </div>
                   </div>
 
                   {timeDisplay && (
-                    <div className="flex items-center gap-2">
-                      <Clock className="h-5 w-5 shrink-0 text-org-primary" />
-                      <div>
-                        <span className="text-xs font-medium text-gray-600">
+                    <div className="flex items-start gap-3">
+                      <Clock className="text-org-primary mt-0.5 h-5 w-5 flex-shrink-0" />
+                      <div className="flex-1">
+                        <span className="text-xs font-semibold tracking-wide text-gray-600 uppercase">
                           Time
                         </span>
-                        <p className="font-medium">{timeDisplay}</p>
+                        <p className="mt-1 font-semibold text-gray-900">
+                          {timeDisplay}
+                        </p>
                       </div>
                     </div>
                   )}
 
                   {event.location && (
-                    <div className="flex items-center gap-2">
-                      <MapPin className="h-5 w-5 shrink-0 text-org-primary" />
-                      <div>
-                        <span className="text-xs font-medium text-gray-600">
+                    <div className="flex items-start gap-3">
+                      <MapPin className="text-org-primary mt-0.5 h-5 w-5 flex-shrink-0" />
+                      <div className="flex-1">
+                        <span className="text-xs font-semibold tracking-wide text-gray-600 uppercase">
                           Location
                         </span>
-                        <p className="font-medium">{event.location}</p>
+                        <p className="mt-1 font-semibold text-gray-900">
+                          {event.location}
+                        </p>
                       </div>
                     </div>
                   )}
 
                   {event.capacity && (
-                    <div className="flex items-center gap-2">
-                      <Users className="h-5 w-5 shrink-0 text-org-primary" />
-                      <div>
-                        <span className="text-xs font-medium text-gray-600">
+                    <div className="flex items-start gap-3">
+                      <Users className="text-org-primary mt-0.5 h-5 w-5 flex-shrink-0" />
+                      <div className="flex-1">
+                        <span className="text-xs font-semibold tracking-wide text-gray-600 uppercase">
                           Capacity
                         </span>
-                        <p className="font-medium">
+                        <p className="mt-1 font-semibold text-gray-900">
                           {event.registrationsCount || 0} / {event.capacity}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {registrationDeadline && (
+                    <div className="flex items-start gap-3">
+                      <Bell className="text-org-primary mt-0.5 h-5 w-5 flex-shrink-0" />
+                      <div className="flex-1">
+                        <span className="text-xs font-semibold tracking-wide text-gray-600 uppercase">
+                          Registration Deadline
+                        </span>
+                        <p className="mt-1 font-semibold text-gray-900">
+                          {formatDate(registrationDeadline)}
                         </p>
                       </div>
                     </div>
@@ -307,8 +413,10 @@ export function EventCard({
 
               <div className="space-y-4">
                 <div>
-                  <h3 className="text-sm font-medium">Description</h3>
-                  <p className="text-muted-foreground mt-1 text-sm whitespace-pre-line">
+                  <h3 className="mb-3 text-sm font-bold tracking-wide text-gray-900 uppercase">
+                    Description
+                  </h3>
+                  <p className="text-sm leading-relaxed whitespace-pre-line text-gray-700">
                     {event.description}
                   </p>
                 </div>
@@ -386,7 +494,9 @@ export function EventCard({
                 <RegisterForEventButton
                   eventId={event.id}
                   memberId={memberId}
-                  disabled={!event.isActive || isRegistrationClosed}
+                  disabled={
+                    !event.isActive || isRegistrationClosed || isAtCapacity
+                  }
                   requiresApproval={event.requiresApproval}
                   className="w-full"
                 />
@@ -420,18 +530,18 @@ export function EventCard({
               </CardTitle>
               <div className="mt-2 rounded-md bg-gray-50 px-3 py-2 sm:bg-transparent sm:px-0 sm:py-0">
                 <div className="flex items-center gap-2 text-sm">
-                  <Calendar className="h-4 w-4 text-org-primary" />
+                  <Calendar className="text-org-primary h-4 w-4" />
                   <span className="font-medium">{dateDisplay}</span>
                 </div>
                 {timeDisplay && (
                   <div className="mt-1 flex items-center gap-2 text-sm">
-                    <Clock className="h-4 w-4 text-org-primary" />
+                    <Clock className="text-org-primary h-4 w-4" />
                     <span>{timeDisplay}</span>
                   </div>
                 )}
                 {event.location && (
                   <div className="mt-1 flex items-center gap-2 text-sm">
-                    <MapPin className="h-4 w-4 text-org-primary" />
+                    <MapPin className="text-org-primary h-4 w-4" />
                     <span>{event.location}</span>
                   </div>
                 )}
@@ -458,7 +568,7 @@ export function EventCard({
 
               {event.memberClasses && event.memberClasses.length > 0 && (
                 <Badge variant="outline" className="text-xs">
-                  {event.memberClasses.join(", ")}
+                  {formatMemberClasses(event.memberClasses)}
                 </Badge>
               )}
             </div>
@@ -473,7 +583,7 @@ export function EventCard({
           {(event.capacity !== undefined ||
             event.registrationsCount !== undefined) && (
             <div className="mt-2 flex items-center gap-2 text-sm">
-              <Users className="h-4 w-4 text-org-primary" />
+              <Users className="text-org-primary h-4 w-4" />
               <span>
                 {event.registrationsCount || 0}
                 {event.capacity !== null &&
@@ -503,7 +613,9 @@ export function EventCard({
               <RegisterForEventButton
                 eventId={event.id}
                 memberId={memberId}
-                disabled={!event.isActive || isRegistrationClosed}
+                disabled={
+                  !event.isActive || isRegistrationClosed || isAtCapacity
+                }
                 requiresApproval={event.requiresApproval}
               />
             </div>
@@ -594,7 +706,7 @@ export function EventCard({
             <div className="rounded-lg border bg-gray-50/50 p-4 sm:hidden">
               <div className="grid grid-cols-1 gap-3">
                 <div className="flex items-center gap-2">
-                  <Calendar className="h-5 w-5 shrink-0 text-org-primary" />
+                  <Calendar className="text-org-primary h-5 w-5 shrink-0" />
                   <div>
                     <span className="text-xs font-medium text-gray-600">
                       Date
@@ -605,7 +717,7 @@ export function EventCard({
 
                 {timeDisplay && (
                   <div className="flex items-center gap-2">
-                    <Clock className="h-5 w-5 shrink-0 text-org-primary" />
+                    <Clock className="text-org-primary h-5 w-5 shrink-0" />
                     <div>
                       <span className="text-xs font-medium text-gray-600">
                         Time
@@ -617,7 +729,7 @@ export function EventCard({
 
                 {event.location && (
                   <div className="flex items-center gap-2">
-                    <MapPin className="h-5 w-5 shrink-0 text-org-primary" />
+                    <MapPin className="text-org-primary h-5 w-5 shrink-0" />
                     <div>
                       <span className="text-xs font-medium text-gray-600">
                         Location
@@ -629,7 +741,7 @@ export function EventCard({
 
                 {event.capacity && (
                   <div className="flex items-center gap-2">
-                    <Users className="h-5 w-5 shrink-0 text-org-primary" />
+                    <Users className="text-org-primary h-5 w-5 shrink-0" />
                     <div>
                       <span className="text-xs font-medium text-gray-600">
                         Capacity
@@ -664,13 +776,13 @@ export function EventCard({
                         <div>
                           <h3 className="text-sm font-medium">Start Date</h3>
                           <p className="text-muted-foreground mt-1 text-sm">
-                            {format(startDate, "MMMM d, yyyy")}
+                            {formatDate(startDate)}
                           </p>
                         </div>
                         <div>
                           <h3 className="text-sm font-medium">End Date</h3>
                           <p className="text-muted-foreground mt-1 text-sm">
-                            {format(endDate, "MMMM d, yyyy")}
+                            {formatDate(endDate)}
                           </p>
                         </div>
                       </div>
@@ -736,7 +848,7 @@ export function EventCard({
                           Registration Deadline
                         </h3>
                         <p className="text-muted-foreground mt-1 text-sm">
-                          {format(registrationDeadline, "MMMM d, yyyy")}
+                          {formatDate(registrationDeadline)}
                         </p>
                       </div>
                     )}
