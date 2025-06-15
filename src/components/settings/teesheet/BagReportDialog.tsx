@@ -112,27 +112,48 @@ export function BagReportDialog({ timeBlocks = [] }: BagReportDialogProps) {
             <head>
               <title>Bag Report</title>
               <style>
+                @media print {
+                  * {
+                    -webkit-print-color-adjust: exact !important;
+                    color-adjust: exact !important;
+                  }
+                }
                 body {
-                  font-family: monospace;
+                  font-family: 'Courier New', monospace !important;
                   width: 3in;
                   margin: 0;
-                  padding: 10px;
+                  padding: 8px;
+                  font-size: 12px;
+                  line-height: 1.2;
                 }
                 .print-header {
                   text-align: center;
-                  margin-bottom: 10px;
-                  font-size: 14px;
+                  margin-bottom: 8px;
+                  font-size: 12px;
                   font-weight: bold;
+                  border-bottom: 1px solid #000;
+                  padding-bottom: 4px;
                 }
-                .print-row {
-                  display: flex;
-                  justify-content: space-between;
+                .bag-table {
                   width: 100%;
+                  border-collapse: collapse;
+                  table-layout: fixed;
                 }
-                .col {
+                .bag-table td {
                   width: 50%;
-                  padding: 2px 5px;
-                  font-size: 14px;
+                  padding: 1px 4px;
+                  font-size: 12px;
+                  font-family: 'Courier New', monospace !important;
+                  vertical-align: top;
+                }
+                .bag-table td:first-child {
+                  border-right: 1px dotted #ccc;
+                }
+                pre {
+                  font-family: 'Courier New', monospace !important;
+                  font-size: 12px;
+                  margin: 0;
+                  white-space: pre;
                 }
               </style>
             </head>
@@ -140,16 +161,32 @@ export function BagReportDialog({ timeBlocks = [] }: BagReportDialogProps) {
               <div class="print-header">
                 Bag Report ${formatTimeStringTo12Hour(startTime)} - ${formatTimeStringTo12Hour(endTime)}
               </div>
-              ${formatBagNumbersForPrinting()
-                .map(
-                  (row) => `
-                <div class="print-row">
-                  <div class="col">${row.left}</div>
-                  <div class="col">${row.right}</div>
-                </div>
-              `,
-                )
-                .join("")}
+              <table class="bag-table">
+                ${formatBagNumbersForPrinting()
+                  .map(
+                    (row) => `
+                  <tr>
+                    <td>${row.left}</td>
+                    <td>${row.right}</td>
+                  </tr>
+                `,
+                  )
+                  .join("")}
+              </table>
+              
+              <!-- Fallback preformatted version for difficult printers -->
+              <div style="display: none;">
+                <pre>
+Bag Report ${formatTimeStringTo12Hour(startTime)} - ${formatTimeStringTo12Hour(endTime)}
+${formatBagNumbersForPrinting()
+  .map((row) => {
+    const leftPadded = (row.left || "").padEnd(15, " ");
+    const rightPadded = row.right || "";
+    return `${leftPadded}${rightPadded}`;
+  })
+  .join("\n")}
+                </pre>
+              </div>
             </body>
           </html>
         `);
