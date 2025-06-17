@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
 import {
   Table,
@@ -31,7 +32,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "~/components/ui/select";
-import { formatCalendarDate } from "~/lib/utils";
+import { formatDate } from "~/lib/dates";
 import {
   type PowerCartChargeWithRelations,
   type GeneralChargeWithRelations,
@@ -60,6 +61,7 @@ export function PendingChargesList({
   powerCartCharges,
   generalCharges,
 }: PendingChargesListProps) {
+  const router = useRouter();
   const [completeChargeDialogOpen, setCompleteChargeDialogOpen] =
     useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -139,6 +141,7 @@ export function PendingChargesList({
       setStaffInitials("");
       setPaymentMethod("ACCOUNT");
       setSelectedCharge(null);
+      router.refresh();
     } catch (error) {
       console.error("Error completing charge:", error);
       toast.error("Failed to complete charge");
@@ -157,6 +160,7 @@ export function PendingChargesList({
       toast.success("Charge deleted successfully");
       setDeleteDialogOpen(false);
       setSelectedCharge(null);
+      router.refresh();
     } catch (error) {
       console.error("Error deleting charge:", error);
       toast.error("Failed to delete charge");
@@ -192,7 +196,9 @@ export function PendingChargesList({
               ) : (
                 powerCartCharges.map((charge) => (
                   <TableRow key={charge.id}>
-                    <TableCell>{formatCalendarDate(charge.date)}</TableCell>
+                    <TableCell>
+                      {formatDate(charge.date, "MMM d, yyyy")}
+                    </TableCell>
                     <TableCell>{renderName(charge)}</TableCell>
                     <TableCell>
                       {charge.splitWithMember && (
@@ -278,7 +284,9 @@ export function PendingChargesList({
               ) : (
                 generalCharges.map((charge) => (
                   <TableRow key={charge.id}>
-                    <TableCell>{formatCalendarDate(charge.date)}</TableCell>
+                    <TableCell>
+                      {formatDate(charge.date, "MMM d, yyyy")}
+                    </TableCell>
                     <TableCell>{renderName(charge)}</TableCell>
                     <TableCell>{charge.chargeType}</TableCell>
                     <TableCell>

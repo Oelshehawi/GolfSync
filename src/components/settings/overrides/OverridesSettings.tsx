@@ -20,7 +20,7 @@ import {
 } from "~/components/ui/table";
 import { DatePicker } from "~/components/ui/date-picker";
 import { getTimeblockOverrides } from "~/server/timeblock-restrictions/data";
-import { format } from "date-fns";
+import { formatDate } from "~/lib/dates";
 import { Search } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -69,13 +69,14 @@ export function OverridesSettings({
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
   const [endDate, setEndDate] = useState<Date | undefined>(undefined);
   const [isLoading, setIsLoading] = useState(false);
+  const [hasSearched, setHasSearched] = useState(false);
 
   // Search function
   const performSearch = async () => {
     setIsLoading(true);
     try {
       const result = await getTimeblockOverrides({
-        searchTerm: searchTerm.trim() !== "" ? searchTerm : undefined,
+        // Don't pass searchTerm to server - we'll filter client-side for comprehensive search
         startDate,
         endDate,
       });
@@ -90,18 +91,36 @@ export function OverridesSettings({
       toast.error("Failed to search overrides");
     } finally {
       setIsLoading(false);
+      setHasSearched(true);
     }
   };
 
-  // Trigger search when any filter changes
+  // Trigger search when date filters change (but not on initial mount)
   useEffect(() => {
-    // Add a small delay to prevent too many requests when typing
+    // Don't search on initial mount - wait for user interaction
+    if (!hasSearched && !startDate && !endDate) {
+      return;
+    }
+
+    // Add a small delay to prevent too many requests when changing dates
     const delaySearch = setTimeout(() => {
       performSearch();
     }, 300);
 
     return () => clearTimeout(delaySearch);
-  }, [searchTerm, startDate, endDate]);
+  }, [startDate, endDate]);
+
+  // Trigger search when searchTerm changes and we have data
+  useEffect(() => {
+    if (hasSearched && searchTerm !== "") {
+      // No need to call server - client-side filtering will handle it
+      return;
+    }
+    if (!hasSearched && searchTerm !== "") {
+      // First search with a search term - get initial data
+      performSearch();
+    }
+  }, [searchTerm]);
 
   const getCategoryDisplayName = (
     category: "MEMBER_CLASS" | "GUEST" | "COURSE_AVAILABILITY",
@@ -118,12 +137,53 @@ export function OverridesSettings({
     }
   };
 
+  // Filter overrides based on search term (client-side filtering for comprehensive search)
+  const filteredOverrides = overrides.filter((override) => {
+    if (!searchTerm.trim()) return true;
+
+    const searchLower = searchTerm.toLowerCase();
+
+    // Search in restriction name
+    if (override.restriction.name.toLowerCase().includes(searchLower))
+      return true;
+
+    // Search in category
+    if (
+      getCategoryDisplayName(override.restriction.restrictionCategory)
+        .toLowerCase()
+        .includes(searchLower)
+    )
+      return true;
+
+    // Search in person name
+    if (override.member) {
+      const memberName =
+        `${override.member.firstName} ${override.member.lastName}`.toLowerCase();
+      if (memberName.includes(searchLower)) return true;
+    }
+
+    if (override.guest) {
+      const guestName =
+        `${override.guest.firstName} ${override.guest.lastName}`.toLowerCase();
+      if (guestName.includes(searchLower)) return true;
+    }
+
+    // Search in reason
+    if (override.reason && override.reason.toLowerCase().includes(searchLower))
+      return true;
+
+    // Search in overridden by
+    if (override.overriddenBy.toLowerCase().includes(searchLower)) return true;
+
+    return false;
+  });
+
   return (
     <Card className="rounded-lg">
       <CardHeader>
         <CardTitle className="text-2xl font-bold">Override Records</CardTitle>
         <CardDescription>
-          Search and filter restriction override reasons
+          Search and filter restriction override records
         </CardDescription>
       </CardHeader>
 
@@ -131,13 +191,13 @@ export function OverridesSettings({
         {/* Search and Filter Controls */}
         <div className="grid gap-6 md:grid-cols-3">
           <div className="space-y-2">
-            <Label htmlFor="search">Search Reason</Label>
+            <Label htmlFor="search">Search</Label>
             <div className="relative">
               <Search className="absolute top-2.5 left-2.5 h-4 w-4 text-gray-500" />
               <Input
                 id="search"
-                placeholder="Search override reasons..."
-                className="pl-8"
+                placeholder="Search all fields..."
+                className="h-10 pl-8"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
@@ -150,6 +210,7 @@ export function OverridesSettings({
               date={startDate}
               setDate={setStartDate}
               placeholder="From date"
+              className="h-10"
             />
           </div>
 
@@ -159,6 +220,7 @@ export function OverridesSettings({
               date={endDate}
               setDate={setEndDate}
               placeholder="To date"
+              className="h-10"
             />
           </div>
         </div>
@@ -172,7 +234,7 @@ export function OverridesSettings({
                 <TableHead>Restriction</TableHead>
                 <TableHead>Category</TableHead>
                 <TableHead>Person</TableHead>
-                <TableHead>Time Block</TableHead>
+                <TableHead>Overridden By</TableHead>
                 <TableHead className="w-1/3">Override Reason</TableHead>
               </TableRow>
             </TableHeader>
@@ -186,20 +248,25 @@ export function OverridesSettings({
                     Searching...
                   </TableCell>
                 </TableRow>
-              ) : overrides.length === 0 ? (
+              ) : filteredOverrides.length === 0 ? (
                 <TableRow>
                   <TableCell
                     colSpan={6}
                     className="text-muted-foreground h-24 text-center"
                   >
-                    No override records found
+                    {hasSearched || searchTerm || startDate || endDate
+                      ? "No override records found"
+                      : "Use the search and filter options above to find override records"}
                   </TableCell>
                 </TableRow>
               ) : (
-                overrides.map((override) => (
+                filteredOverrides.map((override) => (
                   <TableRow key={override.id}>
                     <TableCell>
-                      {format(new Date(override.createdAt), "PPP p")}
+                      {formatDate(
+                        override.createdAt,
+                        "MMM d, yyyy 'at' h:mm a",
+                      )}
                     </TableCell>
                     <TableCell>{override.restriction.name}</TableCell>
                     <TableCell>
@@ -214,14 +281,7 @@ export function OverridesSettings({
                           ? `${override.guest.firstName} ${override.guest.lastName} (Guest)`
                           : "N/A"}
                     </TableCell>
-                    <TableCell>
-                      {override.timeBlock
-                        ? `${format(
-                            new Date(override.timeBlock.date),
-                            "MMM d",
-                          )} at ${override.timeBlock.startTime}`
-                        : "N/A"}
-                    </TableCell>
+                    <TableCell>{override.overriddenBy}</TableCell>
                     <TableCell>
                       {override.reason || "No reason provided"}
                     </TableCell>
