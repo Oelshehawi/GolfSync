@@ -30,13 +30,8 @@ import {
 import { TimeBlockItem, type TimeBlockItemProps } from "./TimeBlockItem";
 import { DatePicker } from "./DatePicker";
 import { PlayerDetailsDrawer } from "./PlayerDetailsDrawer";
-import { TeesheetGeneralNotes } from "~/components/teesheet/TeesheetGeneralNotes";
 import toast from "react-hot-toast";
-import {
-  checkTimeBlockInPast,
-  formatCalendarDate,
-  formatDisplayDate,
-} from "~/lib/utils";
+import { isPast, formatDateWithDay, getDateForDB } from "~/lib/dates";
 import { parse } from "date-fns";
 import { Member } from "~/app/types/MemberTypes";
 import type {
@@ -52,6 +47,7 @@ type ClientTimeBlock = {
   endTime: string;
   members: TimeBlockMemberView[];
   fills: TimeBlockFill[];
+  maxMembers: number;
   restriction?: {
     isRestricted: boolean;
     reason: string;
@@ -254,7 +250,7 @@ export default function TeesheetClient({
   const navigateToDate = useCallback(
     (newDate: Date) => {
       const params = new URLSearchParams(searchParams.toString());
-      params.set("date", formatCalendarDate(newDate));
+      params.set("date", getDateForDB(newDate));
       replace(`${pathname}?${params.toString()}`);
     },
     [pathname, searchParams, replace],
@@ -439,6 +435,15 @@ export default function TeesheetClient({
       const timeBlock = timeBlocks.find((tb) => tb.id === timeBlockId);
       if (!timeBlock) return;
 
+      // First check if the timeblock is at capacity
+      if (!isTimeBlockAvailable(timeBlock)) {
+        toast.error("This time slot is full and cannot be booked", {
+          icon: <AlertCircle className="h-5 w-5 text-orange-500" />,
+          id: `full-timeblock-${timeBlockId}`,
+        });
+        return;
+      }
+
       // Check if the timeblock is restricted (pre-checked from server)
       if (timeBlock.restriction && timeBlock.restriction.isRestricted) {
         const violations = timeBlock.restriction.violations || [];
@@ -534,22 +539,19 @@ export default function TeesheetClient({
     [member],
   );
 
-  const isTimeBlockAvailable = useCallback(
-    (timeBlock: ClientTimeBlock) => {
-      if (!timeBlock?.members) return true;
-      const maxMembers = config?.maxMembersPerBlock || 4;
-      const totalPeople =
-        timeBlock.members.length + (timeBlock.fills?.length || 0);
-      return totalPeople < maxMembers;
-    },
-    [config],
-  );
+  const isTimeBlockAvailable = useCallback((timeBlock: ClientTimeBlock) => {
+    if (!timeBlock?.members) return true;
+    const maxMembers = timeBlock.maxMembers || 4;
+    const totalPeople =
+      timeBlock.members.length + (timeBlock.fills?.length || 0);
+    return totalPeople < maxMembers;
+  }, []);
 
   const isTimeBlockInPast = useCallback(
     (timeBlock: ClientTimeBlock) => {
       if (!timeBlock || !timeBlock.startTime) return false;
       // Use both date and time parameters for accurate past checking
-      return checkTimeBlockInPast(selectedDate, timeBlock.startTime);
+      return isPast(selectedDate, timeBlock.startTime);
     },
     [selectedDate],
   );
@@ -566,7 +568,7 @@ export default function TeesheetClient({
             size="sm"
             onClick={goToPreviousDay}
             disabled={loading || swipeLoading}
-            className="h-10 w-10 rounded-full hover:bg-org-primary/10 hover:text-org-primary"
+            className="hover:bg-org-primary/10 hover:text-org-primary h-10 w-10 rounded-full"
             aria-label="Previous day"
           >
             {swipeLoading ? (
@@ -578,14 +580,14 @@ export default function TeesheetClient({
 
           <div className="flex items-center gap-2">
             <h2 className="text-lg font-bold text-gray-900">
-              {formatDisplayDate(date)}
+              {formatDateWithDay(date)}
             </h2>
             <Button
               variant="ghost"
               size="sm"
               onClick={() => dispatch({ type: "TOGGLE_DATE_PICKER" })}
               disabled={loading || swipeLoading}
-              className="h-8 w-8 rounded-full hover:bg-org-primary/10 hover:text-org-primary"
+              className="hover:bg-org-primary/10 hover:text-org-primary h-8 w-8 rounded-full"
               aria-label="Open date picker"
             >
               <CalendarIcon className="h-4 w-4" />
@@ -597,7 +599,7 @@ export default function TeesheetClient({
             size="sm"
             onClick={goToNextDay}
             disabled={loading || swipeLoading}
-            className="h-10 w-10 rounded-full hover:bg-org-primary/10 hover:text-org-primary"
+            className="hover:bg-org-primary/10 hover:text-org-primary h-10 w-10 rounded-full"
             aria-label="Next day"
           >
             {swipeLoading ? (
@@ -611,7 +613,7 @@ export default function TeesheetClient({
         {/* Swipe Loading Indicator */}
         {swipeLoading && (
           <div className="mt-2 flex items-center justify-center">
-            <div className="flex items-center gap-2 text-sm text-org-primary">
+            <div className="text-org-primary flex items-center gap-2 text-sm">
               <Loader2 className="h-4 w-4 animate-spin" />
               <span>Loading new date...</span>
             </div>
@@ -638,10 +640,10 @@ export default function TeesheetClient({
 
       {/* Tee Sheet Grid - No internal scrolling */}
       <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
-        <div className="border-b border-gray-100 bg-org-primary/5 p-4">
+        <div className="bg-org-primary/5 border-b border-gray-100 p-4">
           <h3 className="flex items-center gap-2 text-lg font-bold text-gray-900">
-            <ClockIcon className="h-5 w-5 text-org-primary" />
-            Tee Sheet - {formatDisplayDate(date)}
+            <ClockIcon className="text-org-primary h-5 w-5" />
+            Tee Sheet - {formatDateWithDay(date)}
           </h3>
           {config?.disallowMemberBooking && (
             <div className="mt-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
@@ -748,7 +750,7 @@ export default function TeesheetClient({
             <Button
               onClick={handleBookTeeTime}
               disabled={loading}
-              className="flex-1 bg-org-primary hover:bg-org-primary/90"
+              className="bg-org-primary hover:bg-org-primary/90 flex-1"
             >
               {loading ? (
                 <>

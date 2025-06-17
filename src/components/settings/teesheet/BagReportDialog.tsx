@@ -106,6 +106,19 @@ export function BagReportDialog({ timeBlocks = [] }: BagReportDialogProps) {
           return;
         }
 
+        // Format bag numbers for thermal printer (TM-T88V)
+        const bagNumbers = getBagNumbersInRange();
+        const formattedBagReport = formatBagNumbersForPrinting()
+          .map((row) => {
+            // Use simple space-based padding like the header - left side gets enough spaces to reach position 16
+            const leftSide = row.left || "";
+            const rightSide = row.right || "";
+            const spacesNeeded = Math.max(1, 16 - leftSide.length);
+            const spaces = " ".repeat(spacesNeeded);
+            return `${leftSide}${spaces}${rightSide}`;
+          })
+          .join("\n");
+
         // Write the print content to the new window
         printWindow.document.write(`
           <html>
@@ -126,67 +139,19 @@ export function BagReportDialog({ timeBlocks = [] }: BagReportDialogProps) {
                   font-size: 12px;
                   line-height: 1.2;
                 }
-                .print-header {
-                  text-align: center;
-                  margin-bottom: 8px;
-                  font-size: 12px;
-                  font-weight: bold;
-                  border-bottom: 1px solid #000;
-                  padding-bottom: 4px;
-                }
-                .bag-table {
-                  width: 100%;
-                  border-collapse: collapse;
-                  table-layout: fixed;
-                }
-                .bag-table td {
-                  width: 50%;
-                  padding: 1px 4px;
-                  font-size: 12px;
-                  font-family: 'Courier New', monospace !important;
-                  vertical-align: top;
-                }
-                .bag-table td:first-child {
-                  border-right: 1px dotted #ccc;
-                }
                 pre {
                   font-family: 'Courier New', monospace !important;
                   font-size: 12px;
                   margin: 0;
                   white-space: pre;
+                  letter-spacing: 0;
                 }
               </style>
             </head>
             <body>
-              <div class="print-header">
-                Bag Report ${formatTimeStringTo12Hour(startTime)} - ${formatTimeStringTo12Hour(endTime)}
-              </div>
-              <table class="bag-table">
-                ${formatBagNumbersForPrinting()
-                  .map(
-                    (row) => `
-                  <tr>
-                    <td>${row.left}</td>
-                    <td>${row.right}</td>
-                  </tr>
-                `,
-                  )
-                  .join("")}
-              </table>
-              
-              <!-- Fallback preformatted version for difficult printers -->
-              <div style="display: none;">
-                <pre>
-Bag Report ${formatTimeStringTo12Hour(startTime)} - ${formatTimeStringTo12Hour(endTime)}
-${formatBagNumbersForPrinting()
-  .map((row) => {
-    const leftPadded = (row.left || "").padEnd(15, " ");
-    const rightPadded = row.right || "";
-    return `${leftPadded}${rightPadded}`;
-  })
-  .join("\n")}
-                </pre>
-              </div>
+              <pre>Bag Report ${formatTimeStringTo12Hour(startTime)} - ${formatTimeStringTo12Hour(endTime)}
+${"=".repeat(32)}
+${formattedBagReport}</pre>
             </body>
           </html>
         `);
@@ -269,8 +234,7 @@ ${formatBagNumbersForPrinting()
                   <div key={block.id} className="rounded-md border p-3">
                     <div className="mb-2 flex items-center justify-between border-b pb-2">
                       <span className="text-lg font-medium">
-                        {formatTimeStringTo12Hour(block.startTime)} -{" "}
-                        {formatTimeStringTo12Hour(block.endTime)}
+                        {formatTimeStringTo12Hour(block.startTime)}
                       </span>
                       <span className="text-muted-foreground text-sm">
                         {block.members.length}/4 bags

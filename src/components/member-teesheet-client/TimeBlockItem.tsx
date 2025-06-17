@@ -12,7 +12,7 @@ import {
   Info,
   ClockIcon,
 } from "lucide-react";
-import { formatDisplayTime } from "~/lib/utils";
+import { formatTime12Hour } from "~/lib/dates";
 import { TimeBlockMemberView, TimeBlockFill } from "~/app/types/TeeSheetTypes";
 import { Member } from "~/app/types/MemberTypes";
 
@@ -23,6 +23,7 @@ type ClientTimeBlock = {
   endTime: string;
   members: TimeBlockMemberView[];
   fills: TimeBlockFill[];
+  maxMembers: number;
   [key: string]: any;
 };
 
@@ -54,11 +55,11 @@ export function TimeBlockItem({
   isRestricted = false,
 }: TimeBlockItemProps) {
   // Format the start time for display using our proper date utility function
-  const startTimeDisplay = formatDisplayTime(timeBlock.startTime);
+  const startTimeDisplay = formatTime12Hour(timeBlock.startTime);
 
   // Calculate total people including fills
   const totalPeople = timeBlock.members.length + (timeBlock.fills?.length || 0);
-  const maxPlayers = timeBlock.maxMembersPerBlock || 4;
+  const maxPlayers = timeBlock.maxMembers || 4;
 
   // Check for different types of restrictions
   const hasAvailabilityViolation = timeBlock.restriction?.violations?.some(
@@ -217,7 +218,7 @@ export function TimeBlockItem({
                 </div>
               ))}
               {hasMorePlayers && (
-                <div className="mt-1 flex items-center text-sm text-org-primary">
+                <div className="text-org-primary mt-1 flex items-center text-sm">
                   <Info className="mr-1 h-4 w-4" />
                   <span className="font-medium">
                     +{totalPeople - 2} more players
@@ -297,13 +298,22 @@ export function TimeBlockItem({
           >
             Past
           </Button>
+        ) : !isAvailable ? (
+          <Button
+            variant="outline"
+            size="sm"
+            disabled
+            className="h-9 w-full border-orange-300 bg-orange-50 text-sm text-orange-600"
+          >
+            Full
+          </Button>
         ) : isFrequencyRestricted ? (
           <div className="space-y-2">
             <Button
               variant="default"
               size="sm"
               onClick={onBook}
-              className="h-9 w-full bg-org-primary text-sm font-semibold hover:bg-org-primary/90"
+              className="bg-org-primary hover:bg-org-primary/90 h-9 w-full text-sm font-semibold"
               disabled={isButtonDisabled}
             >
               Book Now*
@@ -316,24 +326,15 @@ export function TimeBlockItem({
               ),
             )}
           </div>
-        ) : isAvailable ? (
+        ) : (
           <Button
             variant="default"
             size="sm"
             onClick={onBook}
-            className="h-9 w-full bg-org-primary text-sm font-semibold hover:bg-org-primary/90"
+            className="bg-org-primary hover:bg-org-primary/90 h-9 w-full text-sm font-semibold"
             disabled={isButtonDisabled}
           >
             Book Now
-          </Button>
-        ) : (
-          <Button
-            variant="outline"
-            size="sm"
-            disabled
-            className="h-9 w-full border-orange-300 bg-orange-50 text-sm text-orange-600"
-          >
-            Full
           </Button>
         )}
       </div>
