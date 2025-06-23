@@ -1,8 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useMemo, useCallback, useReducer } from "react";
+import React, { useMemo, useCallback, useReducer, useRef } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
-import { Button } from "~/components/ui/button";
 import { addDays } from "date-fns";
 import { useDebounce } from "use-debounce";
 import {
@@ -10,35 +9,27 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
-  DialogFooter,
 } from "~/components/ui/dialog";
 import {
   bookTeeTime,
   cancelTeeTime,
 } from "~/server/members-teesheet-client/actions";
-import {
-  ChevronLeft,
-  ChevronRight,
-  CalendarIcon,
-  Loader2,
-  ClockIcon,
-  AlertCircle,
-  CheckCircle,
-  X,
-} from "lucide-react";
-import { TimeBlockItem, type TimeBlockItemProps } from "./TimeBlockItem";
+import { AlertCircle, CheckCircle, X } from "lucide-react";
 import { DatePicker } from "./DatePicker";
 import { PlayerDetailsDrawer } from "./PlayerDetailsDrawer";
+import { DateNavigationHeader } from "./DateNavigationHeader";
+import { TeesheetGrid } from "./TeesheetGrid";
+import { BookingDialogs } from "./BookingDialogs";
+import { LotteryView } from "../lottery/LotteryView";
 import toast from "react-hot-toast";
-import { isPast, formatDateWithDay, getDateForDB } from "~/lib/dates";
+import { isPast, getDateForDB } from "~/lib/dates";
 import { parse } from "date-fns";
 import { Member } from "~/app/types/MemberTypes";
 import type {
   TimeBlockMemberView,
   TimeBlockFill,
 } from "~/app/types/TeeSheetTypes";
-import { Skeleton } from "~/components/ui/skeleton";
+import type { LotteryEntryData } from "~/app/types/LotteryTypes";
 
 // Define proper types that match TimeBlockItem requirements
 type ClientTimeBlock = {
@@ -55,76 +46,6 @@ type ClientTimeBlock = {
   };
   [key: string]: any;
 };
-
-// Simple utility to scroll to a time block on today's date
-function scrollToClosestTime(
-  now: Date,
-  selectedDate: Date | string,
-  timeBlocks: ClientTimeBlock[],
-) {
-  // Parse the date properly
-  let parsedSelectedDate: Date;
-  if (typeof selectedDate === "string") {
-    const parts = selectedDate.split("-");
-    if (parts.length === 3) {
-      const year = parseInt(parts[0] || "0");
-      const month = parseInt(parts[1] || "0") - 1;
-      const day = parseInt(parts[2] || "0");
-      parsedSelectedDate = new Date(year, month, day);
-    } else {
-      parsedSelectedDate = new Date(selectedDate);
-    }
-  } else {
-    parsedSelectedDate = selectedDate;
-  }
-
-  // Only proceed if we're on today's date
-  if (
-    now.getDate() !== parsedSelectedDate.getDate() ||
-    now.getMonth() !== parsedSelectedDate.getMonth() ||
-    now.getFullYear() !== parsedSelectedDate.getFullYear()
-  ) {
-    return;
-  }
-
-  // Get current time
-  const currentHour = now.getHours();
-  const currentMinute = now.getMinutes();
-
-  // Skip if no timeblocks
-  if (!timeBlocks.length) return;
-
-  // Find timeblock closest to current time
-  const currentTimeMinutes = currentHour * 60 + currentMinute;
-
-  let bestBlock = timeBlocks[0];
-  let bestDiff = Infinity;
-
-  for (let i = 0; i < timeBlocks.length; i++) {
-    const block = timeBlocks[i];
-    if (!block || !block.startTime) continue;
-
-    // Parse time from HH:MM format
-    const timeParts = block.startTime.split(":");
-    if (timeParts.length !== 2) continue;
-
-    const blockHour = parseInt(timeParts[0] || "0", 10);
-    const blockMinute = parseInt(timeParts[1] || "0", 10);
-    const blockMinutes = blockHour * 60 + blockMinute;
-    const diff = Math.abs(blockMinutes - currentTimeMinutes);
-
-    if (diff < bestDiff) {
-      bestDiff = diff;
-      bestBlock = block;
-    }
-  }
-
-  // Scroll to element without delay
-  const element = document.getElementById(`time-block-${bestBlock?.id}`);
-  if (element) {
-    element.scrollIntoView({ behavior: "auto", block: "center" });
-  }
-}
 
 type BookingState = {
   loading: boolean;
@@ -203,12 +124,16 @@ export default function TeesheetClient({
   timeBlocks: initialTimeBlocks,
   selectedDate,
   member,
+  lotteryEntry = null,
+  isLotteryEligible = false,
 }: {
   teesheet: any;
   config: any;
   timeBlocks: ClientTimeBlock[];
   selectedDate: string | Date;
   member: Member;
+  lotteryEntry?: LotteryEntryData;
+  isLotteryEligible?: boolean;
 }) {
   const [state, dispatch] = useReducer(bookingReducer, initialState);
   const {
@@ -224,16 +149,8 @@ export default function TeesheetClient({
   // Use sorted timeBlocks from server
   const timeBlocks = initialTimeBlocks;
 
-  // Create a ref for the time blocks container to enable scrolling
-  const timeBlocksContainerRef = useRef<HTMLDivElement>(null);
+  // Touch handling for swipe navigation
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
-
-  // Auto-scroll to current time once when time blocks load
-  useEffect(() => {
-    if (timeBlocks.length > 0) {
-      scrollToClosestTime(new Date(), selectedDate, timeBlocks);
-    }
-  }, [timeBlocks, selectedDate]);
 
   // Memoize date parsing to prevent unnecessary recalculations
   const date = useMemo(() => {
@@ -244,17 +161,22 @@ export default function TeesheetClient({
 
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const { replace } = useRouter();
+  const router = useRouter();
 
   // Navigation functions wrapped in useCallback
   const navigateToDate = useCallback(
     (newDate: Date) => {
       const params = new URLSearchParams(searchParams.toString());
       params.set("date", getDateForDB(newDate));
-      replace(`${pathname}?${params.toString()}`);
+      router.replace(`${pathname}?${params.toString()}`);
     },
-    [pathname, searchParams, replace],
+    [pathname, searchParams, router],
   );
+
+  // Handle lottery data changes
+  const handleDataChange = useCallback(() => {
+    router.refresh();
+  }, [router]);
 
   const goToPreviousDay = useCallback(async () => {
     dispatch({ type: "SET_SWIPE_LOADING", payload: true });
@@ -558,68 +480,36 @@ export default function TeesheetClient({
 
   const hasTimeBlocks = timeBlocks.length > 0;
 
+  // If this is a lottery-eligible date, show lottery interface instead of tee sheet
+  if (isLotteryEligible) {
+    return (
+      <LotteryView
+        selectedDate={selectedDate}
+        lotteryEntry={lotteryEntry}
+        member={member}
+        date={date}
+        showDatePicker={showDatePicker}
+        swipeLoading={swipeLoading}
+        onPreviousDay={goToPreviousDay}
+        onNextDay={goToNextDay}
+        onDatePickerToggle={() => dispatch({ type: "TOGGLE_DATE_PICKER" })}
+        onDataChange={handleDataChange}
+        onDateChange={handleDateChange}
+      />
+    );
+  }
+
   return (
     <div className="space-y-4 px-3 pb-6">
-      {/* Sticky Date Navigation Header - Now the only sticky element */}
-      <div className="sticky top-2 z-30 mb-4 rounded-xl border border-gray-200 bg-white/95 p-3 shadow-lg backdrop-blur-sm">
-        <div className="flex items-center justify-between">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={goToPreviousDay}
-            disabled={loading || swipeLoading}
-            className="hover:bg-org-primary/10 hover:text-org-primary h-10 w-10 rounded-full"
-            aria-label="Previous day"
-          >
-            {swipeLoading ? (
-              <Loader2 className="h-5 w-5 animate-spin" />
-            ) : (
-              <ChevronLeft className="h-5 w-5" />
-            )}
-          </Button>
-
-          <div className="flex items-center gap-2">
-            <h2 className="text-lg font-bold text-gray-900">
-              {formatDateWithDay(date)}
-            </h2>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => dispatch({ type: "TOGGLE_DATE_PICKER" })}
-              disabled={loading || swipeLoading}
-              className="hover:bg-org-primary/10 hover:text-org-primary h-8 w-8 rounded-full"
-              aria-label="Open date picker"
-            >
-              <CalendarIcon className="h-4 w-4" />
-            </Button>
-          </div>
-
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={goToNextDay}
-            disabled={loading || swipeLoading}
-            className="hover:bg-org-primary/10 hover:text-org-primary h-10 w-10 rounded-full"
-            aria-label="Next day"
-          >
-            {swipeLoading ? (
-              <Loader2 className="h-5 w-5 animate-spin" />
-            ) : (
-              <ChevronRight className="h-5 w-5" />
-            )}
-          </Button>
-        </div>
-
-        {/* Swipe Loading Indicator */}
-        {swipeLoading && (
-          <div className="mt-2 flex items-center justify-center">
-            <div className="text-org-primary flex items-center gap-2 text-sm">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              <span>Loading new date...</span>
-            </div>
-          </div>
-        )}
-      </div>
+      {/* Date Navigation Header */}
+      <DateNavigationHeader
+        date={date}
+        onPreviousDay={goToPreviousDay}
+        onNextDay={goToNextDay}
+        onDatePickerToggle={() => dispatch({ type: "TOGGLE_DATE_PICKER" })}
+        loading={loading}
+        swipeLoading={swipeLoading}
+      />
 
       {/* General Notes Section */}
       {teesheet?.generalNotes && (
@@ -638,75 +528,31 @@ export default function TeesheetClient({
         </div>
       )}
 
-      {/* Tee Sheet Grid - No internal scrolling */}
-      <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
-        <div className="bg-org-primary/5 border-b border-gray-100 p-4">
-          <h3 className="flex items-center gap-2 text-lg font-bold text-gray-900">
-            <ClockIcon className="text-org-primary h-5 w-5" />
-            Tee Sheet - {formatDateWithDay(date)}
-          </h3>
-          {config?.disallowMemberBooking && (
-            <div className="mt-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-              <AlertCircle className="mr-2 inline-block h-4 w-4" />
-              Member booking is currently disabled
-            </div>
-          )}
-        </div>
-
-        <div
-          ref={timeBlocksContainerRef}
-          className="p-4"
-          onTouchStart={handleTouchStart}
-          onTouchEnd={handleTouchEnd}
-          aria-live="polite"
-        >
-          {hasTimeBlocks ? (
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {timeBlocks.map((timeBlock) => (
-                <TimeBlockItem
-                  key={timeBlock.id}
-                  timeBlock={
-                    timeBlock as unknown as TimeBlockItemProps["timeBlock"]
-                  }
-                  isBooked={isTimeBlockBooked(timeBlock)}
-                  isAvailable={isTimeBlockAvailable(timeBlock)}
-                  isPast={isTimeBlockInPast(timeBlock)}
-                  onBook={() => checkBookingRestrictions(timeBlock.id)}
-                  onCancel={() =>
-                    dispatch({
-                      type: "START_CANCELLING",
-                      payload: timeBlock.id,
-                    })
-                  }
-                  onShowDetails={() => handleShowPlayerDetails(timeBlock)}
-                  disabled={loading || config?.disallowMemberBooking}
-                  member={member}
-                  id={`time-block-${timeBlock.id}`}
-                  isRestricted={timeBlock.restriction?.isRestricted || false}
-                />
-              ))}
-            </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center py-12 text-center">
-              <CalendarIcon className="mb-4 h-16 w-16 text-gray-300" />
-              <p className="mb-2 text-lg font-medium text-gray-500">
-                No tee times available
-              </p>
-              <p className="text-sm text-gray-400">
-                Try selecting a different date to see available times.
-              </p>
-            </div>
-          )}
-        </div>
-      </div>
+      {/* Tee Sheet Grid */}
+      <TeesheetGrid
+        date={date}
+        timeBlocks={timeBlocks}
+        config={config}
+        member={member}
+        loading={loading}
+        selectedDate={selectedDate}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+        onBook={checkBookingRestrictions}
+        onCancel={(timeBlockId) =>
+          dispatch({ type: "START_CANCELLING", payload: timeBlockId })
+        }
+        onShowDetails={handleShowPlayerDetails}
+        isTimeBlockBooked={isTimeBlockBooked}
+        isTimeBlockAvailable={isTimeBlockAvailable}
+        isTimeBlockInPast={isTimeBlockInPast}
+      />
 
       {/* Date Picker Dialog */}
       {showDatePicker && (
         <Dialog
           open={showDatePicker}
-          onOpenChange={(isOpen) =>
-            dispatch({ type: "TOGGLE_DATE_PICKER", payload: isOpen })
-          }
+          onOpenChange={() => dispatch({ type: "TOGGLE_DATE_PICKER" })}
         >
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
@@ -724,88 +570,16 @@ export default function TeesheetClient({
         timeBlock={selectedTimeBlock}
       />
 
-      {/* Streamlined Booking Confirmation */}
-      <Dialog
-        open={bookingTimeBlockId !== null}
-        onOpenChange={(isOpen) => {
-          if (!isOpen) dispatch({ type: "CLEAR_BOOKING" });
-        }}
-      >
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Book Tee Time</DialogTitle>
-            <DialogDescription>
-              Confirm your booking for this tee time?
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="gap-2">
-            <Button
-              variant="outline"
-              onClick={() => dispatch({ type: "CLEAR_BOOKING" })}
-              disabled={loading}
-              className="flex-1"
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleBookTeeTime}
-              disabled={loading}
-              className="bg-org-primary hover:bg-org-primary/90 flex-1"
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Booking...
-                </>
-              ) : (
-                "Confirm"
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Cancel Confirmation Dialog */}
-      <Dialog
-        open={cancelTimeBlockId !== null}
-        onOpenChange={(isOpen) => {
-          if (!isOpen) dispatch({ type: "CLEAR_CANCELLING" });
-        }}
-      >
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Cancel Booking</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to cancel this tee time?
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="gap-2">
-            <Button
-              variant="outline"
-              onClick={() => dispatch({ type: "CLEAR_CANCELLING" })}
-              disabled={loading}
-              className="flex-1"
-            >
-              Keep Booking
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleCancelTeeTime}
-              disabled={loading}
-              className="flex-1"
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Cancelling...
-                </>
-              ) : (
-                "Cancel Booking"
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Booking Dialogs */}
+      <BookingDialogs
+        bookingTimeBlockId={bookingTimeBlockId}
+        cancelTimeBlockId={cancelTimeBlockId}
+        loading={loading}
+        onBookConfirm={handleBookTeeTime}
+        onCancelConfirm={handleCancelTeeTime}
+        onBookingClose={() => dispatch({ type: "CLEAR_BOOKING" })}
+        onCancelClose={() => dispatch({ type: "CLEAR_CANCELLING" })}
+      />
     </div>
   );
 }

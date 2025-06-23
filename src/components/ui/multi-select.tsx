@@ -117,7 +117,7 @@ export function MultiSelect({
           <div className="flex flex-wrap gap-1">
             {selected.length === 0 ? (
               <span className="text-muted">{placeholder}</span>
-            ) : selected.length <= 4 ? (
+            ) : selected.length <= 3 ? (
               <div className="flex flex-wrap gap-1">
                 {selected.map((value, i) => {
                   const option = options.find((o) => o.value === value);

@@ -1,8 +1,6 @@
 import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
-import { format, parse, addMinutes, parseISO } from "date-fns";
-import type { TeesheetConfig } from "~/app/types/TeeSheetTypes";
-import { ConfigTypes } from "~/app/types/TeeSheetTypes";
+import { format } from "date-fns";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -784,16 +782,15 @@ export function preserveDate(
   }
 }
 
-
 export function urlBase64ToUint8Array(base64String: string) {
-  const padding = '='.repeat((4 - (base64String.length % 4)) % 4)
-  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/')
- 
-  const rawData = window.atob(base64)
-  const outputArray = new Uint8Array(rawData.length)
- 
+  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+
   for (let i = 0; i < rawData.length; ++i) {
-    outputArray[i] = rawData.charCodeAt(i)
+    outputArray[i] = rawData.charCodeAt(i);
   }
-  return outputArray
+  return outputArray;
 }

@@ -821,3 +821,139 @@ export const timeBlockFillsRelations = relations(timeBlockFills, ({ one }) => ({
     references: [timeBlocks.id],
   }),
 }));
+
+// Lottery system tables
+
+// Core lottery entries
+export const lotteryEntries = createTable(
+  "lottery_entries",
+  {
+    id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+    memberId: integer("member_id")
+      .references(() => members.id, { onDelete: "cascade" })
+      .notNull(),
+    lotteryDate: date("lottery_date").notNull(), // Date they want to play
+    preferredWindow: varchar("preferred_window", { length: 20 }).notNull(), // EARLY_MORNING, MORNING, MIDDAY, AFTERNOON
+    specificTimePreference: varchar("specific_time_preference", { length: 5 }), // "09:00"
+    alternateWindow: varchar("alternate_window", { length: 20 }), // Backup choice
+    status: varchar("status", { length: 20 }).notNull().default("PENDING"), // PENDING, PROCESSING, ASSIGNED, CANCELLED
+    submittedBy: integer("submitted_by").references(() => members.id), // Admin who submitted on behalf
+    submissionTimestamp: timestamp("submission_timestamp", {
+      withTimezone: true,
+    })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    processedAt: timestamp("processed_at", { withTimezone: true }),
+    assignedTimeBlockId: integer("assigned_time_block_id").references(
+      () => timeBlocks.id,
+    ),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).$onUpdate(
+      () => new Date(),
+    ),
+    memberClass: varchar("member_class", { length: 50 }).notNull(),
+  },
+  (table) => [
+    index("lottery_entries_member_id_idx").on(table.memberId),
+    index("lottery_entries_lottery_date_idx").on(table.lotteryDate),
+    index("lottery_entries_status_idx").on(table.status),
+    unique("lottery_entries_member_date_unq").on(
+      table.memberId,
+      table.lotteryDate,
+    ),
+  ],
+);
+
+// Group requests within lottery entries
+export const lotteryGroups = createTable(
+  "lottery_groups",
+  {
+    id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+    leaderId: integer("leader_id")
+      .references(() => members.id, { onDelete: "cascade" })
+      .notNull(), // Member who submitted for group
+    lotteryDate: date("lottery_date").notNull(),
+    memberIds: integer("member_ids").array().notNull(), // All members in group including leader
+    preferredWindow: varchar("preferred_window", { length: 20 }).notNull(),
+    specificTimePreference: varchar("specific_time_preference", { length: 5 }),
+    alternateWindow: varchar("alternate_window", { length: 20 }),
+    status: varchar("status", { length: 20 }).notNull().default("PENDING"),
+    submissionTimestamp: timestamp("submission_timestamp", {
+      withTimezone: true,
+    })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    processedAt: timestamp("processed_at", { withTimezone: true }),
+    leaderMemberClass: varchar("leader_member_class", { length: 50 }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).$onUpdate(
+      () => new Date(),
+    ),
+  },
+  (table) => [
+    index("lottery_groups_leader_id_idx").on(table.leaderId),
+    index("lottery_groups_lottery_date_idx").on(table.lotteryDate),
+    index("lottery_groups_status_idx").on(table.status),
+    unique("lottery_groups_leader_date_unq").on(
+      table.leaderId,
+      table.lotteryDate,
+    ),
+  ],
+);
+
+// Member fairness scores (stub for Phase 1)
+export const memberFairnessScores = createTable(
+  "member_fairness_scores",
+  {
+    memberId: integer("member_id")
+      .references(() => members.id, { onDelete: "cascade" })
+      .primaryKey(),
+    last6WeeksAverage: real("last_6_weeks_average").notNull().default(0), // Simple average of time quality points
+    currentStreak: integer("current_streak").notNull().default(0), // Consecutive good times
+    priorityScore: real("priority_score").notNull().default(0), // Calculated field
+    lastUpdated: timestamp("last_updated", { withTimezone: true })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+  },
+  (table) => [
+    index("member_fairness_scores_priority_idx").on(table.priorityScore),
+    index("member_fairness_scores_updated_idx").on(table.lastUpdated),
+  ],
+);
+
+// Define relations for lottery tables
+export const lotteryEntriesRelations = relations(lotteryEntries, ({ one }) => ({
+  member: one(members, {
+    fields: [lotteryEntries.memberId],
+    references: [members.id],
+  }),
+  submittedByMember: one(members, {
+    fields: [lotteryEntries.submittedBy],
+    references: [members.id],
+  }),
+  assignedTimeBlock: one(timeBlocks, {
+    fields: [lotteryEntries.assignedTimeBlockId],
+    references: [timeBlocks.id],
+  }),
+}));
+
+export const lotteryGroupsRelations = relations(lotteryGroups, ({ one }) => ({
+  leader: one(members, {
+    fields: [lotteryGroups.leaderId],
+    references: [members.id],
+  }),
+}));
+
+export const memberFairnessScoresRelations = relations(
+  memberFairnessScores,
+  ({ one }) => ({
+    member: one(members, {
+      fields: [memberFairnessScores.memberId],
+      references: [members.id],
+    }),
+  }),
+);

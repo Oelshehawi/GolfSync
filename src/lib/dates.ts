@@ -9,7 +9,7 @@
  * This replaces the mess of date functions in utils.ts with a clean, consistent API
  */
 
-import { format } from "date-fns";
+import { format, addDays as dateFnsAddDays } from "date-fns";
 import { toZonedTime, fromZonedTime, formatInTimeZone } from "date-fns-tz";
 
 // Hardcoded timezone for BC, Canada (handles PST/PDT automatically)
@@ -333,4 +333,34 @@ export function formatDaysOfWeek(days: number[]): string {
     .sort((a, b) => a - b)
     .map((day) => dayNames[day])
     .join(", ");
+}
+
+/**
+ * Adds days to a date and returns a new Date object
+ * Handles both Date objects and YYYY-MM-DD strings
+ */
+export function addDays(date: Date | string, days: number): Date {
+  if (typeof date === "string") {
+    const parsedDate = parseDate(date);
+    return dateFnsAddDays(parsedDate, days);
+  }
+  return dateFnsAddDays(date, days);
+}
+
+/**
+ * Formats a date to YYYY-MM-DD string for database storage
+ * Works with both Date objects and YYYY-MM-DD strings
+ * Always returns the date in BC timezone
+ */
+export function formatDateToYYYYMMDD(date: Date | string): string {
+  if (typeof date === "string") {
+    // If it's already in YYYY-MM-DD format, validate and return
+    if (/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      return date;
+    }
+    // Otherwise, parse the string to a date
+    const parsedDate = new Date(date);
+    return formatInTimeZone(parsedDate, BC_TIMEZONE, "yyyy-MM-dd");
+  }
+  return formatInTimeZone(date, BC_TIMEZONE, "yyyy-MM-dd");
 }
