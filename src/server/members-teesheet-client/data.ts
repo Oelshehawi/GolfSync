@@ -4,8 +4,6 @@ import { db } from "~/server/db";
 import {
   timeBlockMembers,
   members,
-  timeBlocks,
-  teesheetConfigs,
 } from "~/server/db/schema";
 import { and, eq, or, gt, asc, gte } from "drizzle-orm";
 import { auth } from "@clerk/nextjs/server";

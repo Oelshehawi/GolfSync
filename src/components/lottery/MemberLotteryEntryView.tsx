@@ -132,7 +132,6 @@ export function LotteryEntryView({
       setIsCancelling(true);
       try {
         const result = await cancelLotteryEntry(
-          member.username,
           Number(entry.id),
         );
         if (result.success) {

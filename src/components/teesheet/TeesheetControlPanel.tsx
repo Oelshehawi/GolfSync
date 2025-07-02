@@ -1,7 +1,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Button } from "~/components/ui/button";
-import { Settings, Activity, RotateCw, Bug } from "lucide-react";
+import { Settings, Activity, RotateCw, Bug, Dice1 } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -72,6 +72,20 @@ export function TeesheetControlPanel({
     }
   };
 
+  // Get lottery button text based on date status
+  const getLotteryButtonText = () => {
+    const today = new Date();
+    const teesheetDate = new Date(teesheet.date);
+
+    if (teesheetDate < today) {
+      return "View Lottery";
+    } else if (teesheetDate.toDateString() === today.toDateString()) {
+      return "Manage Lottery";
+    } else {
+      return "Setup Lottery";
+    }
+  };
+
   return (
     <div className="mb-4 flex items-center justify-between">
       <div className="flex items-center gap-2">
@@ -94,6 +108,17 @@ export function TeesheetControlPanel({
           >
             <RotateCw className="mr-2 h-4 w-4" />
             Finish Check-in
+          </Button>
+        </Link>
+
+        <Link href={`/admin/lottery/${teesheet.date}`} passHref>
+          <Button
+            variant="outline"
+            size="sm"
+            className="shadow-sm hover:text-white"
+          >
+            <Dice1 className="mr-2 h-4 w-4" />
+            {getLotteryButtonText()}
           </Button>
         </Link>
 
@@ -130,7 +155,7 @@ export function TeesheetControlPanel({
               key={config.id}
               onClick={() => handleConfigChange(config.id)}
               disabled={config.id === teesheet.configId || isUpdating}
-              className="cursor-pointer transition-colors hover:bg-org-primary hover:text-white"
+              className="hover:bg-org-primary cursor-pointer transition-colors hover:text-white"
             >
               {config.name}
               {config.id === teesheet.configId && " (Current)"}

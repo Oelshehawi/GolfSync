@@ -12,8 +12,8 @@ import { Button } from "~/components/ui/button";
 import { Badge } from "~/components/ui/badge";
 import { Dice1, Plus, Calendar } from "lucide-react";
 import { formatDate } from "~/lib/dates";
-import { LotteryEntryForm } from "./LotteryEntryForm";
-import { LotteryEntryView } from "./LotteryEntryView";
+import { LotteryEntryForm } from "./MemberLotteryEntryForm";
+import { LotteryEntryView } from "./MemberLotteryEntryView";
 import type { LotteryEntryData } from "~/app/types/LotteryTypes";
 import type { Member } from "~/app/types/MemberTypes";
 

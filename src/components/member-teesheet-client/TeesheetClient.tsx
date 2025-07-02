@@ -20,7 +20,7 @@ import { PlayerDetailsDrawer } from "./PlayerDetailsDrawer";
 import { DateNavigationHeader } from "./DateNavigationHeader";
 import { TeesheetGrid } from "./TeesheetGrid";
 import { BookingDialogs } from "./BookingDialogs";
-import { LotteryView } from "../lottery/LotteryView";
+import { LotteryView } from "../lottery/MemberLotteryView";
 import toast from "react-hot-toast";
 import { isPast, getDateForDB } from "~/lib/dates";
 import { parse } from "date-fns";

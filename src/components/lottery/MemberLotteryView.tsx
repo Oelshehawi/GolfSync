@@ -1,6 +1,6 @@
 "use client";
 
-import { LotteryInterface } from "~/components/lottery/LotteryInterface";
+import { LotteryInterface } from "~/components/lottery/MemberLotteryInterface";
 import { DateNavigationHeader } from "../member-teesheet-client/DateNavigationHeader";
 import { DatePicker } from "../member-teesheet-client/DatePicker";
 import {

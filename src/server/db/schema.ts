@@ -886,6 +886,9 @@ export const lotteryGroups = createTable(
       .default(sql`CURRENT_TIMESTAMP`)
       .notNull(),
     processedAt: timestamp("processed_at", { withTimezone: true }),
+    assignedTimeBlockId: integer("assigned_time_block_id").references(
+      () => timeBlocks.id,
+    ),
     leaderMemberClass: varchar("leader_member_class", { length: 50 }).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .default(sql`CURRENT_TIMESTAMP`)
@@ -945,6 +948,10 @@ export const lotteryGroupsRelations = relations(lotteryGroups, ({ one }) => ({
   leader: one(members, {
     fields: [lotteryGroups.leaderId],
     references: [members.id],
+  }),
+  assignedTimeBlock: one(timeBlocks, {
+    fields: [lotteryGroups.assignedTimeBlockId],
+    references: [timeBlocks.id],
   }),
 }));
 

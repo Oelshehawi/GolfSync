@@ -396,10 +396,13 @@ export async function populateTimeBlocksWithRandomMembers(
   date: string,
 ) {
   try {
-
-
-    // Get all members in the organization
+    // Get all members in the organization (exclude RESIGNED, SUSPENDED, DINING)
     const allMembers = await db.query.members.findMany({
+      where: and(
+        sql`${members.class} != 'RESIGNED'`,
+        sql`${members.class} != 'SUSPENDED'`,
+        sql`${members.class} != 'DINING'`,
+      ),
     });
 
     if (allMembers.length === 0) {

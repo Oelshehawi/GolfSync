@@ -1,8 +1,14 @@
-"use server";
+import "server-only";
 
 import { db } from "~/server/db";
-import { lotteryEntries, lotteryGroups, members } from "~/server/db/schema";
-import { eq, and } from "drizzle-orm";
+import {
+  lotteryEntries,
+  lotteryGroups,
+  members,
+  teesheets,
+  timeBlocks,
+} from "~/server/db/schema";
+import { eq, and, sql, desc, asc, inArray } from "drizzle-orm";
 import { getAuthenticatedUser } from "~/lib/auth-server";
 import type { LotteryEntryData } from "~/app/types/LotteryTypes";
 
@@ -67,24 +73,179 @@ export async function getLotteryEntryData(
 }
 
 /**
- * Get the authenticated member's data
- * @returns Member data
+ * Get lottery statistics for a specific date
+ * @param date YYYY-MM-DD date string
  */
-export async function getMemberForLottery() {
+export async function getLotteryStatsForDate(date: string) {
   try {
-    const { sessionClaims } = await getAuthenticatedUser();
-
-    const member = await db.query.members.findFirst({
-      where: eq(members.id, Number(sessionClaims?.userId)),
+    // Get individual entries
+    const individualEntries = await db.query.lotteryEntries.findMany({
+      where: eq(lotteryEntries.lotteryDate, date),
+      with: {
+        member: true,
+      },
     });
 
-    if (!member) {
-      throw new Error("Member not found");
+    // Get group entries
+    const groupEntries = await db.query.lotteryGroups.findMany({
+      where: eq(lotteryGroups.lotteryDate, date),
+      with: {
+        leader: true,
+      },
+    });
+
+    // Calculate total players in groups
+    const totalGroupPlayers = groupEntries.reduce(
+      (sum, group) => sum + group.memberIds.length,
+      0,
+    );
+
+    // Get available slots for the date
+    const teesheet = await db.query.teesheets.findFirst({
+      where: eq(teesheets.date, date),
+      with: {
+        timeBlocks: true,
+      },
+    });
+
+    const availableSlots =
+      teesheet?.timeBlocks.reduce((sum, block) => sum + block.maxMembers, 0) ||
+      0;
+
+    // Determine processing status
+    const hasProcessedEntries =
+      individualEntries.some((entry) => entry.status === "ASSIGNED") ||
+      groupEntries.some((group) => group.status === "ASSIGNED");
+
+    const hasAssignedEntries =
+      individualEntries.some((entry) => entry.assignedTimeBlockId) ||
+      groupEntries.some((group) => group.processedAt);
+
+    let processingStatus: "pending" | "processing" | "completed";
+    if (hasAssignedEntries) {
+      processingStatus = "completed";
+    } else if (hasProcessedEntries) {
+      processingStatus = "processing";
+    } else {
+      processingStatus = "pending";
     }
 
-    return member;
+    return {
+      totalEntries: individualEntries.length + groupEntries.length,
+      individualEntries: individualEntries.length,
+      groupEntries: groupEntries.length,
+      totalPlayers: individualEntries.length + totalGroupPlayers,
+      availableSlots,
+      processingStatus,
+      entries: {
+        individual: individualEntries,
+        groups: groupEntries,
+      },
+    };
   } catch (error) {
-    console.error("Error getting member for lottery:", error);
+    console.error("Error getting lottery stats:", error);
+    throw error;
+  }
+}
+
+/**
+ * Get all lottery entries for a date with member details
+ */
+export async function getLotteryEntriesForDate(date: string) {
+  try {
+    const individualEntries = await db.query.lotteryEntries.findMany({
+      where: eq(lotteryEntries.lotteryDate, date),
+      with: {
+        member: true,
+        submittedByMember: true,
+        assignedTimeBlock: true,
+      },
+      orderBy: [asc(lotteryEntries.submissionTimestamp)],
+    });
+
+    const groupEntries = await db.query.lotteryGroups.findMany({
+      where: eq(lotteryGroups.lotteryDate, date),
+      with: {
+        leader: true,
+      },
+      orderBy: [asc(lotteryGroups.submissionTimestamp)],
+    });
+
+    // For group entries, get member details for all members in the group
+    const groupEntriesWithMembers = await Promise.all(
+      groupEntries.map(async (group) => {
+        const groupMembers = await db.query.members.findMany({
+          where: inArray(members.id, group.memberIds),
+        });
+        return {
+          ...group,
+          members: groupMembers,
+        };
+      }),
+    );
+
+    return {
+      individual: individualEntries,
+      groups: groupEntriesWithMembers,
+    };
+  } catch (error) {
+    console.error("Error getting lottery entries for date:", error);
+    throw error;
+  }
+}
+
+/**
+ * Get available time blocks for a specific date
+ */
+export async function getAvailableTimeBlocksForDate(date: string) {
+  try {
+    const teesheet = await db.query.teesheets.findFirst({
+      where: eq(teesheets.date, date),
+      with: {
+        timeBlocks: {
+          with: {
+            timeBlockMembers: {
+              with: {
+                member: true,
+              },
+            },
+            timeBlockGuests: {
+              with: {
+                guest: true,
+                invitedByMember: true,
+              },
+            },
+            fills: true,
+          },
+          orderBy: [asc(timeBlocks.startTime)],
+        },
+      },
+    });
+
+    if (!teesheet) {
+      return [];
+    }
+
+    // Calculate available spots for each time block
+    const timeBlocksWithAvailability = teesheet.timeBlocks.map((block) => {
+      const currentOccupancy =
+        block.timeBlockMembers.length +
+        block.timeBlockGuests.length +
+        block.fills.length;
+
+      const availableSpots = block.maxMembers - currentOccupancy;
+
+      return {
+        ...block,
+        currentOccupancy,
+        availableSpots,
+        isAvailable: availableSpots > 0,
+      };
+    });
+
+    return timeBlocksWithAvailability;
+  } catch (error) {
+    console.error("Error getting available time blocks:", error);
     throw error;
   }
 }
