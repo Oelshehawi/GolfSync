@@ -402,6 +402,16 @@ export async function populateTimeBlocksWithRandomMembers(
         sql`${members.class} != 'RESIGNED'`,
         sql`${members.class} != 'SUSPENDED'`,
         sql`${members.class} != 'DINING'`,
+        sql`${members.class} != 'STAFF PLAY'`,
+        sql`${members.class} != 'MANAGEMENT'`,
+        sql`${members.class} != 'MGMT / PRO'`,
+        sql`${members.class} != 'HONORARY MALE'`,
+        sql`${members.class} != 'HONORARY FEMALE'`,
+        sql`${members.class} != 'PRIVILEGED MALE'`,
+        sql`${members.class} != 'PRIVILEGED FEMALE'`,
+        sql`${members.class} != 'SENIOR RETIRED MALE'`,
+        sql`${members.class} != 'SENIOR RETIRED FEMALE'`,
+        sql`${members.class} != 'LEAVE OF ABSENCE'`,
       ),
     });
 

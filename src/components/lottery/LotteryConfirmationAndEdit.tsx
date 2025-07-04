@@ -29,6 +29,8 @@ import { TIME_WINDOWS } from "~/app/types/LotteryTypes";
 import { formatTime12Hour, formatDate } from "~/lib/dates";
 import { LotteryAssignmentStats } from "./LotteryAssignmentStats";
 import { LotteryAllEntries } from "./LotteryAllEntries";
+import { calculateDynamicTimeWindows } from "~/lib/lottery-utils";
+import type { TeesheetConfig } from "~/app/types/TeeSheetTypes";
 
 interface LotteryConfirmationAndEditProps {
   date: string;
@@ -41,6 +43,8 @@ interface LotteryConfirmationAndEditProps {
   }>;
   initialLotteryEntries: any;
   initialTimeBlocks: any;
+  restrictions: any[];
+  config: TeesheetConfig;
 }
 
 interface LotteryEntryData {
@@ -58,7 +62,10 @@ interface ClientSideAssignment {
   memberClasses?: { name: string; class: string; id: number }[];
   memberClass?: string;
   preferredWindow?: string;
+  alternateWindow?: string | null;
   size: number;
+  // Assignment quality tracking
+  assignmentQuality?: "preferred" | "alternate" | "fallback" | null;
   // Client-side state
   originalTimeBlockId?: number | null;
   currentTimeBlockId?: number | null;
@@ -113,6 +120,45 @@ const getShortMemberClass = (memberClass: string) => {
   return classMap[memberClass] || memberClass.substring(0, 3).toUpperCase();
 };
 
+// Helper function to get assignment quality badge
+const getAssignmentQualityBadge = (
+  quality: "preferred" | "alternate" | "fallback" | null | undefined,
+) => {
+  if (!quality) return null;
+
+  switch (quality) {
+    case "preferred":
+      return (
+        <Badge
+          variant="default"
+          className="bg-green-100 text-xs text-green-800"
+        >
+          ✅ Got Preferred
+        </Badge>
+      );
+    case "alternate":
+      return (
+        <Badge
+          variant="secondary"
+          className="bg-yellow-100 text-xs text-yellow-800"
+        >
+          ⚠️ Got Alternate
+        </Badge>
+      );
+    case "fallback":
+      return (
+        <Badge
+          variant="destructive"
+          className="bg-red-100 text-xs text-red-800"
+        >
+          ❌ Fallback Time
+        </Badge>
+      );
+    default:
+      return null;
+  }
+};
+
 // Individual Member Card Component (Horizontal)
 function MemberCard({
   member,
@@ -159,6 +205,7 @@ function GroupCard({
   isHighlighted,
   onGroupClick,
   compact = false,
+  showTimePreference = false,
 }: {
   entry: ClientSideAssignment;
   isSelected: boolean;
@@ -166,6 +213,7 @@ function GroupCard({
   selectedMemberId?: number;
   onGroupClick: () => void;
   compact?: boolean;
+  showTimePreference?: boolean;
 }) {
   return (
     <div
@@ -184,19 +232,36 @@ function GroupCard({
         onClick={onGroupClick}
       >
         <Users className={`text-blue-600 ${compact ? "h-3 w-3" : "h-3 w-3"}`} />
-        <span className={`font-semibold ${compact ? "text-xs" : "text-xs"}`}>
-          Group ({entry.size})
-        </span>
-        {isSelected && (
-          <Badge variant="outline" className="text-xs">
-            Selected
-          </Badge>
-        )}
-        {entry.hasChanges && (
-          <Badge variant="secondary" className="text-xs">
-            Modified
-          </Badge>
-        )}
+        <div className="flex-1">
+          <span className={`font-semibold ${compact ? "text-xs" : "text-xs"}`}>
+            Group ({entry.size})
+          </span>
+          {showTimePreference && entry.preferredWindow && (
+            <div className="mt-1 text-xs text-blue-600">
+              <Clock className="mr-1 inline h-3 w-3" />
+              {entry.preferredWindow}
+              {entry.alternateWindow && (
+                <span className="ml-1 text-gray-500">
+                  / {entry.alternateWindow}
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+        <div className="flex gap-1">
+          {isSelected && (
+            <Badge variant="outline" className="text-xs">
+              Selected
+            </Badge>
+          )}
+          {entry.hasChanges && (
+            <Badge variant="secondary" className="text-xs">
+              Modified
+            </Badge>
+          )}
+          {entry.assignmentQuality &&
+            getAssignmentQualityBadge(entry.assignmentQuality)}
+        </div>
       </div>
 
       {/* Horizontal member layout - non-clickable */}
@@ -226,12 +291,14 @@ function IndividualCard({
   isHighlighted,
   onClick,
   compact = false,
+  showTimePreference = false,
 }: {
   entry: ClientSideAssignment;
   isSelected: boolean;
   isHighlighted: boolean;
   onClick: () => void;
   compact?: boolean;
+  showTimePreference?: boolean;
 }) {
   return (
     <div
@@ -255,6 +322,17 @@ function IndividualCard({
           <div className={`text-xs text-gray-600`}>
             {getShortMemberClass(entry.memberClass || "")}
           </div>
+          {showTimePreference && entry.preferredWindow && (
+            <div className="mt-1 text-xs text-blue-600">
+              <Clock className="mr-1 inline h-3 w-3" />
+              {entry.preferredWindow}
+              {entry.alternateWindow && (
+                <span className="ml-1 text-gray-500">
+                  / {entry.alternateWindow}
+                </span>
+              )}
+            </div>
+          )}
         </div>
         <div className="flex gap-1">
           {isSelected && (
@@ -267,6 +345,8 @@ function IndividualCard({
               Modified
             </Badge>
           )}
+          {entry.assignmentQuality &&
+            getAssignmentQualityBadge(entry.assignmentQuality)}
         </div>
       </div>
     </div>
@@ -281,6 +361,9 @@ function TimeBlockCard({
   selectedItem,
   onTimeBlockClick,
   onEntryClick,
+  restrictions,
+  bookingDate,
+  entries,
 }: {
   block: TimeBlockWithAssignments;
   isHighlighted: boolean;
@@ -288,12 +371,59 @@ function TimeBlockCard({
   selectedItem: SelectedItem | null;
   onTimeBlockClick: () => void;
   onEntryClick: (entryId: string) => void;
+  restrictions: any[];
+  bookingDate: string;
+  entries: LotteryEntryData;
 }) {
   const currentOccupancy = block.assignments.reduce(
     (sum, assignment) => sum + assignment.size,
     0,
   );
   const availableSpots = Math.max(0, block.maxMembers - currentOccupancy);
+
+  // Check if the selected item has restrictions for this time block
+  let restrictionWarning = null;
+  if (selectedItem) {
+    const selectedEntry = [...entries.individual, ...entries.groups].find(
+      (e) => e.id.toString() === selectedItem.entryId,
+    );
+
+    if (selectedEntry) {
+      if (selectedEntry.isGroup && selectedEntry.memberClasses) {
+        const groupCheck = checkGroupRestrictions(
+          selectedEntry.memberClasses,
+          block.startTime,
+          bookingDate,
+          restrictions,
+        );
+        if (!groupCheck.canAssign) {
+          restrictionWarning = (
+            <RestrictionWarning
+              restrictions={groupCheck.violatedRestrictions}
+              blockedMembers={groupCheck.blockedMembers}
+              canOverride={true}
+            />
+          );
+        }
+      } else if (!selectedEntry.isGroup && selectedEntry.memberClass) {
+        const memberCheck = checkMemberRestrictions(
+          selectedEntry.entryId,
+          selectedEntry.memberClass,
+          block.startTime,
+          bookingDate,
+          restrictions,
+        );
+        if (!memberCheck.canAssign) {
+          restrictionWarning = (
+            <RestrictionWarning
+              restrictions={memberCheck.violatedRestrictions}
+              canOverride={true}
+            />
+          );
+        }
+      }
+    }
+  }
 
   return (
     <div
@@ -326,6 +456,9 @@ function TimeBlockCard({
           </Badge>
         )}
       </div>
+
+      {/* Restriction warning */}
+      {restrictionWarning && <div className="mb-2">{restrictionWarning}</div>}
 
       {/* Horizontal layout for assignments */}
       <div className="flex flex-wrap gap-1">
@@ -366,12 +499,145 @@ function TimeBlockCard({
   );
 }
 
+// Helper function to check if a member can be assigned to a time block
+const checkMemberRestrictions = (
+  memberId: number,
+  memberClass: string,
+  timeBlockStartTime: string,
+  bookingDate: string,
+  restrictions: any[],
+): { canAssign: boolean; violatedRestrictions: any[] } => {
+  const violatedRestrictions = [];
+
+  for (const restriction of restrictions) {
+    if (restriction.restrictionCategory !== "MEMBER_CLASS") continue;
+    if (restriction.restrictionType !== "TIME") continue;
+    if (!restriction.isActive) continue;
+
+    // Check if restriction applies to this member class
+    const appliesToMemberClass =
+      !restriction.memberClasses?.length ||
+      restriction.memberClasses.includes(memberClass);
+
+    if (!appliesToMemberClass) continue;
+
+    // Check day of week
+    const bookingDateObj = new Date(bookingDate);
+    const dayOfWeek = bookingDateObj.getDay();
+    const appliesToDay =
+      !restriction.daysOfWeek?.length ||
+      restriction.daysOfWeek.includes(dayOfWeek);
+
+    if (!appliesToDay) continue;
+
+    // Check time range
+    const withinTimeRange =
+      timeBlockStartTime >= (restriction.startTime || "00:00") &&
+      timeBlockStartTime <= (restriction.endTime || "23:59");
+
+    if (withinTimeRange) {
+      // Check date range if applicable
+      if (restriction.startDate && restriction.endDate) {
+        const formatDateToYYYYMMDD = (date: string | Date): string => {
+          if (typeof date === "string") {
+            return date.split("T")[0] || date;
+          }
+          return date.toISOString().split("T")[0] || "";
+        };
+
+        const startDateStr = formatDateToYYYYMMDD(restriction.startDate);
+        const endDateStr = formatDateToYYYYMMDD(restriction.endDate);
+        const withinDateRange =
+          bookingDate >= startDateStr && bookingDate <= endDateStr;
+
+        if (withinDateRange) {
+          violatedRestrictions.push(restriction);
+        }
+      } else {
+        violatedRestrictions.push(restriction);
+      }
+    }
+  }
+
+  return {
+    canAssign: violatedRestrictions.length === 0,
+    violatedRestrictions,
+  };
+};
+
+// Helper function to check if a group can be assigned to a time block
+const checkGroupRestrictions = (
+  groupMembers: { id: number; class: string; name: string }[],
+  timeBlockStartTime: string,
+  bookingDate: string,
+  restrictions: any[],
+): {
+  canAssign: boolean;
+  violatedRestrictions: any[];
+  blockedMembers: string[];
+} => {
+  const allViolatedRestrictions = [];
+  const blockedMembers = [];
+
+  for (const member of groupMembers) {
+    const memberCheck = checkMemberRestrictions(
+      member.id,
+      member.class,
+      timeBlockStartTime,
+      bookingDate,
+      restrictions,
+    );
+
+    if (!memberCheck.canAssign) {
+      allViolatedRestrictions.push(...memberCheck.violatedRestrictions);
+      blockedMembers.push(member.name);
+    }
+  }
+
+  return {
+    canAssign: blockedMembers.length === 0,
+    violatedRestrictions: allViolatedRestrictions,
+    blockedMembers,
+  };
+};
+
+// Helper component to display restriction warnings
+function RestrictionWarning({
+  restrictions,
+  blockedMembers,
+  canOverride = true,
+}: {
+  restrictions: any[];
+  blockedMembers?: string[];
+  canOverride?: boolean;
+}) {
+  if (restrictions.length === 0) return null;
+
+  return (
+    <div className="flex items-center gap-2 text-xs text-red-600">
+      <AlertCircle className="h-3 w-3" />
+      <span>
+        {blockedMembers?.length
+          ? `${blockedMembers.join(", ")} blocked by restrictions`
+          : "Time restricted"}
+      </span>
+      {canOverride && (
+        <Badge variant="outline" className="text-xs">
+          Override Available
+        </Badge>
+      )}
+    </div>
+  );
+}
+
 export function LotteryConfirmationAndEdit({
   date,
   onComplete,
   members,
   initialLotteryEntries,
   initialTimeBlocks,
+  restrictions,
+  config,
 }: LotteryConfirmationAndEditProps) {
   const [entries, setEntries] = useState<LotteryEntryData>(
     initialLotteryEntries,
@@ -418,6 +684,7 @@ export function LotteryConfirmationAndEdit({
             size: 1,
             memberClass: entry.member.class,
             preferredWindow: entry.preferredWindow,
+            alternateWindow: entry.alternateWindow,
             originalTimeBlockId: null,
             currentTimeBlockId: null,
             hasChanges: false,
@@ -448,6 +715,7 @@ export function LotteryConfirmationAndEdit({
             size: group.memberIds.length,
             memberClass: group.leader.class,
             preferredWindow: group.preferredWindow,
+            alternateWindow: group.alternateWindow,
             originalTimeBlockId: null,
             currentTimeBlockId: null,
             hasChanges: false,
@@ -472,6 +740,14 @@ export function LotteryConfirmationAndEdit({
               entryId: entry.id,
               isGroup: false,
               memberClass: entry.member.class,
+              preferredWindow: entry.preferredWindow,
+              alternateWindow: entry.alternateWindow,
+              assignmentQuality: getAssignmentQuality(
+                block.startTime,
+                entry.preferredWindow,
+                null,
+                entry.alternateWindow,
+              ),
               size: 1,
               originalTimeBlockId: block.id,
               currentTimeBlockId: block.id,
@@ -506,6 +782,14 @@ export function LotteryConfirmationAndEdit({
               memberIds: group.memberIds,
               memberClasses: memberClasses,
               memberClass: group.leader.class,
+              preferredWindow: group.preferredWindow,
+              alternateWindow: group.alternateWindow,
+              assignmentQuality: getAssignmentQuality(
+                block.startTime,
+                group.preferredWindow,
+                null,
+                group.alternateWindow,
+              ),
               size: group.memberIds.length,
               originalTimeBlockId: block.id,
               currentTimeBlockId: block.id,
@@ -1012,6 +1296,101 @@ export function LotteryConfirmationAndEdit({
     return timeWindow ? timeWindow.label : window;
   };
 
+  // Helper function to determine assignment quality
+  const getAssignmentQuality = (
+    assignedTime: string,
+    preferredWindow: string | null,
+    specificTimePreference: string | null,
+    alternateWindow: string | null,
+  ): "preferred" | "alternate" | "fallback" => {
+    // If they requested a specific time and got it, that's preferred
+    if (specificTimePreference && assignedTime === specificTimePreference) {
+      return "preferred";
+    }
+
+    // Check if the assigned time falls within the preferred window
+    if (preferredWindow) {
+      const preferredWindowInfo = TIME_WINDOWS.find(
+        (w) => w.value === preferredWindow,
+      );
+      if (preferredWindowInfo) {
+        const assignedTimeMinutes = parseInt(assignedTime.replace(":", ""));
+        const assignedMinutes =
+          Math.floor(assignedTimeMinutes / 100) * 60 +
+          (assignedTimeMinutes % 100);
+
+        if (
+          assignedMinutes >= preferredWindowInfo.startMinutes &&
+          assignedMinutes < preferredWindowInfo.endMinutes
+        ) {
+          return "preferred";
+        }
+      }
+    }
+
+    // Check if it falls within the alternate window
+    if (alternateWindow) {
+      const alternateWindowInfo = TIME_WINDOWS.find(
+        (w) => w.value === alternateWindow,
+      );
+      if (alternateWindowInfo) {
+        const assignedTimeMinutes = parseInt(assignedTime.replace(":", ""));
+        const assignedMinutes =
+          Math.floor(assignedTimeMinutes / 100) * 60 +
+          (assignedTimeMinutes % 100);
+
+        if (
+          assignedMinutes >= alternateWindowInfo.startMinutes &&
+          assignedMinutes < alternateWindowInfo.endMinutes
+        ) {
+          return "alternate";
+        }
+      }
+    }
+
+    // Otherwise it's a fallback assignment
+    return "fallback";
+  };
+
+  // Helper function to get assignment quality badge
+  const getAssignmentQualityBadge = (
+    quality: "preferred" | "alternate" | "fallback" | null | undefined,
+  ) => {
+    if (!quality) return null;
+
+    switch (quality) {
+      case "preferred":
+        return (
+          <Badge
+            variant="default"
+            className="bg-green-100 text-xs text-green-800"
+          >
+            ✅ Got Preferred
+          </Badge>
+        );
+      case "alternate":
+        return (
+          <Badge
+            variant="secondary"
+            className="bg-yellow-100 text-xs text-yellow-800"
+          >
+            ⚠️ Got Alternate
+          </Badge>
+        );
+      case "fallback":
+        return (
+          <Badge
+            variant="destructive"
+            className="bg-red-100 text-xs text-red-800"
+          >
+            ❌ Fallback Time
+          </Badge>
+        );
+      default:
+        return null;
+    }
+  };
+
   const totalUnassigned = unassignedEntries.length;
   const assignedIndividual = entries.individual.filter(
     (e) => e.status === "ASSIGNED",
@@ -1125,6 +1504,7 @@ export function LotteryConfirmationAndEdit({
                               ? handleGroupClick(entry.id)
                               : handleEntryClick(entry.id)
                           }
+                          showTimePreference={true}
                         />
                       ) : (
                         <IndividualCard
@@ -1132,6 +1512,7 @@ export function LotteryConfirmationAndEdit({
                           isSelected={selectedItem?.entryId === entry.id}
                           isHighlighted={false}
                           onClick={() => handleEntryClick(entry.id)}
+                          showTimePreference={true}
                         />
                       )}
                     </div>
@@ -1184,6 +1565,9 @@ export function LotteryConfirmationAndEdit({
                         selectedItem={selectedItem}
                         onTimeBlockClick={() => handleTimeBlockClick(block.id)}
                         onEntryClick={handleEntryClick}
+                        restrictions={restrictions}
+                        bookingDate={date}
+                        entries={entries}
                       />
                     ))}
                   </div>
@@ -1200,6 +1584,7 @@ export function LotteryConfirmationAndEdit({
             onCancelEntry={handleCancelEntry}
             getTimeWindowLabel={getTimeWindowLabel}
             members={members}
+            config={config}
           />
         </TabsContent>
       </Tabs>

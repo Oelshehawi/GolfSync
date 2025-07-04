@@ -24,12 +24,12 @@ export async function updateMemberSpeedProfileAction(
     // Validate admin priority adjustment range
     if (
       updates.adminPriorityAdjustment !== undefined &&
-      (updates.adminPriorityAdjustment < -25 ||
-        updates.adminPriorityAdjustment > 25)
+      (updates.adminPriorityAdjustment < -10 ||
+        updates.adminPriorityAdjustment > 10)
     ) {
       return {
         success: false,
-        error: "Admin priority adjustment must be between -25 and +25",
+        error: "Admin priority adjustment must be between -10 and +10",
       };
     }
 
@@ -42,7 +42,7 @@ export async function updateMemberSpeedProfileAction(
       .where(eq(memberSpeedProfiles.memberId, memberId));
 
     // Revalidate relevant pages
-    revalidatePath("/admin/lottery/speed-profiles");
+    revalidatePath("/admin/lottery/member-profiles");
     revalidatePath("/admin/lottery/[date]", "page");
 
     return {
@@ -76,7 +76,7 @@ export async function resetAllAdminPriorityAdjustmentsAction(): Promise<{
       .where(sql`admin_priority_adjustment != 0`);
 
     // Revalidate relevant pages
-    revalidatePath("/admin/lottery/speed-profiles");
+    revalidatePath("/admin/lottery/member-profiles");
     revalidatePath("/admin/lottery/[date]", "page");
 
     return {
@@ -115,12 +115,12 @@ export async function bulkUpdateSpeedProfilesAction(
           // Validate admin priority adjustment range
           if (
             update.adminPriorityAdjustment !== undefined &&
-            (update.adminPriorityAdjustment < -25 ||
-              update.adminPriorityAdjustment > 25)
+            (update.adminPriorityAdjustment < -10 ||
+              update.adminPriorityAdjustment > 10)
           ) {
             return {
               success: false,
-              error: "Admin priority adjustment must be between -25 and +25",
+              error: "Admin priority adjustment must be between -10 and +10",
             };
           }
 
@@ -164,7 +164,7 @@ export async function bulkUpdateSpeedProfilesAction(
 
     if (updatedCount > 0) {
       // Revalidate relevant pages
-      revalidatePath("/admin/lottery/speed-profiles");
+      revalidatePath("/admin/lottery/member-profiles");
       revalidatePath("/admin/lottery/[date]", "page");
     }
 

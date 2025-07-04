@@ -31,13 +31,13 @@ export type ActionResult = {
  * Submit a lottery entry (individual or group based on memberIds)
  */
 export async function submitLotteryEntry(
-  userId: string,
+  userId: number,
   data: LotteryEntryFormData,
 ): Promise<ActionResult> {
   try {
     // Get member data
     const member = await db.query.members.findFirst({
-      where: eq(members.username, userId),
+      where: eq(members.id, userId),
     });
 
     if (!member) {
@@ -89,9 +89,7 @@ export async function submitLotteryEntry(
         lotteryDate: data.lotteryDate,
         memberIds: allMemberIds,
         preferredWindow: data.preferredWindow,
-        specificTimePreference: data.specificTimePreference || null,
         alternateWindow: data.alternateWindow || null,
-        leaderMemberClass: member.class,
         status: "PENDING",
       };
 
@@ -124,9 +122,7 @@ export async function submitLotteryEntry(
         memberId: member.id,
         lotteryDate: data.lotteryDate,
         preferredWindow: data.preferredWindow,
-        specificTimePreference: data.specificTimePreference || null,
         alternateWindow: data.alternateWindow || null,
-        memberClass: member.class,
         status: "PENDING",
       };
 
@@ -215,7 +211,6 @@ export async function updateLotteryEntry(
   data: {
     entryId: number;
     preferredWindow: string;
-    specificTimePreference?: string;
     alternateWindow?: string;
   },
 ): Promise<ActionResult> {
@@ -256,7 +251,6 @@ export async function updateLotteryEntry(
       .update(lotteryEntries)
       .set({
         preferredWindow: data.preferredWindow,
-        specificTimePreference: data.specificTimePreference || null,
         alternateWindow: data.alternateWindow || null,
         updatedAt: new Date(),
       })
@@ -278,7 +272,6 @@ export async function updateLotteryEntryAdmin(
   entryId: number,
   data: {
     preferredWindow: string;
-    specificTimePreference?: string;
     alternateWindow?: string;
   },
 ): Promise<ActionResult> {
@@ -300,7 +293,6 @@ export async function updateLotteryEntryAdmin(
       .update(lotteryEntries)
       .set({
         preferredWindow: data.preferredWindow,
-        specificTimePreference: data.specificTimePreference || null,
         alternateWindow: data.alternateWindow || null,
         updatedAt: new Date(),
       })
@@ -322,7 +314,6 @@ export async function updateLotteryGroupAdmin(
   groupId: number,
   data: {
     preferredWindow: string;
-    specificTimePreference?: string;
     alternateWindow?: string;
     memberIds: number[];
   },
@@ -353,7 +344,6 @@ export async function updateLotteryGroupAdmin(
       .update(lotteryGroups)
       .set({
         preferredWindow: data.preferredWindow,
-        specificTimePreference: data.specificTimePreference || null,
         alternateWindow: data.alternateWindow || null,
         memberIds: data.memberIds,
         updatedAt: new Date(),
@@ -490,14 +480,14 @@ export async function assignLotteryEntry(
 }
 
 /**
- * Calculate priority score for a lottery entry based on fairness, speed, and admin adjustments
+ * Calculate fairness score for a lottery entry based on fairness, speed, and admin adjustments
  */
-async function calculatePriorityScore(
+async function calculateFairnessScore(
   entry: any,
   timeWindows: any[],
   isGroup: boolean = false,
 ): Promise<number> {
-  let priorityScore = 0;
+  let fairnessScore = 0;
 
   // Get the member ID (either direct member or group leader)
   const memberId = isGroup ? entry.leaderId : entry.memberId;
@@ -508,10 +498,10 @@ async function calculatePriorityScore(
   });
 
   if (fairnessData) {
-    priorityScore += fairnessData.priorityScore || 0;
+    fairnessScore += fairnessData.fairnessScore || 0;
   }
 
-  // 2. Speed bonus for morning slots (FAST: +10, AVERAGE: +5, SLOW: +0)
+  // 2. Speed bonus for morning slots (FAST: +5, AVERAGE: +2, SLOW: +0)
   const speedData = await db.query.memberSpeedProfiles.findFirst({
     where: eq(memberSpeedProfiles.memberId, memberId),
   });
@@ -519,8 +509,8 @@ async function calculatePriorityScore(
   if (speedData && entry.preferredWindow) {
     // Define speed bonuses directly to avoid import issues
     const speedBonuses = [
-      { window: "MORNING", fastBonus: 10, averageBonus: 5, slowBonus: 0 },
-      { window: "MIDDAY", fastBonus: 5, averageBonus: 2, slowBonus: 0 },
+      { window: "MORNING", fastBonus: 5, averageBonus: 2, slowBonus: 0 },
+      { window: "MIDDAY", fastBonus: 2, averageBonus: 1, slowBonus: 0 },
       { window: "AFTERNOON", fastBonus: 0, averageBonus: 0, slowBonus: 0 },
       { window: "EVENING", fastBonus: 0, averageBonus: 0, slowBonus: 0 },
     ];
@@ -532,33 +522,24 @@ async function calculatePriorityScore(
     if (speedBonus) {
       switch (speedData.speedTier) {
         case "FAST":
-          priorityScore += speedBonus.fastBonus;
+          fairnessScore += speedBonus.fastBonus;
           break;
         case "AVERAGE":
-          priorityScore += speedBonus.averageBonus;
+          fairnessScore += speedBonus.averageBonus;
           break;
         case "SLOW":
-          priorityScore += speedBonus.slowBonus;
+          fairnessScore += speedBonus.slowBonus;
           break;
       }
     }
   }
 
-  // 3. Admin priority adjustment (-25 to +25)
+  // 3. Admin priority adjustment (-10 to +10)
   if (speedData?.adminPriorityAdjustment) {
-    priorityScore += speedData.adminPriorityAdjustment;
+    fairnessScore += speedData.adminPriorityAdjustment;
   }
 
-  // 4. Small bonus for early submission (max 5 points)
-  const submissionTime = new Date(entry.submissionTimestamp).getTime();
-  const dayStart = new Date(entry.submissionTimestamp);
-  dayStart.setHours(0, 0, 0, 0);
-  const timeSinceStart = submissionTime - dayStart.getTime();
-  const maxDayMs = 24 * 60 * 60 * 1000; // 24 hours in ms
-  const submissionBonus = Math.max(0, 5 * (1 - timeSinceStart / maxDayMs));
-  priorityScore += submissionBonus;
-
-  return priorityScore;
+  return fairnessScore;
 }
 
 /**
@@ -571,11 +552,15 @@ export async function processLotteryForDate(
   config: TeesheetConfig,
 ): Promise<ActionResult> {
   try {
-    const { getLotteryEntriesForDate, getAvailableTimeBlocksForDate } =
-      await import("~/server/lottery/data");
+    const {
+      getLotteryEntriesForDate,
+      getAvailableTimeBlocksForDate,
+      getActiveTimeRestrictionsForDate,
+    } = await import("~/server/lottery/data");
 
     const entries = await getLotteryEntriesForDate(date);
     const availableBlocks = await getAvailableTimeBlocksForDate(date);
+    const timeRestrictions = await getActiveTimeRestrictionsForDate(date);
 
     const availableBlocksOnly = availableBlocks.filter(
       (block) => block.availableSpots > 0,
@@ -593,29 +578,41 @@ export async function processLotteryForDate(
     let processedCount = 0;
     const now = new Date();
 
-    // Calculate priority scores for all entries
+    // Simple logging for algorithm decisions
+    console.log(`🎲 Starting lottery processing for ${date}`);
+    console.log(
+      `📊 Available blocks: ${availableBlocksOnly.length}, Total slots: ${availableBlocksOnly.reduce((sum, b) => sum + b.availableSpots, 0)}`,
+    );
+    console.log(
+      `🏌️ Total entries: ${entries.individual.length} individual + ${entries.groups.length} groups`,
+    );
+    console.log(
+      `⏰ Processing groups first, then individuals for better fairness`,
+    );
+
+    // Calculate fairness scores for all entries
     const individualEntriesWithPriority = await Promise.all(
       entries.individual.map(async (entry) => {
-        const priority = await calculatePriorityScore(
+        const priority = await calculateFairnessScore(
           entry,
           timeWindows,
           false,
         );
-        return { ...entry, priorityScore: priority };
+        return { ...entry, fairnessScore: priority };
       }),
     );
 
     const groupEntriesWithPriority = await Promise.all(
       entries.groups.map(async (group) => {
-        const priority = await calculatePriorityScore(group, timeWindows, true);
-        return { ...group, priorityScore: priority };
+        const priority = await calculateFairnessScore(group, timeWindows, true);
+        return { ...group, fairnessScore: priority };
       }),
     );
 
-    // Sort by priority score (highest first), then by submission time as tiebreaker
+    // Sort by fairness score (highest first), then by submission time as tiebreaker
     individualEntriesWithPriority.sort((a, b) => {
-      if (b.priorityScore !== a.priorityScore) {
-        return b.priorityScore - a.priorityScore;
+      if (b.fairnessScore !== a.fairnessScore) {
+        return b.fairnessScore - a.fairnessScore;
       }
       return (
         new Date(a.submissionTimestamp).getTime() -
@@ -624,8 +621,8 @@ export async function processLotteryForDate(
     });
 
     groupEntriesWithPriority.sort((a, b) => {
-      if (b.priorityScore !== a.priorityScore) {
-        return b.priorityScore - a.priorityScore;
+      if (b.fairnessScore !== a.fairnessScore) {
+        return b.fairnessScore - a.fairnessScore;
       }
       return (
         new Date(a.submissionTimestamp).getTime() -
@@ -633,55 +630,58 @@ export async function processLotteryForDate(
       );
     });
 
-    // Process individual entries in priority order
-    for (const entry of individualEntriesWithPriority) {
-      if (entry.status !== "PENDING") continue;
-
-      // Find available block that matches preferences
-      const suitableBlock = findSuitableTimeBlock(
-        availableBlocksOnly,
-        entry.preferredWindow as TimeWindow,
-        entry.alternateWindow as TimeWindow | null,
-        entry.specificTimePreference,
-        config,
-      );
-
-      if (suitableBlock && suitableBlock.availableSpots > 0) {
-        // ONLY assign the entry - DO NOT create timeBlockMembers record yet
-        await db
-          .update(lotteryEntries)
-          .set({
-            status: "ASSIGNED",
-            assignedTimeBlockId: suitableBlock.id,
-            processedAt: now,
-            updatedAt: now,
-          })
-          .where(eq(lotteryEntries.id, entry.id));
-
-        // Update available spots for next assignment calculations
-        suitableBlock.availableSpots -= 1;
-        processedCount++;
-      }
-    }
-
-    // Process group entries in priority order
+    // Process group entries FIRST in priority order (groups are harder to accommodate)
     for (const group of groupEntriesWithPriority) {
       if (group.status !== "PENDING") continue;
 
       const groupSize = group.memberIds.length;
 
-      // Find available block that can accommodate the entire group
-      const suitableBlock = availableBlocksOnly.find(
-        (block) =>
-          block.availableSpots >= groupSize &&
-          matchesTimePreference(
-            block,
-            group.preferredWindow as TimeWindow,
-            group.alternateWindow as TimeWindow | null,
-            group.specificTimePreference,
-            config,
-          ),
+      // Check restrictions for ALL group members, not just leader
+      const allowedBlocks = availableBlocksOnly.filter((block) => {
+        // Block must have enough spots
+        if (block.availableSpots < groupSize) return false;
+
+        // Block must be allowed for ALL group members
+        return group.members.every((member) => {
+          const memberAllowedBlocks = filterBlocksByRestrictions(
+            [block],
+            { memberId: member.id, memberClass: member.class },
+            date,
+            timeRestrictions,
+          );
+          return memberAllowedBlocks.length > 0;
+        });
+      });
+
+      // Try to find a block that matches time preferences
+      let suitableBlock = allowedBlocks.find((block) =>
+        matchesTimePreference(
+          block,
+          group.preferredWindow as TimeWindow,
+          group.alternateWindow as TimeWindow | null,
+          config,
+        ),
       );
+
+      // Fallback: if no preference match, try any allowed block
+      if (!suitableBlock) {
+        suitableBlock = allowedBlocks.find(
+          (block) => block.availableSpots >= groupSize,
+        );
+      }
+
+      // Final fallback: try ANY available block (even if restrictions violated)
+      if (!suitableBlock) {
+        const anyAvailableBlock = availableBlocksOnly.find(
+          (block) => block.availableSpots >= groupSize,
+        );
+        if (anyAvailableBlock) {
+          console.log(
+            `⚠️ Group fallback assignment: Group ${group.id} assigned to ${anyAvailableBlock.startTime} (may violate restrictions)`,
+          );
+          suitableBlock = anyAvailableBlock;
+        }
+      }
 
       if (suitableBlock) {
         // ONLY assign the group - DO NOT create timeBlockMembers records yet
@@ -701,17 +701,78 @@ export async function processLotteryForDate(
       }
     }
 
+    // Process individual entries SECOND in priority order (fill remaining spots)
+    for (const entry of individualEntriesWithPriority) {
+      if (entry.status !== "PENDING") continue;
+
+      // Find available block that matches preferences
+      const suitableResult = findSuitableTimeBlock(
+        availableBlocksOnly,
+        entry.preferredWindow as TimeWindow,
+        entry.alternateWindow as TimeWindow | null,
+        config,
+        {
+          memberId: entry.memberId,
+          memberClass: entry.member.class,
+        },
+        date,
+        timeRestrictions,
+      );
+
+      if (suitableResult.block && suitableResult.block.availableSpots > 0) {
+        // ONLY assign the entry - DO NOT create timeBlockMembers record yet
+        await db
+          .update(lotteryEntries)
+          .set({
+            status: "ASSIGNED",
+            assignedTimeBlockId: suitableResult.block.id,
+            processedAt: now,
+            updatedAt: now,
+          })
+          .where(eq(lotteryEntries.id, entry.id));
+
+        // Update available spots for next assignment calculations
+        suitableResult.block.availableSpots -= 1;
+        processedCount++;
+      }
+    }
+
     // Update fairness scores after processing
     if (processedCount > 0) {
       await updateFairnessScoresAfterProcessing(date, config);
     }
+
+    // Final results logging
+    const totalEntries = entries.individual.length + entries.groups.length;
+    const assignedGroups = entries.groups.filter(
+      (g) => g.status === "ASSIGNED",
+    ).length;
+    const assignedIndividuals = entries.individual.filter(
+      (e) => e.status === "ASSIGNED",
+    ).length;
+    const remainingSlots = availableBlocksOnly.reduce(
+      (sum, b) => sum + b.availableSpots,
+      0,
+    );
+
+    console.log(`✅ Lottery processing completed for ${date}`);
+    console.log(
+      `📈 Results: ${processedCount}/${totalEntries} entries assigned (${Math.round((processedCount / totalEntries) * 100)}%)`,
+    );
+    console.log(
+      `👥 Groups: ${assignedGroups}/${entries.groups.length} assigned`,
+    );
+    console.log(
+      `🏌️ Individuals: ${assignedIndividuals}/${entries.individual.length} assigned`,
+    );
+    console.log(`🎯 Remaining slots: ${remainingSlots}`);
 
     revalidatePath("/admin/lottery");
     return {
       success: true,
       data: {
         processedCount,
-        totalEntries: entries.individual.length + entries.groups.length,
+        totalEntries,
         message: `Enhanced algorithm processed ${processedCount} entries using priority scoring`,
       },
     };
@@ -806,27 +867,132 @@ export async function initializeFairnessScore(
   memberId: number,
 ): Promise<ActionResult> {
   try {
-    const currentMonth = new Date().toISOString().slice(0, 7); // "2024-01" format
+    const currentMonth = new Date().toISOString().slice(0, 7);
 
-    const [score] = await db
-      .insert(memberFairnessScores)
-      .values({
+    // Check if record already exists
+    const existing = await db.query.memberFairnessScores.findFirst({
+      where: and(
+        eq(memberFairnessScores.memberId, memberId),
+        eq(memberFairnessScores.currentMonth, currentMonth),
+      ),
+    });
+
+    if (!existing) {
+      await db.insert(memberFairnessScores).values({
         memberId,
         currentMonth,
         totalEntriesMonth: 0,
         preferencesGrantedMonth: 0,
         preferenceFulfillmentRate: 0,
         daysWithoutGoodTime: 0,
-        priorityScore: 0,
-      })
-      .onConflictDoNothing()
-      .returning();
+        fairnessScore: 0,
+      });
+    }
 
-    return { success: true, data: score };
+    return { success: true };
   } catch (error) {
     console.error("Error initializing fairness score:", error);
     return { success: false, error: "Failed to initialize fairness score" };
   }
+}
+
+/**
+ * Helper function to format date to YYYY-MM-DD for consistent comparison
+ */
+function formatDateToYYYYMMDD(date: string | Date): string {
+  if (typeof date === "string") {
+    return date.split("T")[0] || date; // Handle ISO strings
+  }
+  return date.toISOString().split("T")[0] || "";
+}
+
+/**
+ * Filter timeblocks by member class TIME restrictions
+ */
+function filterBlocksByRestrictions(
+  blocks: any[],
+  memberInfo: { memberId: number; memberClass: string },
+  bookingDate: string,
+  timeRestrictions: any[],
+): any[] {
+  return blocks.filter((block) => {
+    // Check each time restriction
+    for (const restriction of timeRestrictions) {
+      if (restriction.restrictionCategory !== "MEMBER_CLASS") continue;
+      if (restriction.restrictionType !== "TIME") continue;
+      if (!restriction.isActive) continue;
+
+      // Check if restriction applies to this member class
+      const appliesToMemberClass =
+        !restriction.memberClasses?.length ||
+        restriction.memberClasses.includes(memberInfo.memberClass);
+
+      if (!appliesToMemberClass) continue;
+
+      // Check day of week
+      const bookingDateObj = new Date(bookingDate);
+      const dayOfWeek = bookingDateObj.getDay();
+      const appliesToDay =
+        !restriction.daysOfWeek?.length ||
+        restriction.daysOfWeek.includes(dayOfWeek);
+
+      if (!appliesToDay) continue;
+
+      // Check time range
+      const blockTime = block.startTime; // "HH:MM"
+      const withinTimeRange =
+        blockTime >= (restriction.startTime || "00:00") &&
+        blockTime <= (restriction.endTime || "23:59");
+
+      if (withinTimeRange) {
+        // Check date range if applicable
+        if (restriction.startDate && restriction.endDate) {
+          const startDateStr = formatDateToYYYYMMDD(restriction.startDate);
+          const endDateStr = formatDateToYYYYMMDD(restriction.endDate);
+          const withinDateRange =
+            bookingDate >= startDateStr && bookingDate <= endDateStr;
+
+          if (withinDateRange) {
+            return false; // Block this timeblock
+          }
+        } else {
+          return false; // Block this timeblock (no date range = always applies)
+        }
+      }
+    }
+
+    return true; // No restrictions block this timeblock
+  });
+}
+
+/**
+ * Helper to find a block within preferred/alternate windows
+ */
+function findBlockInWindow(
+  availableBlocks: any[],
+  preferredWindow: TimeWindow,
+  alternateWindow: TimeWindow | null,
+  config: TeesheetConfig,
+): any | null {
+  // Try preferred window
+  const preferredMatch = availableBlocks.find(
+    (block) =>
+      matchesTimePreference(block, preferredWindow, null, config) &&
+      block.availableSpots > 0,
+  );
+  if (preferredMatch) return preferredMatch;
+
+  // Then try alternate window
+  if (alternateWindow) {
+    const alternateMatch = availableBlocks.find(
+      (block) =>
+        matchesTimePreference(block, alternateWindow, null, config) &&
+        block.availableSpots > 0,
+    );
+    if (alternateMatch) return alternateMatch;
+  }
+
+  return null;
 }
 
 /**
@@ -836,37 +1002,69 @@ function findSuitableTimeBlock(
   availableBlocks: any[],
   preferredWindow: TimeWindow,
   alternateWindow: TimeWindow | null,
-  specificTime: string | null,
   config: TeesheetConfig,
-) {
-  // First try to match specific time preference
-  if (specificTime) {
-    const specificMatch = availableBlocks.find(
-      (block) => block.startTime === specificTime && block.availableSpots > 0,
-    );
-    if (specificMatch) return specificMatch;
-  }
-
-  // Then try preferred window
-  const preferredMatch = availableBlocks.find(
-    (block) =>
-      matchesTimePreference(block, preferredWindow, null, null, config) &&
-      block.availableSpots > 0,
+  memberInfo: { memberId: number; memberClass: string },
+  bookingDate: string,
+  timeRestrictions: any[],
+): { block: any | null; wasBlockedByRestrictions: boolean } {
+  // First try with all blocks (no restriction filtering)
+  const unrestrictedBlock = findBlockInWindow(
+    availableBlocks,
+    preferredWindow,
+    alternateWindow,
+    config,
   );
-  if (preferredMatch) return preferredMatch;
 
-  // Finally try alternate window
-  if (alternateWindow) {
-    const alternateMatch = availableBlocks.find(
-      (block) =>
-        matchesTimePreference(block, alternateWindow, null, null, config) &&
-        block.availableSpots > 0,
-    );
-    if (alternateMatch) return alternateMatch;
+  // Then try with restriction filtering
+  const allowedBlocks = filterBlocksByRestrictions(
+    availableBlocks,
+    memberInfo,
+    bookingDate,
+    timeRestrictions,
+  );
+  const restrictedBlock = findBlockInWindow(
+    allowedBlocks,
+    preferredWindow,
+    alternateWindow,
+    config,
+  );
+
+  // If we found the same block both ways, no restrictions affected the choice
+  if (
+    unrestrictedBlock &&
+    restrictedBlock &&
+    unrestrictedBlock.id === restrictedBlock.id
+  ) {
+    return { block: restrictedBlock, wasBlockedByRestrictions: false };
   }
 
-  // Return any available block as last resort
-  return availableBlocks.find((block) => block.availableSpots > 0);
+  // If we found a block with restrictions, restrictions affected the choice
+  if (restrictedBlock) {
+    return { block: restrictedBlock, wasBlockedByRestrictions: true };
+  }
+
+  // Last resort: try to find any available block in allowed blocks
+  const anyAllowedBlock = allowedBlocks.find(
+    (block) => block.availableSpots > 0,
+  );
+  if (anyAllowedBlock) {
+    return { block: anyAllowedBlock, wasBlockedByRestrictions: true };
+  }
+
+  // Final fallback: assign to ANY available block (even if it violates restrictions)
+  // This ensures no entry is left unassigned if ANY slot exists
+  const anyAvailableBlock = availableBlocks.find(
+    (block) => block.availableSpots > 0,
+  );
+  if (anyAvailableBlock) {
+    console.log(
+      `⚠️ Fallback assignment: Member ${memberInfo.memberId} assigned to ${anyAvailableBlock.startTime} (may violate restrictions)`,
+    );
+    return { block: anyAvailableBlock, wasBlockedByRestrictions: true };
+  }
+
+  // No suitable block found
+  return { block: null, wasBlockedByRestrictions: false };
 }
 
 /**
@@ -876,13 +1074,8 @@ function matchesTimePreference(
   block: any,
   timeWindow: TimeWindow,
   alternateWindow: TimeWindow | null,
-  specificTime: string | null,
   config: TeesheetConfig,
 ): boolean {
-  if (specificTime && block.startTime === specificTime) {
-    return true;
-  }
-
   // Get dynamic time windows from config
   const dynamicWindows = calculateDynamicTimeWindows(config);
   const blockTime = parseInt(block.startTime.replace(":", ""));
@@ -926,160 +1119,226 @@ export async function createTestLotteryEntries(
   date: string,
 ): Promise<ActionResult> {
   try {
-    // Get many members to use for test entries - need enough to fill a full teesheet
-    // Exclude RESIGNED, SUSPENDED, and DINING members
+    // Get active members from database - exclude STAFF and MANAGEMENT classes
     const allMembers = await db.query.members.findMany({
       where: and(
         sql`${members.class} != 'RESIGNED'`,
         sql`${members.class} != 'SUSPENDED'`,
         sql`${members.class} != 'DINING'`,
+        sql`${members.class} != 'STAFF'`,
+        sql`${members.class} != 'STAFF PLAY'`,
+        sql`${members.class} != 'MANAGEMENT'`,
+        sql`${members.class} != 'MGMT / PRO'`,
+        sql`${members.class} != 'HONORARY MALE'`,
+        sql`${members.class} != 'HONORARY FEMALE'`,
+        sql`${members.class} != 'PRIVILEGED MALE'`,
+        sql`${members.class} != 'PRIVILEGED FEMALE'`,
+        sql`${members.class} != 'SENIOR RETIRED MALE'`,
+        sql`${members.class} != 'SENIOR RETIRED FEMALE'`,
+        sql`${members.class} != 'LEAVE OF ABSENCE'`,
       ),
-      limit: 80, // Increased to support many more entries
+      limit: 200, // Get more members for realistic data
     });
 
-    if (allMembers.length < 15) {
+    if (allMembers.length < 20) {
       return {
         success: false,
-        error: "Need at least 15 members to create comprehensive test entries",
+        error: "Need at least 20 members to create realistic test entries",
       };
     }
 
     const testEntries: LotteryEntryInsert[] = [];
     const testGroups: LotteryGroupInsert[] = [];
 
-    // Create individual entries with various preferences - use the current time window system
-    const timeWindows: TimeWindow[] = [
-      "MORNING",
-      "MIDDAY",
-      "AFTERNOON",
-      "EVENING",
-    ];
-    // More specific times to cover 7am-4pm range
-    const specificTimes = [
-      "07:00",
-      "07:15",
-      "07:30",
-      "07:45",
-      "08:00",
-      "08:15",
-      "08:30",
-      "08:45",
-      "09:00",
-      "09:15",
-      "09:30",
-      "09:45",
-      "10:00",
-      "10:15",
-      "10:30",
-      "10:45",
-      "11:00",
-      "11:15",
-      "11:30",
-      "11:45",
-      "12:00",
-      "12:15",
-      "12:30",
-      "12:45",
-      "13:00",
-      "13:15",
-      "13:30",
-      "13:45",
-      "14:00",
-      "14:15",
-      "14:30",
-      "14:45",
-      "15:00",
-      "15:15",
-      "15:30",
-      "15:45",
-      "16:00",
-    ];
+    // Realistic time windows from CSV analysis
+    const timeWindows: TimeWindow[] = ["MORNING", "MIDDAY", "AFTERNOON"];
 
-    // Calculate 70/30 split: 70% group entries, 30% individual entries
-    // Aim for about 20-25 total entries (realistic for a day)
-    const targetTotalEntries = Math.min(25, Math.floor(allMembers.length / 3));
-    const targetGroupEntries = Math.floor(targetTotalEntries * 0.7); // 70%
-    const targetIndividualEntries = targetTotalEntries - targetGroupEntries; // 30%
+    // Target: Create more realistic high-demand day
+    const availableMembers = allMembers.length;
 
-    let memberIndex = 0;
+    // Base targets for a busy day (aim for 60-80% member participation)
+    let targetIndividualEntries = Math.max(
+      5,
+      Math.floor(availableMembers * 0.1),
+    ); // 10% individuals
+    let targetPairGroups = Math.max(8, Math.floor(availableMembers * 0.08)); // ~16% in pairs
+    let targetThreeGroups = Math.max(12, Math.floor(availableMembers * 0.12)); // ~36% in threesomes
+    let targetFourGroups = Math.max(15, Math.floor(availableMembers * 0.15)); // ~60% in foursomes
 
-    // Create group entries first (70% of total entries)
-    while (
-      testGroups.length < targetGroupEntries &&
-      memberIndex < allMembers.length - 1
-    ) {
-      const groupSize = Math.min(
-        2 + Math.floor(Math.random() * 3), // Random size 2-4
-        allMembers.length - memberIndex,
-      );
+    // Calculate members needed
+    const calculateMembersNeeded = () =>
+      targetIndividualEntries +
+      targetPairGroups * 2 +
+      targetThreeGroups * 3 +
+      targetFourGroups * 4;
 
-      if (groupSize < 2 || memberIndex + groupSize > allMembers.length) break;
-
-      const leader = allMembers[memberIndex];
-      if (!leader) break;
-
-      const groupMembers = [leader.id];
-      for (let i = 1; i < groupSize; i++) {
-        const member = allMembers[memberIndex + i];
-        if (member) groupMembers.push(member.id);
+    // Scale down if we exceed available members, but keep realistic proportions
+    while (calculateMembersNeeded() > availableMembers) {
+      // Reduce proportionally to maintain realistic distribution
+      if (targetFourGroups > 10) {
+        targetFourGroups = Math.max(10, targetFourGroups - 2);
+      } else if (targetThreeGroups > 8) {
+        targetThreeGroups = Math.max(8, targetThreeGroups - 2);
+      } else if (targetPairGroups > 5) {
+        targetPairGroups = Math.max(5, targetPairGroups - 1);
+      } else if (targetIndividualEntries > 3) {
+        targetIndividualEntries = Math.max(3, targetIndividualEntries - 1);
+      } else {
+        break; // Can't reduce further
       }
-
-      if (groupMembers.length >= 2) {
-        const randomWindow =
-          timeWindows[Math.floor(Math.random() * timeWindows.length)]!;
-        const alternateWindow =
-          timeWindows[Math.floor(Math.random() * timeWindows.length)]!;
-        const useSpecificTime = Math.random() > 0.6; // 40% chance for groups
-
-        testGroups.push({
-          leaderId: leader.id,
-          lotteryDate: date,
-          memberIds: groupMembers,
-          preferredWindow: randomWindow,
-          alternateWindow:
-            randomWindow !== alternateWindow ? alternateWindow : null,
-          specificTimePreference: useSpecificTime
-            ? specificTimes[Math.floor(Math.random() * specificTimes.length)]!
-            : null,
-          leaderMemberClass: leader.class,
-          status: "PENDING",
-        });
-      }
-
-      memberIndex += groupSize;
     }
 
-    // Create individual entries with remaining members (30% of total entries)
-    let individualCount = 0;
-    while (
-      individualCount < targetIndividualEntries &&
-      memberIndex < allMembers.length
-    ) {
-      const member = allMembers[memberIndex];
-      if (!member) break;
+    // Debug logging
+    console.log(`🎯 Test data generation for ${date}:`);
+    console.log(
+      `👥 Available members: ${availableMembers} (excluded STAFF/MANAGEMENT)`,
+    );
+    console.log(
+      `📊 Target distribution: ${targetIndividualEntries} individuals, ${targetPairGroups} pairs, ${targetThreeGroups} threesomes, ${targetFourGroups} foursomes`,
+    );
+    console.log(`🧮 Members needed: ${calculateMembersNeeded()}`);
 
-      const randomWindow =
-        timeWindows[Math.floor(Math.random() * timeWindows.length)]!;
-      const alternateWindow =
-        timeWindows[Math.floor(Math.random() * timeWindows.length)]!;
-      const useSpecificTime = Math.random() > 0.5; // 50% chance of specific time
+    // Shuffle members to avoid bias
+    const shuffledMembers = [...allMembers].sort(() => Math.random() - 0.5);
+    let memberIndex = 0;
+
+    // Helper function to get realistic time preference based on demand
+    const getTimePreference = () => {
+      const rand = Math.random();
+      let preferredWindow: TimeWindow = "MORNING";
+      let alternateWindow: TimeWindow | null = null;
+
+      if (rand < 0.6) {
+        // 60% want high-demand morning times (creates conflicts)
+        preferredWindow = "MORNING";
+        alternateWindow = Math.random() > 0.5 ? "MIDDAY" : null;
+      } else if (rand < 0.8) {
+        // 20% want medium-demand times
+        preferredWindow = Math.random() > 0.5 ? "MORNING" : "MIDDAY";
+        alternateWindow =
+          preferredWindow === "MORNING" ? "MIDDAY" : "AFTERNOON";
+      } else {
+        // 20% want afternoon times (easier to accommodate)
+        preferredWindow = Math.random() > 0.5 ? "MIDDAY" : "AFTERNOON";
+        alternateWindow = "AFTERNOON";
+      }
+
+      return { preferredWindow, alternateWindow };
+    };
+
+    // Create 4-player groups
+    console.log(`🏌️‍♂️ Creating ${targetFourGroups} 4-player groups...`);
+    for (
+      let i = 0;
+      i < targetFourGroups && memberIndex < shuffledMembers.length - 3;
+      i++
+    ) {
+      const leader = shuffledMembers[memberIndex]!;
+      const groupMembers = [
+        leader.id,
+        shuffledMembers[memberIndex + 1]!.id,
+        shuffledMembers[memberIndex + 2]!.id,
+        shuffledMembers[memberIndex + 3]!.id,
+      ];
+
+      const { preferredWindow, alternateWindow } = getTimePreference();
+
+      testGroups.push({
+        leaderId: leader.id,
+        lotteryDate: date,
+        memberIds: groupMembers,
+        preferredWindow,
+        alternateWindow,
+        status: "PENDING",
+      });
+
+      memberIndex += 4;
+    }
+    console.log(
+      `✅ Created ${testGroups.length} 4-player groups, memberIndex now: ${memberIndex}`,
+    );
+
+    // Create 3-player groups
+    console.log(`🏌️‍♂️ Creating ${targetThreeGroups} 3-player groups...`);
+    for (
+      let i = 0;
+      i < targetThreeGroups && memberIndex < shuffledMembers.length - 2;
+      i++
+    ) {
+      const leader = shuffledMembers[memberIndex]!;
+      const groupMembers = [
+        leader.id,
+        shuffledMembers[memberIndex + 1]!.id,
+        shuffledMembers[memberIndex + 2]!.id,
+      ];
+
+      const { preferredWindow, alternateWindow } = getTimePreference();
+
+      testGroups.push({
+        leaderId: leader.id,
+        lotteryDate: date,
+        memberIds: groupMembers,
+        preferredWindow,
+        alternateWindow,
+        status: "PENDING",
+      });
+
+      memberIndex += 3;
+    }
+    console.log(
+      `✅ Total groups after 3-player: ${testGroups.length}, memberIndex now: ${memberIndex}`,
+    );
+
+    // Create 2-player groups
+    console.log(`🏌️‍♂️ Creating ${targetPairGroups} 2-player groups...`);
+    for (
+      let i = 0;
+      i < targetPairGroups && memberIndex < shuffledMembers.length - 1;
+      i++
+    ) {
+      const leader = shuffledMembers[memberIndex]!;
+      const groupMembers = [leader.id, shuffledMembers[memberIndex + 1]!.id];
+
+      const { preferredWindow, alternateWindow } = getTimePreference();
+
+      testGroups.push({
+        leaderId: leader.id,
+        lotteryDate: date,
+        memberIds: groupMembers,
+        preferredWindow,
+        alternateWindow,
+        status: "PENDING",
+      });
+
+      memberIndex += 2;
+    }
+    console.log(
+      `✅ Total groups after 2-player: ${testGroups.length}, memberIndex now: ${memberIndex}`,
+    );
+
+    // Create individual entries
+    console.log(`🏌️‍♂️ Creating ${targetIndividualEntries} individual entries...`);
+    for (
+      let i = 0;
+      i < targetIndividualEntries && memberIndex < shuffledMembers.length;
+      i++
+    ) {
+      const member = shuffledMembers[memberIndex]!;
+      const { preferredWindow, alternateWindow } = getTimePreference();
 
       testEntries.push({
         memberId: member.id,
         lotteryDate: date,
-        preferredWindow: randomWindow,
-        alternateWindow:
-          randomWindow !== alternateWindow ? alternateWindow : null,
-        specificTimePreference: useSpecificTime
-          ? specificTimes[Math.floor(Math.random() * specificTimes.length)]!
-          : null,
-        memberClass: member.class,
+        preferredWindow,
+        alternateWindow,
         status: "PENDING",
       });
 
       memberIndex++;
-      individualCount++;
     }
+    console.log(
+      `✅ Created ${testEntries.length} individual entries, memberIndex now: ${memberIndex}`,
+    );
 
     // Insert all test entries
     let createdEntries = 0;
@@ -1101,15 +1360,28 @@ export async function createTestLotteryEntries(
       createdGroups = results.length;
     }
 
+    const totalPlayers =
+      createdEntries +
+      testGroups.reduce((sum, group) => sum + group.memberIds.length, 0);
+
+    // Final summary
+    console.log(`🎯 Test data creation complete!`);
+    console.log(
+      `📊 Final results: ${createdGroups} groups + ${createdEntries} individuals = ${createdGroups + createdEntries} total entries`,
+    );
+    console.log(`👥 Total players: ${totalPlayers}`);
+    console.log(
+      `📈 Breakdown: ${testGroups.filter((g) => g.memberIds.length === 4).length} foursomes, ${testGroups.filter((g) => g.memberIds.length === 3).length} threesomes, ${testGroups.filter((g) => g.memberIds.length === 2).length} pairs`,
+    );
+
     revalidatePath("/admin/lottery");
     return {
       success: true,
       data: {
         createdEntries,
         createdGroups,
-        totalPlayers:
-          createdEntries +
-          testGroups.reduce((sum, group) => sum + group.memberIds.length, 0),
+        totalPlayers,
+        message: `Created realistic test data matching CSV patterns: ${createdGroups} groups (${testGroups.filter((g) => g.memberIds.length === 4).length} foursomes, ${testGroups.filter((g) => g.memberIds.length === 3).length} threesomes, ${testGroups.filter((g) => g.memberIds.length === 2).length} pairs) + ${createdEntries} individuals = ${createdGroups + createdEntries} total entries with ${totalPlayers} players.`,
       },
     };
   } catch (error) {
@@ -1238,8 +1510,10 @@ async function updateFairnessScoresAfterProcessing(
   config: TeesheetConfig,
 ): Promise<void> {
   try {
-    const { getLotteryEntriesForDate } = await import("~/server/lottery/data");
+    const { getLotteryEntriesForDate, getActiveTimeRestrictionsForDate } =
+      await import("~/server/lottery/data");
     const entries = await getLotteryEntriesForDate(date);
+    const timeRestrictions = await getActiveTimeRestrictionsForDate(date);
     const currentMonth = new Date().toISOString().slice(0, 7); // "2024-01" format
     const timeWindows = calculateDynamicTimeWindows(config);
 
@@ -1255,12 +1529,46 @@ async function updateFairnessScoresAfterProcessing(
 
         if (!assignedTimeBlock) continue;
 
-        // Check if they got their preferred window
-        const preferenceGranted = checkPreferenceMatch(
+        // Check if they got their preferred window, considering restrictions
+        // Determine if this assignment was affected by restrictions
+        const memberInfo = {
+          memberId: entry.memberId,
+          memberClass: entry.member.class,
+        };
+
+        // Check what blocks were available without restrictions
+        const allBlocks = [
+          { startTime: assignedTimeBlock.startTime, id: assignedTimeBlock.id },
+        ];
+        const allowedBlocks = filterBlocksByRestrictions(
+          allBlocks,
+          memberInfo,
+          date,
+          timeRestrictions,
+        );
+
+        // If the assigned block wouldn't be allowed without restrictions,
+        // or if member has any active restrictions, consider this affected by restrictions
+        const wasBlockedByRestrictions =
+          allowedBlocks.length === 0 ||
+          timeRestrictions.some((restriction) => {
+            const appliesToMemberClass =
+              !restriction.memberClasses?.length ||
+              restriction.memberClasses.includes(memberInfo.memberClass);
+            return (
+              restriction.isActive &&
+              restriction.restrictionCategory === "MEMBER_CLASS" &&
+              restriction.restrictionType === "TIME" &&
+              appliesToMemberClass
+            );
+          });
+
+        const preferenceGranted = checkPreferenceMatchWithRestrictions(
           assignedTimeBlock.startTime,
           entry.preferredWindow,
           entry.alternateWindow,
           timeWindows,
+          wasBlockedByRestrictions,
         );
 
         // Update or create fairness score record
@@ -1281,16 +1589,16 @@ async function updateFairnessScoresAfterProcessing(
             ? 0
             : existingScore.daysWithoutGoodTime + 1;
 
-          // Calculate new priority score (higher = more priority needed)
-          let newPriorityScore = 0;
+          // Calculate new fairness score (higher = more priority needed)
+          let newFairnessScore = 0;
           if (newFulfillmentRate < 0.5) {
             // Less than 50% fulfillment
-            newPriorityScore += 20;
+            newFairnessScore += 20;
           } else if (newFulfillmentRate < 0.7) {
             // Less than 70% fulfillment
-            newPriorityScore += 10;
+            newFairnessScore += 10;
           }
-          newPriorityScore += Math.min(newDaysWithoutGood * 2, 30); // +2 per day without good time, max 30
+          newFairnessScore += Math.min(newDaysWithoutGood * 2, 30); // +2 per day without good time, max 30
 
           await db
             .update(memberFairnessScores)
@@ -1299,7 +1607,7 @@ async function updateFairnessScoresAfterProcessing(
               preferencesGrantedMonth: newPreferencesGranted,
               preferenceFulfillmentRate: newFulfillmentRate,
               daysWithoutGoodTime: newDaysWithoutGood,
-              priorityScore: newPriorityScore,
+              fairnessScore: newFairnessScore,
               lastUpdated: new Date(),
             })
             .where(eq(memberFairnessScores.memberId, memberId));
@@ -1307,9 +1615,9 @@ async function updateFairnessScoresAfterProcessing(
           // Create new record
           const fulfillmentRate = preferenceGranted ? 1 : 0;
           const daysWithoutGood = preferenceGranted ? 0 : 1;
-          let priorityScore = 0;
+          let fairnessScore = 0;
           if (!preferenceGranted) {
-            priorityScore = 10; // Base score for not getting preference
+            fairnessScore = 10; // Base score for not getting preference
           }
 
           await db.insert(memberFairnessScores).values({
@@ -1319,7 +1627,8 @@ async function updateFairnessScoresAfterProcessing(
             preferencesGrantedMonth: preferenceGranted ? 1 : 0,
             preferenceFulfillmentRate: fulfillmentRate,
             daysWithoutGoodTime: daysWithoutGood,
-            priorityScore,
+            fairnessScore,
+            lastUpdated: new Date(),
           });
         }
       }
@@ -1337,12 +1646,34 @@ async function updateFairnessScoresAfterProcessing(
 
         if (!assignedTimeBlock) continue;
 
-        // Check if they got their preferred window
-        const preferenceGranted = checkPreferenceMatch(
+        // Check if they got their preferred window, considering restrictions
+        // For groups, check if ANY member was blocked by restrictions
+        const groupMemberInfo = {
+          memberId: group.leaderId,
+          memberClass: group.leader.class,
+        };
+
+        // Check if the group assignment was affected by restrictions from any member
+        const allBlocks = [
+          { startTime: assignedTimeBlock.startTime, id: assignedTimeBlock.id },
+        ];
+        const wasBlockedByRestrictions =
+          group.members?.some((member) => {
+            const memberAllowedBlocks = filterBlocksByRestrictions(
+              allBlocks,
+              { memberId: member.id, memberClass: member.class },
+              date,
+              timeRestrictions,
+            );
+            return memberAllowedBlocks.length === 0;
+          }) || false;
+
+        const preferenceGranted = checkPreferenceMatchWithRestrictions(
           assignedTimeBlock.startTime,
           group.preferredWindow,
           group.alternateWindow,
           timeWindows,
+          wasBlockedByRestrictions,
         );
 
         // Update fairness score for group leader (similar logic as individual)
@@ -1362,13 +1693,13 @@ async function updateFairnessScoresAfterProcessing(
             ? 0
             : existingScore.daysWithoutGoodTime + 1;
 
-          let newPriorityScore = 0;
+          let newFairnessScore = 0;
           if (newFulfillmentRate < 0.5) {
-            newPriorityScore += 20;
+            newFairnessScore += 20;
           } else if (newFulfillmentRate < 0.7) {
-            newPriorityScore += 10;
+            newFairnessScore += 10;
           }
-          newPriorityScore += Math.min(newDaysWithoutGood * 2, 30);
+          newFairnessScore += Math.min(newDaysWithoutGood * 2, 30);
 
           await db
             .update(memberFairnessScores)
@@ -1377,16 +1708,16 @@ async function updateFairnessScoresAfterProcessing(
               preferencesGrantedMonth: newPreferencesGranted,
               preferenceFulfillmentRate: newFulfillmentRate,
               daysWithoutGoodTime: newDaysWithoutGood,
-              priorityScore: newPriorityScore,
+              fairnessScore: newFairnessScore,
               lastUpdated: new Date(),
             })
             .where(eq(memberFairnessScores.memberId, memberId));
         } else {
           const fulfillmentRate = preferenceGranted ? 1 : 0;
           const daysWithoutGood = preferenceGranted ? 0 : 1;
-          let priorityScore = 0;
+          let fairnessScore = 0;
           if (!preferenceGranted) {
-            priorityScore = 10;
+            fairnessScore = 10;
           }
 
           await db.insert(memberFairnessScores).values({
@@ -1396,7 +1727,8 @@ async function updateFairnessScoresAfterProcessing(
             preferencesGrantedMonth: preferenceGranted ? 1 : 0,
             preferenceFulfillmentRate: fulfillmentRate,
             daysWithoutGoodTime: daysWithoutGood,
-            priorityScore,
+            fairnessScore,
+            lastUpdated: new Date(),
           });
         }
       }
@@ -1446,4 +1778,36 @@ function checkPreferenceMatch(
   }
 
   return false;
+}
+
+/**
+ * Enhanced preference checking that considers restrictions
+ * Per club policy: restrictions don't penalize fairness scores
+ */
+function checkPreferenceMatchWithRestrictions(
+  assignedTime: string,
+  preferredWindow: string,
+  alternateWindow: string | null,
+  timeWindows: any[],
+  wasBlockedByRestrictions: boolean = false,
+): boolean {
+  // First check if they got their preferred/alternate window
+  const preferenceGranted = checkPreferenceMatch(
+    assignedTime,
+    preferredWindow,
+    alternateWindow,
+    timeWindows,
+  );
+
+  if (preferenceGranted) {
+    return true; // Got their window
+  }
+
+  // If they didn't get their window BUT it was due to restrictions,
+  // treat as preference met (don't penalize for rule violations)
+  if (wasBlockedByRestrictions) {
+    return true; // Don't penalize for restrictions
+  }
+
+  return false; // Only penalize for availability issues
 }

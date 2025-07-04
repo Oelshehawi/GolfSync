@@ -33,13 +33,13 @@ import {
 } from "~/components/ui/select";
 import { Timer, TrendingUp, Clock, AlertTriangle, Save, X } from "lucide-react";
 import { toast } from "react-hot-toast";
-import { updateMemberSpeedProfileAction } from "~/server/lottery/speed-profiles-actions";
+import { updateMemberSpeedProfileAction } from "~/server/lottery/member-profiles-actions";
 import { formatDistanceToNow } from "date-fns";
 import type { MemberSpeedProfileView } from "~/app/types/LotteryTypes";
 
 const speedProfileSchema = z.object({
   speedTier: z.enum(["FAST", "AVERAGE", "SLOW"]),
-  adminPriorityAdjustment: z.number().min(-25).max(25),
+  adminPriorityAdjustment: z.number().min(-10).max(10),
   manualOverride: z.boolean(),
   notes: z.string().optional(),
 });
@@ -295,14 +295,14 @@ export function SpeedProfileEditDialog({
                     Admin Priority Adjustment
                   </FormLabel>
                   <FormDescription>
-                    Manually adjust lottery priority (-25 to +25 points).
+                    Manually adjust lottery priority (-10 to +10 points).
                     Positive values increase priority.
                   </FormDescription>
                   <FormControl>
                     <div className="space-y-3">
                       <Slider
-                        min={-25}
-                        max={25}
+                        min={-10}
+                        max={10}
                         step={1}
                         value={[field.value]}
                         onValueChange={(value) => field.onChange(value[0])}
@@ -310,7 +310,7 @@ export function SpeedProfileEditDialog({
                       />
                       <div className="flex items-center justify-between text-sm">
                         <span className="text-red-600">
-                          -25 (Lower Priority)
+                          -10 (Lower Priority)
                         </span>
                         <Badge
                           variant={
@@ -325,7 +325,7 @@ export function SpeedProfileEditDialog({
                           {watchedAdminAdjustment} points
                         </Badge>
                         <span className="text-green-600">
-                          +25 (Higher Priority)
+                          +10 (Higher Priority)
                         </span>
                       </div>
                     </div>

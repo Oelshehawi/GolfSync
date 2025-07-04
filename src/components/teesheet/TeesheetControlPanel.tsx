@@ -1,17 +1,32 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Button } from "~/components/ui/button";
-import { Settings, Activity, RotateCw, Bug, Dice1 } from "lucide-react";
+import {
+  Settings,
+  Activity,
+  RotateCw,
+  Bug,
+  Dice1,
+  UserPlus,
+} from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "~/components/ui/dialog";
 import { updateTeesheetConfigForDate } from "~/server/settings/actions";
 import toast from "react-hot-toast";
 import type { TeeSheet, TeesheetConfig } from "~/app/types/TeeSheetTypes";
 import { populateTimeBlocksWithRandomMembers } from "~/server/teesheet/actions";
+import { AdminLotteryEntryForm } from "~/components/lottery/AdminLotteryEntryForm";
 
 // Check if we're in development mode
 const isDev = process.env.NODE_ENV === "development";
@@ -29,6 +44,7 @@ export function TeesheetControlPanel({
 }: TeesheetControlPanelProps) {
   const [isUpdating, setIsUpdating] = useState(false);
   const [isPopulating, setIsPopulating] = useState(false);
+  const [showAdminEntryDialog, setShowAdminEntryDialog] = useState(false);
 
   const handleConfigChange = async (configId: number) => {
     if (configId === teesheet.configId) return;
@@ -120,6 +136,16 @@ export function TeesheetControlPanel({
           </Button>
         </Link>
 
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setShowAdminEntryDialog(true)}
+          className="shadow-sm hover:text-white"
+        >
+          <UserPlus className="mr-2 h-4 w-4" />
+          Create Entry
+        </Button>
+
         {/* Debug Button - Only shown in development */}
         {isDev && (
           <Button
@@ -161,6 +187,36 @@ export function TeesheetControlPanel({
           ))}
         </DropdownMenuContent>
       </DropdownMenu>
+
+      {/* Admin Lottery Entry Dialog */}
+      <Dialog
+        open={showAdminEntryDialog}
+        onOpenChange={setShowAdminEntryDialog}
+      >
+        <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
+          <DialogHeader className="sr-only">
+            <DialogTitle>Create Lottery Entry</DialogTitle>
+            <DialogDescription>
+              Create a lottery entry for any member
+            </DialogDescription>
+          </DialogHeader>
+          {(() => {
+            const currentConfig = availableConfigs.find(
+              (c) => c.id === teesheet.configId,
+            );
+            if (!currentConfig) return null;
+
+            return (
+              <AdminLotteryEntryForm
+                lotteryDate={teesheet.date}
+                config={currentConfig}
+                onSuccess={() => setShowAdminEntryDialog(false)}
+                onCancel={() => setShowAdminEntryDialog(false)}
+              />
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

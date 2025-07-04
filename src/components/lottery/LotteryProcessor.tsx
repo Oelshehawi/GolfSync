@@ -118,14 +118,14 @@ export function LotteryProcessor({
               <div className="flex items-start gap-2">
                 <div className="mt-2 h-2 w-2 flex-shrink-0 rounded-full bg-blue-500"></div>
                 <span>
-                  Calculates priority scores based on fairness, speed profiles,
+                  Calculates fairness scores based on fairness, member profiles,
                   and admin adjustments
                 </span>
               </div>
               <div className="flex items-start gap-2">
                 <div className="mt-2 h-2 w-2 flex-shrink-0 rounded-full bg-blue-500"></div>
                 <span>
-                  Gives speed bonuses: FAST players get +10 for morning, +5 for
+                  Gives speed bonuses: FAST players get +5 for morning, +2 for
                   midday slots
                 </span>
               </div>

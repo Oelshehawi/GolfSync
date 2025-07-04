@@ -224,11 +224,6 @@ export function LotteryEntryManager({
                                   {getTimeWindowLabel(entry.alternateWindow)}
                                 </span>
                               )}
-                              {entry.specificTimePreference && (
-                                <span>
-                                  Specific Time: {entry.specificTimePreference}
-                                </span>
-                              )}
                             </div>
                           </div>
                         </div>
@@ -290,11 +285,6 @@ export function LotteryEntryManager({
                                 <span>
                                   Alternate:{" "}
                                   {getTimeWindowLabel(group.alternateWindow)}
-                                </span>
-                              )}
-                              {group.specificTimePreference && (
-                                <span>
-                                  Specific Time: {group.specificTimePreference}
                                 </span>
                               )}
                             </div>

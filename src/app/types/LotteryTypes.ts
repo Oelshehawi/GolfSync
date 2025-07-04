@@ -64,7 +64,6 @@ export interface LotteryEntry {
   lotteryDate: string;
   primaryTimeWindow: TimeWindow;
   backupTimeWindow?: TimeWindow;
-  specificTimePreference?: string;
   memberClass: string;
   status: "PENDING" | "ASSIGNED" | "CANCELLED";
   groupId?: string;
@@ -80,12 +79,10 @@ export interface LotteryGroup {
   lotteryDate: string; // YYYY-MM-DD
   memberIds: number[]; // All members including leader
   preferredWindow: TimeWindow;
-  specificTimePreference?: string | null;
   alternateWindow?: TimeWindow | null;
   status: LotteryStatus;
   submissionTimestamp: Date;
   processedAt?: Date | null;
-  leaderMemberClass: string;
   createdAt: Date;
   updatedAt: Date | null;
 }
@@ -95,9 +92,7 @@ export interface LotteryEntryInsert {
   memberId: number;
   lotteryDate: string;
   preferredWindow: TimeWindow;
-  specificTimePreference?: string | null;
   alternateWindow?: TimeWindow | null;
-  memberClass: string;
   status?: LotteryStatus;
   submittedBy?: number | null;
 }
@@ -107,9 +102,7 @@ export interface LotteryGroupInsert {
   lotteryDate: string;
   memberIds: number[];
   preferredWindow: TimeWindow;
-  specificTimePreference?: string | null;
   alternateWindow?: TimeWindow | null;
-  leaderMemberClass: string;
   status?: LotteryStatus;
 }
 
@@ -133,7 +126,6 @@ export type LotteryEntryData =
 export interface LotteryEntryFormData {
   lotteryDate: string;
   preferredWindow: TimeWindow;
-  specificTimePreference?: string;
   alternateWindow?: TimeWindow;
   memberIds?: number[]; // For group entries
 }
@@ -145,7 +137,6 @@ export interface LotteryEntryInput {
   lotteryDate: string;
   primaryTimeWindow: TimeWindow;
   backupTimeWindow?: TimeWindow;
-  specificTimePreference?: string;
   memberClass: string;
 }
 
@@ -188,8 +179,8 @@ export interface MemberSpeedProfileView {
 
 // Default speed bonuses for time windows
 export const DEFAULT_SPEED_BONUSES: TimeWindowSpeedBonus[] = [
-  { window: "MORNING", fastBonus: 10, averageBonus: 5, slowBonus: 0 },
-  { window: "MIDDAY", fastBonus: 5, averageBonus: 2, slowBonus: 0 },
+  { window: "MORNING", fastBonus: 5, averageBonus: 2, slowBonus: 0 },
+  { window: "MIDDAY", fastBonus: 2, averageBonus: 1, slowBonus: 0 },
   { window: "AFTERNOON", fastBonus: 0, averageBonus: 0, slowBonus: 0 },
   { window: "EVENING", fastBonus: 0, averageBonus: 0, slowBonus: 0 },
 ];
@@ -205,6 +196,33 @@ export interface MemberFairnessScore {
   updatedAt: Date | null;
 }
 
+// ===== MEMBER PROFILE TYPES (COMBINED SPEED + FAIRNESS) =====
+
+export interface MemberProfileWithFairness {
+  id: number;
+  memberId: number;
+  memberName: string;
+  memberNumber: string;
+  memberClass: string;
+  // Speed profile data
+  averageMinutes: number | null;
+  speedTier: SpeedTier;
+  adminPriorityAdjustment: number;
+  manualOverride: boolean;
+  lastCalculated: Date | null;
+  notes: string | null;
+  // Fairness score data
+  fairnessScore: {
+    currentMonth: string;
+    totalEntriesMonth: number;
+    preferencesGrantedMonth: number;
+    preferenceFulfillmentRate: number;
+    daysWithoutGoodTime: number;
+    fairnessScore: number;
+    lastUpdated: Date | null;
+  } | null;
+}
+
 // ===== ENHANCED LOTTERY PROCESSING TYPES =====
 
 export interface LotteryProcessingMember {
@@ -216,7 +234,6 @@ export interface LotteryProcessingMember {
   adminPriorityAdjustment: number;
   preferredWindow: TimeWindow;
   alternateWindow?: TimeWindow;
-  specificTimePreference?: string;
   submissionTime: Date;
   isGroupLeader?: boolean;
   groupId?: number;

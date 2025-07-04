@@ -95,7 +95,7 @@ export function SpeedBonusConfiguration() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 mt-6">
       {/* Information Box */}
       <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
         <div className="flex items-start gap-3">
@@ -104,16 +104,15 @@ export function SpeedBonusConfiguration() {
             <div className="mb-1 font-medium">Speed Bonus System</div>
             <div className="space-y-1">
               <p>
-                • <strong>FAST players (≤3:55)</strong>: Get priority in morning
-                slots to maintain pace
+                • <strong>FAST players (≤3:55)</strong>: Get +5 morning, +2
+                midday priority
               </p>
               <p>
-                • <strong>AVERAGE players (3:56-4:05)</strong>: Get moderate
-                priority in morning slots
+                • <strong>AVERAGE players (3:56-4:05)</strong>: Get +2 morning,
+                +1 midday priority
               </p>
               <p>
-                • <strong>SLOW players (4:06+)</strong>: Generally assigned to
-                later slots
+                • <strong>SLOW players (4:06+)</strong>: Get no speed bonuses
               </p>
               <p>• Higher bonuses = higher priority in lottery algorithm</p>
             </div>

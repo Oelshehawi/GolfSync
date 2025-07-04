@@ -39,6 +39,7 @@ interface LotteryDashboardProps {
   initialLotteryEntries: any;
   initialTimeBlocks: any;
   config: TeesheetConfig;
+  restrictions: any[];
 }
 
 interface LotteryStats {
@@ -66,6 +67,7 @@ export function LotteryDashboard({
   initialLotteryEntries,
   initialTimeBlocks,
   config,
+  restrictions,
 }: LotteryDashboardProps) {
   const [stats, setStats] = useState<LotteryStats>(initialStats);
   const [isLoading, setIsLoading] = useState(false);
@@ -149,32 +151,30 @@ export function LotteryDashboard({
 
   return (
     <div className="space-y-6">
-      {/* Debug Controls - Only show in development or setup phase */}
-      {(status === "setup" || process.env.NODE_ENV === "development") && (
-        <Card className="border-orange-200 bg-orange-50">
-          <CardHeader>
-            <CardTitle className="text-orange-800">Debug Controls</CardTitle>
-          </CardHeader>
-          <CardContent className="flex gap-4">
-            <Button
-              onClick={handleCreateTestEntries}
-              disabled={isCreatingTest}
-              variant="outline"
-              className="border-orange-300 text-orange-700 hover:bg-orange-100"
-            >
-              {isCreatingTest ? "Creating..." : "Create Test Entries"}
-            </Button>
-            <Button
-              onClick={handleClearEntries}
-              disabled={isClearing}
-              variant="outline"
-              className="border-red-300 text-red-700 hover:bg-red-100"
-            >
-              {isClearing ? "Clearing..." : "Clear All Entries"}
-            </Button>
-          </CardContent>
-        </Card>
-      )}
+      {/* Debug Controls - Available in production for now */}
+      <Card className="border-orange-200 bg-orange-50">
+        <CardHeader>
+          <CardTitle className="text-orange-800">Lottery Controls</CardTitle>
+        </CardHeader>
+        <CardContent className="flex gap-4">
+          <Button
+            onClick={handleCreateTestEntries}
+            disabled={isCreatingTest}
+            variant="outline"
+            className="border-orange-300 text-orange-700 hover:bg-orange-100"
+          >
+            {isCreatingTest ? "Creating..." : "Create Test Entries"}
+          </Button>
+          <Button
+            onClick={handleClearEntries}
+            disabled={isClearing}
+            variant="outline"
+            className="border-red-300 text-red-700 hover:bg-red-100"
+          >
+            {isClearing ? "Clearing..." : "Clear All Entries"}
+          </Button>
+        </CardContent>
+      </Card>
 
       {/* Processing Controls */}
       <Card>
@@ -227,6 +227,8 @@ export function LotteryDashboard({
         members={members}
         initialLotteryEntries={initialLotteryEntries}
         initialTimeBlocks={initialTimeBlocks}
+        restrictions={restrictions}
+        config={config}
       />
 
       <ConfirmationDialog

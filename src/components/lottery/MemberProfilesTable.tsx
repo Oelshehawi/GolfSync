@@ -5,24 +5,24 @@ import { Button } from "~/components/ui/button";
 import { Badge } from "~/components/ui/badge";
 import {
   Edit,
-  Save,
-  X,
   Clock,
   TrendingUp,
   Timer,
   AlertTriangle,
+  Target,
+  Trophy,
+  Calendar,
 } from "lucide-react";
 import { SpeedProfileEditDialog } from "./SpeedProfileEditDialog";
-import { formatDistanceToNow } from "date-fns";
-import type { MemberSpeedProfileView } from "~/app/types/LotteryTypes";
+import type { MemberProfileWithFairness } from "~/app/types/LotteryTypes";
 
-interface SpeedProfilesTableProps {
-  profiles: MemberSpeedProfileView[];
+interface MemberProfilesTableProps {
+  profiles: MemberProfileWithFairness[];
 }
 
-export function SpeedProfilesTable({ profiles }: SpeedProfilesTableProps) {
+export function MemberProfilesTable({ profiles }: MemberProfilesTableProps) {
   const [editingProfile, setEditingProfile] =
-    useState<MemberSpeedProfileView | null>(null);
+    useState<MemberProfileWithFairness | null>(null);
 
   const formatPaceTime = (minutes: number | null) => {
     if (!minutes) return "N/A";
@@ -75,12 +75,37 @@ export function SpeedProfilesTable({ profiles }: SpeedProfilesTableProps) {
     );
   };
 
+  const getPriorityBadge = (score: number) => {
+    if (score > 20) {
+      return (
+        <Badge className="bg-red-100 text-red-800 hover:bg-red-100">
+          <Target className="mr-1 h-3 w-3" />
+          High ({score.toFixed(1)})
+        </Badge>
+      );
+    } else if (score >= 10) {
+      return (
+        <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">
+          <Calendar className="mr-1 h-3 w-3" />
+          Medium ({score.toFixed(1)})
+        </Badge>
+      );
+    } else {
+      return (
+        <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
+          <Trophy className="mr-1 h-3 w-3" />
+          Low ({score.toFixed(1)})
+        </Badge>
+      );
+    }
+  };
+
   if (profiles.length === 0) {
     return (
       <div className="rounded-lg border border-gray-200 p-8 text-center">
         <div className="text-gray-500">
           <Timer className="mx-auto mb-4 h-12 w-12 opacity-50" />
-          <p className="text-lg font-medium">No speed profiles found</p>
+          <p className="text-lg font-medium">No member profiles found</p>
           <p className="text-sm">
             Profiles will be created automatically when pace data is processed.
           </p>
@@ -106,13 +131,16 @@ export function SpeedProfilesTable({ profiles }: SpeedProfilesTableProps) {
                   Speed Tier
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">
+                  Fairness Score
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">
+                  Fulfillment Rate
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">
                   Admin Priority
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">
                   Override
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">
-                  Last Updated
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">
                   Actions
@@ -129,7 +157,7 @@ export function SpeedProfilesTable({ profiles }: SpeedProfilesTableProps) {
                         {profile.memberName}
                       </div>
                       <div className="text-sm text-gray-500">
-                        #{profile.memberNumber}
+                        #{profile.memberNumber} • {profile.memberClass}
                       </div>
                     </div>
                   </td>
@@ -141,7 +169,7 @@ export function SpeedProfilesTable({ profiles }: SpeedProfilesTableProps) {
                     </div>
                     {profile.averageMinutes && (
                       <div className="text-xs text-gray-500">
-                        {profile.averageMinutes} minutes
+                        {profile.averageMinutes.toFixed(0)} minutes
                       </div>
                     )}
                   </td>
@@ -149,6 +177,38 @@ export function SpeedProfilesTable({ profiles }: SpeedProfilesTableProps) {
                   {/* Speed Tier */}
                   <td className="px-4 py-4 whitespace-nowrap">
                     {getSpeedTierBadge(profile.speedTier)}
+                  </td>
+
+                  {/* Fairness Score */}
+                  <td className="px-4 py-4 whitespace-nowrap">
+                    {profile.fairnessScore ? (
+                      getPriorityBadge(profile.fairnessScore.fairnessScore)
+                    ) : (
+                      <Badge variant="outline" className="text-gray-500">
+                        No Data
+                      </Badge>
+                    )}
+                  </td>
+
+                  {/* Fulfillment Rate */}
+                  <td className="px-4 py-4 whitespace-nowrap">
+                    {profile.fairnessScore ? (
+                      <div>
+                        <div className="text-sm font-medium text-gray-900">
+                          {(
+                            profile.fairnessScore.preferenceFulfillmentRate *
+                            100
+                          ).toFixed(0)}
+                          %
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {profile.fairnessScore.preferencesGrantedMonth}/
+                          {profile.fairnessScore.totalEntriesMonth} granted
+                        </div>
+                      </div>
+                    ) : (
+                      <span className="text-gray-400">N/A</span>
+                    )}
                   </td>
 
                   {/* Admin Priority Adjustment */}
@@ -172,21 +232,6 @@ export function SpeedProfilesTable({ profiles }: SpeedProfilesTableProps) {
                       >
                         Auto
                       </Badge>
-                    )}
-                  </td>
-
-                  {/* Last Updated */}
-                  <td className="px-4 py-4 text-sm whitespace-nowrap text-gray-500">
-                    {profile.lastCalculated ? (
-                      <div>
-                        <div className="text-xs">
-                          {formatDistanceToNow(profile.lastCalculated, {
-                            addSuffix: true,
-                          })}
-                        </div>
-                      </div>
-                    ) : (
-                      <span className="text-gray-400">Never</span>
                     )}
                   </td>
 
@@ -226,8 +271,13 @@ export function SpeedProfilesTable({ profiles }: SpeedProfilesTableProps) {
             </div>
             <div className="flex items-center gap-4">
               <span>
-                With Admin Adjustments:{" "}
-                {profiles.filter((p) => p.adminPriorityAdjustment !== 0).length}
+                High Priority:{" "}
+                {
+                  profiles.filter(
+                    (p) =>
+                      p.fairnessScore && p.fairnessScore.fairnessScore > 20,
+                  ).length
+                }
               </span>
               <span>
                 Manual Overrides:{" "}

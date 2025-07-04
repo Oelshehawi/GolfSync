@@ -12,7 +12,9 @@ import {
   getLotteryStatsForDate,
   getLotteryEntriesForDate,
   getAvailableTimeBlocksForDate,
+  getActiveTimeRestrictionsForDate,
 } from "~/server/lottery/data";
+import { checkAndRunMonthlyMaintenance } from "~/server/lottery/maintenance-actions";
 
 interface PageProps {
   params: {
@@ -37,15 +39,25 @@ export default async function LotteryManagementPage({ params }: PageProps) {
     redirect("/admin");
   }
 
+  // Check and run monthly maintenance if needed
+  await checkAndRunMonthlyMaintenance();
+
   // Fetch all data at server level
-  const [members, initialStats, lotteryEntries, timeBlocks, config] =
-    await Promise.all([
-      getMembers(),
-      getLotteryStatsForDate(date),
-      getLotteryEntriesForDate(date),
-      getAvailableTimeBlocksForDate(date),
-      getConfigForDate(lotteryDate),
-    ]);
+  const [
+    members,
+    initialStats,
+    lotteryEntries,
+    timeBlocks,
+    config,
+    restrictions,
+  ] = await Promise.all([
+    getMembers(),
+    getLotteryStatsForDate(date),
+    getLotteryEntriesForDate(date),
+    getAvailableTimeBlocksForDate(date),
+    getConfigForDate(lotteryDate),
+    getActiveTimeRestrictionsForDate(date),
+  ]);
 
   // Determine lottery status
   const isPastDate = isBefore(lotteryDate, today);
@@ -71,10 +83,10 @@ export default async function LotteryManagementPage({ params }: PageProps) {
             description={`Managing lottery entries for ${formatDate(date, "EEEE, MMMM do, yyyy")}`}
           />
           <div className="flex items-center gap-2">
-            <Link href="/admin/lottery/speed-profiles" passHref>
+            <Link href="/admin/lottery/member-profiles" passHref>
               <Button variant="outline">
                 <Timer className="mr-2 h-4 w-4" />
-                Speed Profiles
+                Member Profiles
               </Button>
             </Link>
           </div>
@@ -90,6 +102,7 @@ export default async function LotteryManagementPage({ params }: PageProps) {
         initialLotteryEntries={lotteryEntries}
         initialTimeBlocks={timeBlocks}
         config={config}
+        restrictions={restrictions}
       />
     </div>
   );

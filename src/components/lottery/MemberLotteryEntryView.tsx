@@ -112,7 +112,7 @@ const STATUS_CONFIG = {
   },
 };
 
-export function LotteryEntryView({
+export function MemberLotteryEntryView({
   lotteryDate,
   entry,
   entryType,
@@ -131,9 +131,7 @@ export function LotteryEntryView({
     if (entryType === "individual") {
       setIsCancelling(true);
       try {
-        const result = await cancelLotteryEntry(
-          Number(entry.id),
-        );
+        const result = await cancelLotteryEntry(Number(entry.id));
         if (result.success) {
           toast.success("Lottery entry cancelled successfully");
           if (onCancel) onCancel();
@@ -211,19 +209,6 @@ export function LotteryEntryView({
                   </span>
                 </div>
               </div>
-
-              {entry.specificTimePreference && (
-                <div>
-                  <label className="text-sm font-medium text-gray-600">
-                    Specific Time Preference
-                  </label>
-                  <div className="mt-1 rounded-lg border border-blue-200 bg-blue-50 p-3">
-                    <span className="font-medium">
-                      {formatTime12Hour(entry.specificTimePreference)}
-                    </span>
-                  </div>
-                </div>
-              )}
 
               {getAlternateWindow(entry) && (
                 <div>

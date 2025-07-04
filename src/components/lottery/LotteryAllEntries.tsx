@@ -7,6 +7,7 @@ import { Search } from "lucide-react";
 import { LotteryIndividualEntriesList } from "./LotteryIndividualEntriesList";
 import { LotteryGroupEntriesList } from "./LotteryGroupEntriesList";
 import { LotteryEditDialog } from "./LotteryEditDialog";
+import type { TeesheetConfig } from "~/app/types/TeeSheetTypes";
 
 interface LotteryEntryData {
   individual: any[];
@@ -23,6 +24,7 @@ interface LotteryAllEntriesProps {
     lastName: string;
     class: string;
   }>;
+  config: TeesheetConfig;
 }
 
 export function LotteryAllEntries({
@@ -30,6 +32,7 @@ export function LotteryAllEntries({
   onCancelEntry,
   getTimeWindowLabel,
   members,
+  config,
 }: LotteryAllEntriesProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [editDialog, setEditDialog] = useState<{
@@ -171,6 +174,7 @@ export function LotteryAllEntries({
         entry={editDialog.entry}
         isGroup={editDialog.isGroup}
         members={members}
+        config={config}
       />
     </>
   );

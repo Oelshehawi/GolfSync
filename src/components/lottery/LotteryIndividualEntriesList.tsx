@@ -14,7 +14,6 @@ interface IndividualEntry {
     class: string;
   };
   preferredWindow: string;
-  specificTimePreference?: string;
   assignedTimeBlock?: {
     startTime: string;
   };
@@ -64,8 +63,6 @@ export function LotteryIndividualEntriesList({
                 <div className="text-sm text-gray-500">
                   {entry.member.class} •{" "}
                   {getTimeWindowLabel(entry.preferredWindow)}
-                  {entry.specificTimePreference &&
-                    ` at ${entry.specificTimePreference}`}
                 </div>
               </div>
               <Badge

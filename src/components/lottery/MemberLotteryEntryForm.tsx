@@ -52,7 +52,6 @@ interface SearchMember {
 
 const lotteryEntrySchema = z.object({
   preferredWindow: z.string().min(1, "Please select a preferred time window"),
-  specificTimePreference: z.string().optional(),
   alternateWindow: z.string().optional(),
   memberIds: z.array(z.number()).optional(),
 });
@@ -67,7 +66,7 @@ interface LotteryEntryFormProps {
   onSuccess?: () => void;
 }
 
-export function LotteryEntryForm({
+export function MemberLotteryEntryForm({
   lotteryDate,
   member,
   config,
@@ -86,7 +85,6 @@ export function LotteryEntryForm({
     resolver: zodResolver(lotteryEntrySchema),
     defaultValues: {
       preferredWindow: existingEntry?.primaryTimeWindow || "",
-      specificTimePreference: existingEntry?.specificTimePreference || "",
       alternateWindow: existingEntry?.backupTimeWindow || "",
       memberIds: [],
     },
@@ -94,7 +92,6 @@ export function LotteryEntryForm({
 
   const isEditing = !!existingEntry;
   const selectedWindow = form.watch("preferredWindow");
-  const specificTime = form.watch("specificTimePreference");
   const alternateWindow = form.watch("alternateWindow");
 
   const handleMemberSelect = (selectedMember: SearchMember | null) => {
@@ -137,12 +134,11 @@ export function LotteryEntryForm({
       const formData: LotteryEntryFormData = {
         lotteryDate,
         preferredWindow: data.preferredWindow as TimeWindow,
-        specificTimePreference: data.specificTimePreference,
         alternateWindow: data.alternateWindow as TimeWindow | undefined,
         memberIds: data.memberIds,
       };
 
-      const result = await submitLotteryEntry(member.username, formData);
+      const result = await submitLotteryEntry(member.id, formData);
 
       if (result.success) {
         toast.success(
@@ -347,31 +343,6 @@ export function LotteryEntryForm({
                   )}
                 />
 
-                {/* Specific Time */}
-                {selectedWindow && (
-                  <FormField
-                    control={form.control}
-                    name="specificTimePreference"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Specific Time (Optional)</FormLabel>
-                        <FormDescription>
-                          Preferred time within your selected window
-                        </FormDescription>
-                        <FormControl>
-                          <Input
-                            type="time"
-                            {...field}
-                            value={field.value || ""}
-                            className="w-full"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                )}
-
                 {/* Backup Window */}
                 {selectedWindow && (
                   <FormField
@@ -471,11 +442,6 @@ export function LotteryEntryForm({
                       <div className="flex items-center gap-2">
                         <span>{getSelectedWindowInfo()?.icon}</span>
                         <span>{getSelectedWindowInfo()?.label}</span>
-                        {specificTime && (
-                          <span className="text-sm text-gray-500">
-                            at {specificTime}
-                          </span>
-                        )}
                       </div>
                     </div>
 

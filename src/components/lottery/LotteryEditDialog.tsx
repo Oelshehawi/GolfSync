@@ -19,7 +19,9 @@ import {
 } from "~/components/ui/select";
 import { LoadingSpinner } from "~/components/ui/loading-spinner";
 import { Badge } from "~/components/ui/badge";
-import { TIME_WINDOWS, type TimeWindow } from "~/app/types/LotteryTypes";
+import { type TimeWindow } from "~/app/types/LotteryTypes";
+import { calculateDynamicTimeWindows } from "~/lib/lottery-utils";
+import type { TeesheetConfig } from "~/app/types/TeeSheetTypes";
 import {
   updateLotteryEntryAdmin,
   updateLotteryGroupAdmin,
@@ -45,7 +47,6 @@ interface IndividualEntry {
     class: string;
   };
   preferredWindow: string;
-  specificTimePreference?: string;
   alternateWindow?: string;
   status: string;
 }
@@ -66,7 +67,6 @@ interface GroupEntry {
   }>;
   memberIds: number[];
   preferredWindow: string;
-  specificTimePreference?: string;
   alternateWindow?: string;
   status: string;
 }
@@ -77,6 +77,7 @@ interface LotteryEditDialogProps {
   entry: IndividualEntry | GroupEntry | null;
   isGroup: boolean;
   members: Member[];
+  config: TeesheetConfig;
 }
 
 export function LotteryEditDialog({
@@ -85,12 +86,15 @@ export function LotteryEditDialog({
   entry,
   isGroup,
   members,
+  config,
 }: LotteryEditDialogProps) {
   const [isLoading, setIsLoading] = useState(false);
 
+  // Calculate dynamic time windows from config
+  const timeWindows = calculateDynamicTimeWindows(config);
+
   // Form state
   const [preferredWindow, setPreferredWindow] = useState<TimeWindow>("MORNING");
-  const [specificTimePreference, setSpecificTimePreference] = useState("");
   const [alternateWindow, setAlternateWindow] = useState<TimeWindow | "">("");
   const [selectedMemberIds, setSelectedMemberIds] = useState<number[]>([]);
 
@@ -98,7 +102,6 @@ export function LotteryEditDialog({
   useEffect(() => {
     if (entry) {
       setPreferredWindow(entry.preferredWindow as TimeWindow);
-      setSpecificTimePreference(entry.specificTimePreference || "");
       setAlternateWindow((entry.alternateWindow as TimeWindow) || "");
 
       if (isGroup && "memberIds" in entry) {
@@ -115,7 +118,6 @@ export function LotteryEditDialog({
     try {
       const updateData = {
         preferredWindow,
-        specificTimePreference: specificTimePreference || undefined,
         alternateWindow: alternateWindow || undefined,
       };
 
@@ -199,27 +201,13 @@ export function LotteryEditDialog({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {TIME_WINDOWS.map((window) => (
+                  {timeWindows.map((window) => (
                     <SelectItem key={window.value} value={window.value}>
                       {window.label} ({window.timeRange})
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-
-            {/* Specific Time Preference */}
-            <div className="space-y-2">
-              <Label htmlFor="specificTime">
-                Specific Time Preference (Optional)
-              </Label>
-              <Input
-                id="specificTime"
-                type="time"
-                value={specificTimePreference}
-                onChange={(e) => setSpecificTimePreference(e.target.value)}
-                placeholder="e.g., 10:30"
-              />
             </div>
 
             {/* Alternate Window */}
@@ -240,7 +228,7 @@ export function LotteryEditDialog({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="NONE">None</SelectItem>
-                  {TIME_WINDOWS.map((window) => (
+                  {timeWindows.map((window) => (
                     <SelectItem key={window.value} value={window.value}>
                       {window.label} ({window.timeRange})
                     </SelectItem>

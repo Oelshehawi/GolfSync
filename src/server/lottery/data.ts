@@ -7,6 +7,7 @@ import {
   members,
   teesheets,
   timeBlocks,
+  timeblockRestrictions,
 } from "~/server/db/schema";
 import { eq, and, sql, desc, asc, inArray } from "drizzle-orm";
 import { getAuthenticatedUser } from "~/lib/auth-server";
@@ -247,5 +248,25 @@ export async function getAvailableTimeBlocksForDate(date: string) {
   } catch (error) {
     console.error("Error getting available time blocks:", error);
     throw error;
+  }
+}
+
+/**
+ * Get active time restrictions for lottery processing
+ * Only fetches MEMBER_CLASS TIME restrictions that are currently active
+ */
+export async function getActiveTimeRestrictionsForDate(date: string) {
+  try {
+    return await db.query.timeblockRestrictions.findMany({
+      where: and(
+        eq(timeblockRestrictions.restrictionCategory, "MEMBER_CLASS"),
+        eq(timeblockRestrictions.restrictionType, "TIME"),
+        eq(timeblockRestrictions.isActive, true),
+      ),
+      orderBy: [desc(timeblockRestrictions.priority)],
+    });
+  } catch (error) {
+    console.error("Error fetching time restrictions:", error);
+    return [];
   }
 }

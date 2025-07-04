@@ -364,7 +364,6 @@ export function TeesheetConfigDialog({
                             type="number"
                             min={5}
                             max={60}
-                            step={5}
                             {...register("interval")}
                           />
                         </div>

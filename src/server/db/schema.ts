@@ -835,7 +835,6 @@ export const lotteryEntries = createTable(
       .notNull(),
     lotteryDate: date("lottery_date").notNull(), // Date they want to play
     preferredWindow: varchar("preferred_window", { length: 20 }).notNull(), // EARLY_MORNING, MORNING, MIDDAY, AFTERNOON
-    specificTimePreference: varchar("specific_time_preference", { length: 5 }), // "09:00"
     alternateWindow: varchar("alternate_window", { length: 20 }), // Backup choice
     status: varchar("status", { length: 20 }).notNull().default("PENDING"), // PENDING, PROCESSING, ASSIGNED, CANCELLED
     submittedBy: integer("submitted_by").references(() => members.id), // Admin who submitted on behalf
@@ -854,7 +853,6 @@ export const lotteryEntries = createTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).$onUpdate(
       () => new Date(),
     ),
-    memberClass: varchar("member_class", { length: 50 }).notNull(),
   },
   (table) => [
     index("lottery_entries_member_id_idx").on(table.memberId),
@@ -878,7 +876,6 @@ export const lotteryGroups = createTable(
     lotteryDate: date("lottery_date").notNull(),
     memberIds: integer("member_ids").array().notNull(), // All members in group including leader
     preferredWindow: varchar("preferred_window", { length: 20 }).notNull(),
-    specificTimePreference: varchar("specific_time_preference", { length: 5 }),
     alternateWindow: varchar("alternate_window", { length: 20 }),
     status: varchar("status", { length: 20 }).notNull().default("PENDING"),
     submissionTimestamp: timestamp("submission_timestamp", {
@@ -890,7 +887,6 @@ export const lotteryGroups = createTable(
     assignedTimeBlockId: integer("assigned_time_block_id").references(
       () => timeBlocks.id,
     ),
-    leaderMemberClass: varchar("leader_member_class", { length: 50 }).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .default(sql`CURRENT_TIMESTAMP`)
       .notNull(),
@@ -925,14 +921,14 @@ export const memberFairnessScores = createTable(
       .notNull()
       .default(0), // 0-1
     daysWithoutGoodTime: integer("days_without_good_time").notNull().default(0),
-    priorityScore: real("priority_score").notNull().default(0), // Final calculated score
+    fairnessScore: real("fairness_score").notNull().default(0), // Final calculated fairness score
     lastUpdated: timestamp("last_updated", { withTimezone: true })
       .default(sql`CURRENT_TIMESTAMP`)
       .notNull(),
   },
   (table) => [
     primaryKey({ columns: [table.memberId, table.currentMonth] }),
-    index("member_fairness_scores_priority_idx").on(table.priorityScore),
+    index("member_fairness_scores_fairness_idx").on(table.fairnessScore),
     index("member_fairness_scores_updated_idx").on(table.lastUpdated),
     index("member_fairness_scores_month_idx").on(table.currentMonth),
   ],
@@ -984,7 +980,7 @@ export const memberSpeedProfiles = createTable(
       .primaryKey(),
     averageMinutes: real("average_minutes"), // Auto-calculated from pace data (last 3 months)
     speedTier: varchar("speed_tier", { length: 10 }).default("AVERAGE"), // 'FAST', 'AVERAGE', 'SLOW'
-    adminPriorityAdjustment: integer("admin_priority_adjustment").default(0), // -25 to +25 points
+    adminPriorityAdjustment: integer("admin_priority_adjustment").default(0), // -10 to +10 points
     manualOverride: boolean("manual_override").default(false), // True if admin manually set
     lastCalculated: timestamp("last_calculated", { withTimezone: true })
       .default(sql`CURRENT_TIMESTAMP`)
@@ -1011,4 +1007,27 @@ export const memberSpeedProfilesRelations = relations(
       references: [members.id],
     }),
   }),
+);
+
+// System maintenance tracking
+export const systemMaintenance = createTable(
+  "system_maintenance",
+  {
+    id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+    maintenanceType: varchar("maintenance_type", { length: 50 }).notNull(), // 'MONTHLY_RESET', 'SPEED_RECALCULATION'
+    month: varchar("month", { length: 7 }).notNull(), // "2024-01"
+    completedAt: timestamp("completed_at", { withTimezone: true })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    recordsAffected: integer("records_affected").default(0),
+    notes: text("notes"),
+  },
+  (table) => [
+    index("system_maintenance_type_idx").on(table.maintenanceType),
+    index("system_maintenance_month_idx").on(table.month),
+    unique("system_maintenance_type_month_unq").on(
+      table.maintenanceType,
+      table.month,
+    ),
+  ],
 );

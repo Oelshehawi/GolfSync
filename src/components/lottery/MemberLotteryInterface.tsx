@@ -12,8 +12,8 @@ import { Button } from "~/components/ui/button";
 import { Badge } from "~/components/ui/badge";
 import { Dice1, Plus, Calendar } from "lucide-react";
 import { formatDate } from "~/lib/dates";
-import { LotteryEntryForm } from "./MemberLotteryEntryForm";
-import { LotteryEntryView } from "./MemberLotteryEntryView";
+import { MemberLotteryEntryForm } from "./MemberLotteryEntryForm";
+import { MemberLotteryEntryView } from "./MemberLotteryEntryView";
 import type { LotteryEntryData } from "~/app/types/LotteryTypes";
 import type { Member } from "~/app/types/MemberTypes";
 import type { TeesheetConfig } from "~/app/types/TeeSheetTypes";
@@ -89,7 +89,7 @@ export function LotteryInterface({
             </Button>
           </div>
         )}
-        <LotteryEntryForm
+        <MemberLotteryEntryForm
           lotteryDate={lotteryDate}
           member={member}
           config={config}
@@ -105,7 +105,7 @@ export function LotteryInterface({
   // Show existing entry
   if (lotteryEntry) {
     return (
-      <LotteryEntryView
+      <MemberLotteryEntryView
         lotteryDate={lotteryDate}
         entry={lotteryEntry.entry}
         entryType={lotteryEntry.type}
