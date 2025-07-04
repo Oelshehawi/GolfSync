@@ -35,6 +35,12 @@ import type {
   LotteryEntryFormData,
 } from "~/app/types/LotteryTypes";
 import type { Member } from "~/app/types/MemberTypes";
+import type { TeesheetConfig } from "~/app/types/TeeSheetTypes";
+import {
+  calculateDynamicTimeWindows,
+  isLotteryAvailableForConfig,
+  type DynamicTimeWindowInfo,
+} from "~/lib/lottery-utils";
 
 // For the member search results
 interface SearchMember {
@@ -43,7 +49,6 @@ interface SearchMember {
   lastName: string;
   memberNumber: string;
 }
-import { TIME_WINDOWS } from "~/app/types/LotteryTypes";
 
 const lotteryEntrySchema = z.object({
   preferredWindow: z.string().min(1, "Please select a preferred time window"),
@@ -57,6 +62,7 @@ type FormData = z.infer<typeof lotteryEntrySchema>;
 interface LotteryEntryFormProps {
   lotteryDate: string;
   member: Member;
+  config: TeesheetConfig;
   existingEntry?: LotteryEntry | null;
   onSuccess?: () => void;
 }
@@ -64,12 +70,17 @@ interface LotteryEntryFormProps {
 export function LotteryEntryForm({
   lotteryDate,
   member,
+  config,
   existingEntry,
   onSuccess,
 }: LotteryEntryFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedMembers, setSelectedMembers] = useState<SearchMember[]>([]);
   const [showPreview, setShowPreview] = useState(false);
+
+  // Calculate dynamic time windows based on config
+  const timeWindows = calculateDynamicTimeWindows(config);
+  const isLotteryAvailable = isLotteryAvailableForConfig(config);
 
   const form = useForm<FormData>({
     resolver: zodResolver(lotteryEntrySchema),
@@ -151,15 +162,51 @@ export function LotteryEntryForm({
   };
 
   const getSelectedWindowInfo = () => {
-    return TIME_WINDOWS.find((w) => w.value === selectedWindow);
+    return timeWindows.find((w) => w.value === selectedWindow);
   };
 
   const getAlternateWindowInfo = () => {
-    return TIME_WINDOWS.find((w) => w.value === alternateWindow);
+    return timeWindows.find((w) => w.value === alternateWindow);
   };
 
   const isGroupEntry = selectedMembers.length > 0;
   const totalPlayers = selectedMembers.length + 1; // +1 for the submitting member
+
+  // Show message if lottery is not available for this config
+  if (!isLotteryAvailable || timeWindows.length === 0) {
+    return (
+      <Card className="w-full">
+        <CardHeader className="pb-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-gray-100">
+              <Dice1 className="h-6 w-6 text-gray-600" />
+            </div>
+            <div>
+              <CardTitle className="text-xl">Lottery Not Available</CardTitle>
+              <CardDescription>
+                {formatDate(lotteryDate, "EEEE, MMMM do")}
+              </CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4 text-center">
+          <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-4">
+            <div className="mb-2 font-medium text-yellow-800">
+              Custom Teesheet Configuration
+            </div>
+            <p className="text-sm text-yellow-700">
+              This date uses a custom teesheet configuration. Lottery entries
+              are only available for regular scheduled dates. Please contact the
+              pro shop for tee time bookings on this date.
+            </p>
+          </div>
+          <Button variant="outline" onClick={onSuccess} className="w-full">
+            Back to Teesheet
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -266,7 +313,7 @@ export function LotteryEntryForm({
                         Choose your preferred part of the day
                       </FormDescription>
                       <div className="grid gap-3">
-                        {TIME_WINDOWS.map((window) => (
+                        {timeWindows.map((window) => (
                           <div
                             key={window.value}
                             className={`cursor-pointer rounded-lg border-2 p-3 transition-all ${
@@ -337,37 +384,37 @@ export function LotteryEntryForm({
                           Alternative if preferred time isn't available
                         </FormDescription>
                         <div className="grid gap-2">
-                          {TIME_WINDOWS.filter(
-                            (w) => w.value !== selectedWindow,
-                          ).map((window) => (
-                            <div
-                              key={window.value}
-                              className={`cursor-pointer rounded-lg border p-2 transition-all ${
-                                field.value === window.value
-                                  ? "border-org-primary bg-org-primary/5"
-                                  : "border-gray-200 hover:border-gray-300"
-                              }`}
-                              onClick={() =>
-                                field.onChange(
+                          {timeWindows
+                            .filter((w) => w.value !== selectedWindow)
+                            .map((window) => (
+                              <div
+                                key={window.value}
+                                className={`cursor-pointer rounded-lg border p-2 transition-all ${
                                   field.value === window.value
-                                    ? ""
-                                    : window.value,
-                                )
-                              }
-                            >
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                  <span>{window.icon}</span>
-                                  <span className="text-sm font-medium">
-                                    {window.label}
-                                  </span>
+                                    ? "border-org-primary bg-org-primary/5"
+                                    : "border-gray-200 hover:border-gray-300"
+                                }`}
+                                onClick={() =>
+                                  field.onChange(
+                                    field.value === window.value
+                                      ? ""
+                                      : window.value,
+                                  )
+                                }
+                              >
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-2">
+                                    <span>{window.icon}</span>
+                                    <span className="text-sm font-medium">
+                                      {window.label}
+                                    </span>
+                                  </div>
+                                  {field.value === window.value && (
+                                    <CheckCircle className="text-org-primary h-4 w-4" />
+                                  )}
                                 </div>
-                                {field.value === window.value && (
-                                  <CheckCircle className="text-org-primary h-4 w-4" />
-                                )}
                               </div>
-                            </div>
-                          ))}
+                            ))}
                         </div>
                         <FormMessage />
                       </FormItem>

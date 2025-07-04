@@ -1,7 +1,6 @@
 import "~/styles/globals.css";
 import { GeistSans } from "geist/font/sans";
 import { type Metadata } from "next";
-import { auth, clerkClient } from "@clerk/nextjs/server";
 import Navigation from "~/components/Navigation";
 
 export const metadata: Metadata = {

@@ -4,12 +4,51 @@
  * Simplified lottery system for mobile-first usage
  */
 
-// Time windows for lottery preferences
-export type TimeWindow =
-  | "EARLY_MORNING" // 6:00-8:00
-  | "MORNING" // 8:00-11:00
-  | "MIDDAY" // 11:00-14:00
-  | "AFTERNOON"; // 14:00-18:00
+import type { TimeWindow, DynamicTimeWindowInfo } from "~/lib/lottery-utils";
+
+// Re-export TimeWindow for backward compatibility
+export type { TimeWindow };
+
+// Backward compatibility: Export a default TIME_WINDOWS for components that still use it
+// This will be deprecated in favor of dynamic time windows
+export const TIME_WINDOWS: DynamicTimeWindowInfo[] = [
+  {
+    value: "MORNING",
+    label: "Morning",
+    description: "Early times",
+    timeRange: "7:00 AM - 10:00 AM",
+    icon: "☀️",
+    startMinutes: 420, // 7:00 AM
+    endMinutes: 600, // 10:00 AM
+  },
+  {
+    value: "MIDDAY",
+    label: "Midday",
+    description: "Mid-day times",
+    timeRange: "10:00 AM - 1:00 PM",
+    icon: "🌞",
+    startMinutes: 600, // 10:00 AM
+    endMinutes: 780, // 1:00 PM
+  },
+  {
+    value: "AFTERNOON",
+    label: "Afternoon",
+    description: "Later times",
+    timeRange: "1:00 PM - 4:00 PM",
+    icon: "🌤️",
+    startMinutes: 780, // 1:00 PM
+    endMinutes: 960, // 4:00 PM
+  },
+  {
+    value: "EVENING",
+    label: "Evening",
+    description: "Latest times",
+    timeRange: "4:00 PM - 7:00 PM",
+    icon: "🌅",
+    startMinutes: 960, // 4:00 PM
+    endMinutes: 1140, // 7:00 PM
+  },
+];
 
 // Entry status
 export type LotteryStatus =
@@ -99,46 +138,8 @@ export interface LotteryEntryFormData {
   memberIds?: number[]; // For group entries
 }
 
-// Time window display information
-export interface TimeWindowInfo {
-  value: TimeWindow;
-  label: string;
-  description: string;
-  timeRange: string;
-  icon: string;
-}
-
-// Constants for time windows
-export const TIME_WINDOWS: TimeWindowInfo[] = [
-  {
-    value: "EARLY_MORNING",
-    label: "Early Morning",
-    description: "Beat the crowds",
-    timeRange: "6:00 AM - 8:00 AM",
-    icon: "🌅",
-  },
-  {
-    value: "MORNING",
-    label: "Morning",
-    description: "Popular times",
-    timeRange: "8:00 AM - 11:00 AM",
-    icon: "☀️",
-  },
-  {
-    value: "MIDDAY",
-    label: "Midday",
-    description: "Lunch time golf",
-    timeRange: "11:00 AM - 2:00 PM",
-    icon: "🌞",
-  },
-  {
-    value: "AFTERNOON",
-    label: "Afternoon",
-    description: "Later times",
-    timeRange: "2:00 PM - 6:00 PM",
-    icon: "🌤️",
-  },
-];
+// Re-export time window info interface from lottery-utils
+export type { DynamicTimeWindowInfo as TimeWindowInfo } from "~/lib/lottery-utils";
 
 export interface LotteryEntryInput {
   lotteryDate: string;
@@ -146,4 +147,140 @@ export interface LotteryEntryInput {
   backupTimeWindow?: TimeWindow;
   specificTimePreference?: string;
   memberClass: string;
+}
+
+// ===== SPEED PROFILE TYPES =====
+
+export type SpeedTier = "FAST" | "AVERAGE" | "SLOW";
+
+export interface MemberSpeedProfile {
+  id: number;
+  memberId: number;
+  averageMinutes: number | null;
+  speedTier: SpeedTier;
+  adminPriorityAdjustment: number; // -25 to +25
+  manualOverride: boolean;
+  lastCalculated: Date | null;
+  notes: string | null;
+  createdAt: Date;
+  updatedAt: Date | null;
+}
+
+export interface TimeWindowSpeedBonus {
+  window: TimeWindow;
+  fastBonus: number;
+  averageBonus: number;
+  slowBonus: number;
+}
+
+export interface MemberSpeedProfileView {
+  id: number;
+  memberId: number;
+  memberName: string;
+  memberNumber: string;
+  averageMinutes: number | null;
+  speedTier: SpeedTier;
+  adminPriorityAdjustment: number;
+  manualOverride: boolean;
+  lastCalculated: Date | null;
+  notes: string | null;
+}
+
+// Default speed bonuses for time windows
+export const DEFAULT_SPEED_BONUSES: TimeWindowSpeedBonus[] = [
+  { window: "MORNING", fastBonus: 10, averageBonus: 5, slowBonus: 0 },
+  { window: "MIDDAY", fastBonus: 5, averageBonus: 2, slowBonus: 0 },
+  { window: "AFTERNOON", fastBonus: 0, averageBonus: 0, slowBonus: 0 },
+  { window: "EVENING", fastBonus: 0, averageBonus: 0, slowBonus: 0 },
+];
+
+// ===== FAIRNESS SCORE TYPES =====
+
+export interface MemberFairnessScore {
+  id: number;
+  memberId: number;
+  monthlyScore: number;
+  lastResetDate: Date | null;
+  createdAt: Date;
+  updatedAt: Date | null;
+}
+
+// ===== ENHANCED LOTTERY PROCESSING TYPES =====
+
+export interface LotteryProcessingMember {
+  memberId: number;
+  memberName: string;
+  memberClass: string;
+  fairnessScore: number;
+  speedTier: SpeedTier;
+  adminPriorityAdjustment: number;
+  preferredWindow: TimeWindow;
+  alternateWindow?: TimeWindow;
+  specificTimePreference?: string;
+  submissionTime: Date;
+  isGroupLeader?: boolean;
+  groupId?: number;
+  groupSize?: number;
+}
+
+export interface LotteryPriorityCalculation {
+  memberId: number;
+  totalScore: number;
+  fairnessScore: number;
+  speedBonus: number;
+  adminAdjustment: number;
+  submissionBonus: number;
+  breakdown: {
+    fairness: number;
+    speed: number;
+    admin: number;
+    submission: number;
+  };
+}
+
+export interface LotteryAssignmentResult {
+  memberId: number;
+  timeBlockId?: number;
+  assignedWindow?: TimeWindow;
+  preferenceMatched: boolean; // Got preferred window
+  specificTimeMatched: boolean; // Got specific time request
+  reason: "ASSIGNED" | "NO_SPACE" | "RESTRICTION" | "ERROR";
+  alternateAssigned: boolean; // Assigned to alternate window instead
+}
+
+// ===== LOTTERY CONFIGURATION TYPES =====
+
+export interface LotteryConfiguration {
+  id: number;
+  speedBonuses: TimeWindowSpeedBonus[];
+  fairnessScoreWeighting: number; // Multiplier for fairness scores
+  submissionTimeBonus: number; // Max bonus for early submission
+  enableSpeedPriority: boolean;
+  enableFairnessSystem: boolean;
+  monthlyResetEnabled: boolean;
+  createdAt: Date;
+  updatedAt: Date | null;
+}
+
+// ===== LOTTERY STATISTICS TYPES =====
+
+export interface LotteryProcessingStats {
+  totalEntries: number;
+  totalPlayers: number;
+  assignedEntries: number;
+  unassignedEntries: number;
+  preferenceMatchRate: number; // % who got preferred window
+  specificTimeMatchRate: number; // % who got specific time
+  fairnessScoreDistribution: {
+    min: number;
+    max: number;
+    average: number;
+  };
+  speedTierDistribution: {
+    fast: number;
+    average: number;
+    slow: number;
+  };
+  processingStatus: "PENDING" | "PROCESSING" | "COMPLETED" | "ERROR";
+  lastProcessedAt?: Date;
 }

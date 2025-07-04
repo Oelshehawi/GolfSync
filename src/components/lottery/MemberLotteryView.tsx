@@ -12,12 +12,14 @@ import {
 import { getDateForDB } from "~/lib/dates";
 import type { LotteryEntryData } from "~/app/types/LotteryTypes";
 import type { Member } from "~/app/types/MemberTypes";
+import type { TeesheetConfig } from "~/app/types/TeeSheetTypes";
 
 interface LotteryViewProps {
   selectedDate: string | Date;
   lotteryEntry?: LotteryEntryData;
   member: Member;
   date: Date;
+  config: TeesheetConfig;
   showDatePicker: boolean;
   swipeLoading: boolean;
   onPreviousDay: () => void;
@@ -32,6 +34,7 @@ export function LotteryView({
   lotteryEntry = null,
   member,
   date,
+  config,
   showDatePicker,
   swipeLoading,
   onPreviousDay,
@@ -60,6 +63,7 @@ export function LotteryView({
         }
         lotteryEntry={lotteryEntry}
         member={member}
+        config={config}
         onDataChange={onDataChange}
       />
 

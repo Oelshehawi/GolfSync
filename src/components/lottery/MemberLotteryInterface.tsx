@@ -16,11 +16,13 @@ import { LotteryEntryForm } from "./MemberLotteryEntryForm";
 import { LotteryEntryView } from "./MemberLotteryEntryView";
 import type { LotteryEntryData } from "~/app/types/LotteryTypes";
 import type { Member } from "~/app/types/MemberTypes";
+import type { TeesheetConfig } from "~/app/types/TeeSheetTypes";
 
 interface LotteryInterfaceProps {
   lotteryDate: string;
   lotteryEntry?: LotteryEntryData;
   member: Member;
+  config: TeesheetConfig;
   error?: string | null;
   onDataChange?: () => void;
 }
@@ -29,6 +31,7 @@ export function LotteryInterface({
   lotteryDate,
   lotteryEntry = null,
   member,
+  config,
   error = null,
   onDataChange,
 }: LotteryInterfaceProps) {
@@ -89,6 +92,7 @@ export function LotteryInterface({
         <LotteryEntryForm
           lotteryDate={lotteryDate}
           member={member}
+          config={config}
           existingEntry={
             lotteryEntry?.type === "individual" ? lotteryEntry.entry : null
           }

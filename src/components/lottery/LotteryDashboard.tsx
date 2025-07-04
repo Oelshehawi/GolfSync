@@ -9,6 +9,7 @@ import { LotteryProcessor } from "./LotteryProcessor";
 import { LotteryConfirmationAndEdit } from "./LotteryConfirmationAndEdit";
 import { LoadingSpinner } from "~/components/ui/loading-spinner";
 import { ConfirmationDialog } from "~/components/ui/confirmation-dialog";
+import type { TeesheetConfig } from "~/app/types/TeeSheetTypes";
 
 import {
   createTestLotteryEntries,
@@ -37,6 +38,7 @@ interface LotteryDashboardProps {
   };
   initialLotteryEntries: any;
   initialTimeBlocks: any;
+  config: TeesheetConfig;
 }
 
 interface LotteryStats {
@@ -63,6 +65,7 @@ export function LotteryDashboard({
   initialStats,
   initialLotteryEntries,
   initialTimeBlocks,
+  config,
 }: LotteryDashboardProps) {
   const [stats, setStats] = useState<LotteryStats>(initialStats);
   const [isLoading, setIsLoading] = useState(false);
@@ -211,6 +214,7 @@ export function LotteryDashboard({
               date={date}
               stats={stats}
               onProcessComplete={handleProcessComplete}
+              config={config}
             />
           </CardContent>
         )}

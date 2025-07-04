@@ -8,6 +8,7 @@ import {
   timeBlockMembers,
   memberFairnessScores,
   timeBlocks,
+  memberSpeedProfiles,
 } from "~/server/db/schema";
 import { eq, and, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
@@ -17,6 +18,8 @@ import type {
   LotteryEntryFormData,
   TimeWindow,
 } from "~/app/types/LotteryTypes";
+import type { TeesheetConfig } from "~/app/types/TeeSheetTypes";
+import { calculateDynamicTimeWindows } from "~/lib/lottery-utils";
 
 export type ActionResult = {
   success: boolean;
@@ -487,14 +490,87 @@ export async function assignLotteryEntry(
 }
 
 /**
+ * Calculate priority score for a lottery entry based on fairness, speed, and admin adjustments
+ */
+async function calculatePriorityScore(
+  entry: any,
+  timeWindows: any[],
+  isGroup: boolean = false,
+): Promise<number> {
+  let priorityScore = 0;
+
+  // Get the member ID (either direct member or group leader)
+  const memberId = isGroup ? entry.leaderId : entry.memberId;
+
+  // 1. Base fairness score (0-100, higher = more priority)
+  const fairnessData = await db.query.memberFairnessScores.findFirst({
+    where: eq(memberFairnessScores.memberId, memberId),
+  });
+
+  if (fairnessData) {
+    priorityScore += fairnessData.priorityScore || 0;
+  }
+
+  // 2. Speed bonus for morning slots (FAST: +10, AVERAGE: +5, SLOW: +0)
+  const speedData = await db.query.memberSpeedProfiles.findFirst({
+    where: eq(memberSpeedProfiles.memberId, memberId),
+  });
+
+  if (speedData && entry.preferredWindow) {
+    // Define speed bonuses directly to avoid import issues
+    const speedBonuses = [
+      { window: "MORNING", fastBonus: 10, averageBonus: 5, slowBonus: 0 },
+      { window: "MIDDAY", fastBonus: 5, averageBonus: 2, slowBonus: 0 },
+      { window: "AFTERNOON", fastBonus: 0, averageBonus: 0, slowBonus: 0 },
+      { window: "EVENING", fastBonus: 0, averageBonus: 0, slowBonus: 0 },
+    ];
+
+    const speedBonus = speedBonuses.find(
+      (bonus) => bonus.window === entry.preferredWindow,
+    );
+
+    if (speedBonus) {
+      switch (speedData.speedTier) {
+        case "FAST":
+          priorityScore += speedBonus.fastBonus;
+          break;
+        case "AVERAGE":
+          priorityScore += speedBonus.averageBonus;
+          break;
+        case "SLOW":
+          priorityScore += speedBonus.slowBonus;
+          break;
+      }
+    }
+  }
+
+  // 3. Admin priority adjustment (-25 to +25)
+  if (speedData?.adminPriorityAdjustment) {
+    priorityScore += speedData.adminPriorityAdjustment;
+  }
+
+  // 4. Small bonus for early submission (max 5 points)
+  const submissionTime = new Date(entry.submissionTimestamp).getTime();
+  const dayStart = new Date(entry.submissionTimestamp);
+  dayStart.setHours(0, 0, 0, 0);
+  const timeSinceStart = submissionTime - dayStart.getTime();
+  const maxDayMs = 24 * 60 * 60 * 1000; // 24 hours in ms
+  const submissionBonus = Math.max(0, 5 * (1 - timeSinceStart / maxDayMs));
+  priorityScore += submissionBonus;
+
+  return priorityScore;
+}
+
+/**
  * Process lottery entries by assigning them to time blocks WITHOUT creating actual bookings
  * This allows for preview and confirmation before finalizing
+ * Enhanced with priority-based processing algorithm
  */
 export async function processLotteryForDate(
   date: string,
+  config: TeesheetConfig,
 ): Promise<ActionResult> {
   try {
-    // This is a basic implementation - can be enhanced with more sophisticated algorithms
     const { getLotteryEntriesForDate, getAvailableTimeBlocksForDate } =
       await import("~/server/lottery/data");
 
@@ -512,11 +588,53 @@ export async function processLotteryForDate(
       };
     }
 
+    // Calculate dynamic time windows for scoring
+    const timeWindows = calculateDynamicTimeWindows(config);
     let processedCount = 0;
     const now = new Date();
 
-    // Process individual entries first (by submission time)
-    for (const entry of entries.individual) {
+    // Calculate priority scores for all entries
+    const individualEntriesWithPriority = await Promise.all(
+      entries.individual.map(async (entry) => {
+        const priority = await calculatePriorityScore(
+          entry,
+          timeWindows,
+          false,
+        );
+        return { ...entry, priorityScore: priority };
+      }),
+    );
+
+    const groupEntriesWithPriority = await Promise.all(
+      entries.groups.map(async (group) => {
+        const priority = await calculatePriorityScore(group, timeWindows, true);
+        return { ...group, priorityScore: priority };
+      }),
+    );
+
+    // Sort by priority score (highest first), then by submission time as tiebreaker
+    individualEntriesWithPriority.sort((a, b) => {
+      if (b.priorityScore !== a.priorityScore) {
+        return b.priorityScore - a.priorityScore;
+      }
+      return (
+        new Date(a.submissionTimestamp).getTime() -
+        new Date(b.submissionTimestamp).getTime()
+      );
+    });
+
+    groupEntriesWithPriority.sort((a, b) => {
+      if (b.priorityScore !== a.priorityScore) {
+        return b.priorityScore - a.priorityScore;
+      }
+      return (
+        new Date(a.submissionTimestamp).getTime() -
+        new Date(b.submissionTimestamp).getTime()
+      );
+    });
+
+    // Process individual entries in priority order
+    for (const entry of individualEntriesWithPriority) {
       if (entry.status !== "PENDING") continue;
 
       // Find available block that matches preferences
@@ -525,6 +643,7 @@ export async function processLotteryForDate(
         entry.preferredWindow as TimeWindow,
         entry.alternateWindow as TimeWindow | null,
         entry.specificTimePreference,
+        config,
       );
 
       if (suitableBlock && suitableBlock.availableSpots > 0) {
@@ -545,8 +664,8 @@ export async function processLotteryForDate(
       }
     }
 
-    // Process group entries
-    for (const group of entries.groups) {
+    // Process group entries in priority order
+    for (const group of groupEntriesWithPriority) {
       if (group.status !== "PENDING") continue;
 
       const groupSize = group.memberIds.length;
@@ -560,6 +679,7 @@ export async function processLotteryForDate(
             group.preferredWindow as TimeWindow,
             group.alternateWindow as TimeWindow | null,
             group.specificTimePreference,
+            config,
           ),
       );
 
@@ -581,12 +701,18 @@ export async function processLotteryForDate(
       }
     }
 
+    // Update fairness scores after processing
+    if (processedCount > 0) {
+      await updateFairnessScoresAfterProcessing(date, config);
+    }
+
     revalidatePath("/admin/lottery");
     return {
       success: true,
       data: {
         processedCount,
         totalEntries: entries.individual.length + entries.groups.length,
+        message: `Enhanced algorithm processed ${processedCount} entries using priority scoring`,
       },
     };
   } catch (error) {
@@ -630,17 +756,13 @@ export async function finalizeLotteryResults(
     for (const group of entries.groups) {
       if (
         group.status === "ASSIGNED" &&
+        group.assignedTimeBlockId &&
         group.members &&
         group.members.length > 0
       ) {
-        // Find the assigned time block for this group
+        // Get the assigned time block directly from the group's assignedTimeBlockId
         const assignedTimeBlock = await db.query.timeBlocks.findFirst({
-          where: sql`EXISTS (
-            SELECT 1 FROM ${lotteryEntries} 
-            WHERE ${lotteryEntries.assignedTimeBlockId} = ${timeBlocks.id}
-            AND ${lotteryEntries.memberId} = ANY(${group.memberIds})
-            AND ${lotteryEntries.lotteryDate} = ${date}
-          )`,
+          where: eq(timeBlocks.id, group.assignedTimeBlockId),
         });
 
         if (assignedTimeBlock) {
@@ -684,12 +806,17 @@ export async function initializeFairnessScore(
   memberId: number,
 ): Promise<ActionResult> {
   try {
+    const currentMonth = new Date().toISOString().slice(0, 7); // "2024-01" format
+
     const [score] = await db
       .insert(memberFairnessScores)
       .values({
         memberId,
-        last6WeeksAverage: 0,
-        currentStreak: 0,
+        currentMonth,
+        totalEntriesMonth: 0,
+        preferencesGrantedMonth: 0,
+        preferenceFulfillmentRate: 0,
+        daysWithoutGoodTime: 0,
         priorityScore: 0,
       })
       .onConflictDoNothing()
@@ -710,6 +837,7 @@ function findSuitableTimeBlock(
   preferredWindow: TimeWindow,
   alternateWindow: TimeWindow | null,
   specificTime: string | null,
+  config: TeesheetConfig,
 ) {
   // First try to match specific time preference
   if (specificTime) {
@@ -722,7 +850,7 @@ function findSuitableTimeBlock(
   // Then try preferred window
   const preferredMatch = availableBlocks.find(
     (block) =>
-      matchesTimePreference(block, preferredWindow, null, null) &&
+      matchesTimePreference(block, preferredWindow, null, null, config) &&
       block.availableSpots > 0,
   );
   if (preferredMatch) return preferredMatch;
@@ -731,7 +859,7 @@ function findSuitableTimeBlock(
   if (alternateWindow) {
     const alternateMatch = availableBlocks.find(
       (block) =>
-        matchesTimePreference(block, alternateWindow, null, null) &&
+        matchesTimePreference(block, alternateWindow, null, null, config) &&
         block.availableSpots > 0,
     );
     if (alternateMatch) return alternateMatch;
@@ -742,35 +870,48 @@ function findSuitableTimeBlock(
 }
 
 /**
- * Helper function to check if a time block matches time preferences
+ * Helper function to check if a time block matches time preferences using dynamic windows
  */
 function matchesTimePreference(
   block: any,
   timeWindow: TimeWindow,
   alternateWindow: TimeWindow | null,
   specificTime: string | null,
+  config: TeesheetConfig,
 ): boolean {
-  const blockTime = parseInt(block.startTime.replace(":", ""));
-
   if (specificTime && block.startTime === specificTime) {
     return true;
   }
 
-  const windowRanges = {
-    EARLY_MORNING: { start: 600, end: 800 },
-    MORNING: { start: 800, end: 1100 },
-    MIDDAY: { start: 1100, end: 1400 },
-    AFTERNOON: { start: 1400, end: 1800 },
-  };
+  // Get dynamic time windows from config
+  const dynamicWindows = calculateDynamicTimeWindows(config);
+  const blockTime = parseInt(block.startTime.replace(":", ""));
 
-  const preferredRange = windowRanges[timeWindow];
-  if (blockTime >= preferredRange.start && blockTime < preferredRange.end) {
+  // Convert block time to minutes from midnight for comparison
+  const blockMinutes = Math.floor(blockTime / 100) * 60 + (blockTime % 100);
+
+  // Check preferred window
+  const preferredWindowInfo = dynamicWindows.find(
+    (w) => w.value === timeWindow,
+  );
+  if (
+    preferredWindowInfo &&
+    blockMinutes >= preferredWindowInfo.startMinutes &&
+    blockMinutes < preferredWindowInfo.endMinutes
+  ) {
     return true;
   }
 
+  // Check alternate window
   if (alternateWindow) {
-    const alternateRange = windowRanges[alternateWindow];
-    if (blockTime >= alternateRange.start && blockTime < alternateRange.end) {
+    const alternateWindowInfo = dynamicWindows.find(
+      (w) => w.value === alternateWindow,
+    );
+    if (
+      alternateWindowInfo &&
+      blockMinutes >= alternateWindowInfo.startMinutes &&
+      blockMinutes < alternateWindowInfo.endMinutes
+    ) {
       return true;
     }
   }
@@ -806,12 +947,12 @@ export async function createTestLotteryEntries(
     const testEntries: LotteryEntryInsert[] = [];
     const testGroups: LotteryGroupInsert[] = [];
 
-    // Create individual entries with various preferences
+    // Create individual entries with various preferences - use the current time window system
     const timeWindows: TimeWindow[] = [
-      "EARLY_MORNING",
       "MORNING",
       "MIDDAY",
       "AFTERNOON",
+      "EVENING",
     ];
     // More specific times to cover 7am-4pm range
     const specificTimes = [
@@ -1010,7 +1151,6 @@ export async function clearLotteryEntriesForDate(
   }
 }
 
-
 /**
  * Update lottery assignment (move entry/group between time blocks or unassign)
  */
@@ -1088,4 +1228,222 @@ export async function batchUpdateLotteryAssignments(
     console.error("Error batch updating lottery assignments:", error);
     return { success: false, error: "Failed to save changes" };
   }
+}
+
+/**
+ * Update fairness scores after lottery processing
+ */
+async function updateFairnessScoresAfterProcessing(
+  date: string,
+  config: TeesheetConfig,
+): Promise<void> {
+  try {
+    const { getLotteryEntriesForDate } = await import("~/server/lottery/data");
+    const entries = await getLotteryEntriesForDate(date);
+    const currentMonth = new Date().toISOString().slice(0, 7); // "2024-01" format
+    const timeWindows = calculateDynamicTimeWindows(config);
+
+    // Update scores for individual entries
+    for (const entry of entries.individual) {
+      if (entry.status === "ASSIGNED" && entry.assignedTimeBlockId) {
+        const memberId = entry.memberId;
+
+        // Get the assigned time block details
+        const assignedTimeBlock = await db.query.timeBlocks.findFirst({
+          where: eq(timeBlocks.id, entry.assignedTimeBlockId),
+        });
+
+        if (!assignedTimeBlock) continue;
+
+        // Check if they got their preferred window
+        const preferenceGranted = checkPreferenceMatch(
+          assignedTimeBlock.startTime,
+          entry.preferredWindow,
+          entry.alternateWindow,
+          timeWindows,
+        );
+
+        // Update or create fairness score record
+        const existingScore = await db.query.memberFairnessScores.findFirst({
+          where: and(
+            eq(memberFairnessScores.memberId, memberId),
+            eq(memberFairnessScores.currentMonth, currentMonth),
+          ),
+        });
+
+        if (existingScore) {
+          // Update existing record
+          const newTotalEntries = existingScore.totalEntriesMonth + 1;
+          const newPreferencesGranted =
+            existingScore.preferencesGrantedMonth + (preferenceGranted ? 1 : 0);
+          const newFulfillmentRate = newPreferencesGranted / newTotalEntries;
+          const newDaysWithoutGood = preferenceGranted
+            ? 0
+            : existingScore.daysWithoutGoodTime + 1;
+
+          // Calculate new priority score (higher = more priority needed)
+          let newPriorityScore = 0;
+          if (newFulfillmentRate < 0.5) {
+            // Less than 50% fulfillment
+            newPriorityScore += 20;
+          } else if (newFulfillmentRate < 0.7) {
+            // Less than 70% fulfillment
+            newPriorityScore += 10;
+          }
+          newPriorityScore += Math.min(newDaysWithoutGood * 2, 30); // +2 per day without good time, max 30
+
+          await db
+            .update(memberFairnessScores)
+            .set({
+              totalEntriesMonth: newTotalEntries,
+              preferencesGrantedMonth: newPreferencesGranted,
+              preferenceFulfillmentRate: newFulfillmentRate,
+              daysWithoutGoodTime: newDaysWithoutGood,
+              priorityScore: newPriorityScore,
+              lastUpdated: new Date(),
+            })
+            .where(eq(memberFairnessScores.memberId, memberId));
+        } else {
+          // Create new record
+          const fulfillmentRate = preferenceGranted ? 1 : 0;
+          const daysWithoutGood = preferenceGranted ? 0 : 1;
+          let priorityScore = 0;
+          if (!preferenceGranted) {
+            priorityScore = 10; // Base score for not getting preference
+          }
+
+          await db.insert(memberFairnessScores).values({
+            memberId,
+            currentMonth,
+            totalEntriesMonth: 1,
+            preferencesGrantedMonth: preferenceGranted ? 1 : 0,
+            preferenceFulfillmentRate: fulfillmentRate,
+            daysWithoutGoodTime: daysWithoutGood,
+            priorityScore,
+          });
+        }
+      }
+    }
+
+    // Update scores for group entries (using group leader)
+    for (const group of entries.groups) {
+      if (group.status === "ASSIGNED" && group.assignedTimeBlockId) {
+        const memberId = group.leaderId;
+
+        // Get the assigned time block details
+        const assignedTimeBlock = await db.query.timeBlocks.findFirst({
+          where: eq(timeBlocks.id, group.assignedTimeBlockId),
+        });
+
+        if (!assignedTimeBlock) continue;
+
+        // Check if they got their preferred window
+        const preferenceGranted = checkPreferenceMatch(
+          assignedTimeBlock.startTime,
+          group.preferredWindow,
+          group.alternateWindow,
+          timeWindows,
+        );
+
+        // Update fairness score for group leader (similar logic as individual)
+        const existingScore = await db.query.memberFairnessScores.findFirst({
+          where: and(
+            eq(memberFairnessScores.memberId, memberId),
+            eq(memberFairnessScores.currentMonth, currentMonth),
+          ),
+        });
+
+        if (existingScore) {
+          const newTotalEntries = existingScore.totalEntriesMonth + 1;
+          const newPreferencesGranted =
+            existingScore.preferencesGrantedMonth + (preferenceGranted ? 1 : 0);
+          const newFulfillmentRate = newPreferencesGranted / newTotalEntries;
+          const newDaysWithoutGood = preferenceGranted
+            ? 0
+            : existingScore.daysWithoutGoodTime + 1;
+
+          let newPriorityScore = 0;
+          if (newFulfillmentRate < 0.5) {
+            newPriorityScore += 20;
+          } else if (newFulfillmentRate < 0.7) {
+            newPriorityScore += 10;
+          }
+          newPriorityScore += Math.min(newDaysWithoutGood * 2, 30);
+
+          await db
+            .update(memberFairnessScores)
+            .set({
+              totalEntriesMonth: newTotalEntries,
+              preferencesGrantedMonth: newPreferencesGranted,
+              preferenceFulfillmentRate: newFulfillmentRate,
+              daysWithoutGoodTime: newDaysWithoutGood,
+              priorityScore: newPriorityScore,
+              lastUpdated: new Date(),
+            })
+            .where(eq(memberFairnessScores.memberId, memberId));
+        } else {
+          const fulfillmentRate = preferenceGranted ? 1 : 0;
+          const daysWithoutGood = preferenceGranted ? 0 : 1;
+          let priorityScore = 0;
+          if (!preferenceGranted) {
+            priorityScore = 10;
+          }
+
+          await db.insert(memberFairnessScores).values({
+            memberId,
+            currentMonth,
+            totalEntriesMonth: 1,
+            preferencesGrantedMonth: preferenceGranted ? 1 : 0,
+            preferenceFulfillmentRate: fulfillmentRate,
+            daysWithoutGoodTime: daysWithoutGood,
+            priorityScore,
+          });
+        }
+      }
+    }
+  } catch (error) {
+    console.error("Error updating fairness scores:", error);
+  }
+}
+
+/**
+ * Check if an assigned time matches member's preferences
+ */
+function checkPreferenceMatch(
+  assignedTime: string,
+  preferredWindow: string,
+  alternateWindow: string | null,
+  timeWindows: any[],
+): boolean {
+  const assignedMinutes = parseInt(assignedTime.replace(":", ""));
+  const assignedMinutesFromMidnight =
+    Math.floor(assignedMinutes / 100) * 60 + (assignedMinutes % 100);
+
+  // Check preferred window
+  const preferredWindowInfo = timeWindows.find(
+    (w) => w.value === preferredWindow,
+  );
+  if (
+    preferredWindowInfo &&
+    assignedMinutesFromMidnight >= preferredWindowInfo.startMinutes &&
+    assignedMinutesFromMidnight < preferredWindowInfo.endMinutes
+  ) {
+    return true;
+  }
+
+  // Check alternate window
+  if (alternateWindow) {
+    const alternateWindowInfo = timeWindows.find(
+      (w) => w.value === alternateWindow,
+    );
+    if (
+      alternateWindowInfo &&
+      assignedMinutesFromMidnight >= alternateWindowInfo.startMinutes &&
+      assignedMinutesFromMidnight < alternateWindowInfo.endMinutes
+    ) {
+      return true;
+    }
+  }
+
+  return false;
 }

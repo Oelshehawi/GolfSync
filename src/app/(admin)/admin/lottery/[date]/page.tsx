@@ -1,13 +1,13 @@
 import { redirect } from "next/navigation";
 import { isAfter, isBefore, startOfDay } from "date-fns";
-import { getAuthenticatedUser } from "~/lib/auth-server";
 import { PageHeader } from "~/components/ui/page-header";
 import { Button } from "~/components/ui/button";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Timer } from "lucide-react";
 import Link from "next/link";
 import { formatDate } from "~/lib/dates";
 import { LotteryDashboard } from "~/components/lottery/LotteryDashboard";
 import { getMembers } from "~/server/members/data";
+import { getConfigForDate } from "~/server/settings/data";
 import {
   getLotteryStatsForDate,
   getLotteryEntriesForDate,
@@ -38,14 +38,14 @@ export default async function LotteryManagementPage({ params }: PageProps) {
   }
 
   // Fetch all data at server level
-  const [members, initialStats, lotteryEntries, timeBlocks] = await Promise.all(
-    [
+  const [members, initialStats, lotteryEntries, timeBlocks, config] =
+    await Promise.all([
       getMembers(),
       getLotteryStatsForDate(date),
       getLotteryEntriesForDate(date),
       getAvailableTimeBlocksForDate(date),
-    ],
-  );
+      getConfigForDate(lotteryDate),
+    ]);
 
   // Determine lottery status
   const isPastDate = isBefore(lotteryDate, today);
@@ -65,11 +65,19 @@ export default async function LotteryManagementPage({ params }: PageProps) {
     <div className="container mx-auto max-w-7xl p-6">
       {/* Page Header */}
       <div className="mb-6">
-        <div className="mb-4 flex items-center gap-4">
+        <div className="mb-4 flex items-center justify-between">
           <PageHeader
             title="Lottery Management"
             description={`Managing lottery entries for ${formatDate(date, "EEEE, MMMM do, yyyy")}`}
           />
+          <div className="flex items-center gap-2">
+            <Link href="/admin/lottery/speed-profiles" passHref>
+              <Button variant="outline">
+                <Timer className="mr-2 h-4 w-4" />
+                Speed Profiles
+              </Button>
+            </Link>
+          </div>
         </div>
       </div>
 
@@ -81,6 +89,7 @@ export default async function LotteryManagementPage({ params }: PageProps) {
         initialStats={initialStats}
         initialLotteryEntries={lotteryEntries}
         initialTimeBlocks={timeBlocks}
+        config={config}
       />
     </div>
   );

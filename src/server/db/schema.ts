@@ -18,6 +18,7 @@ import {
   pgTable,
   jsonb,
   pgEnum,
+  primaryKey,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { FillTypes, type FillType } from "~/app/types/TeeSheetTypes";
@@ -908,23 +909,32 @@ export const lotteryGroups = createTable(
   ],
 );
 
-// Member fairness scores (stub for Phase 1)
+// Member fairness scores (monthly reset system)
 export const memberFairnessScores = createTable(
   "member_fairness_scores",
   {
     memberId: integer("member_id")
       .references(() => members.id, { onDelete: "cascade" })
-      .primaryKey(),
-    last6WeeksAverage: real("last_6_weeks_average").notNull().default(0), // Simple average of time quality points
-    currentStreak: integer("current_streak").notNull().default(0), // Consecutive good times
-    priorityScore: real("priority_score").notNull().default(0), // Calculated field
+      .notNull(),
+    currentMonth: varchar("current_month", { length: 7 }).notNull(), // "2024-01"
+    totalEntriesMonth: integer("total_entries_month").notNull().default(0),
+    preferencesGrantedMonth: integer("preferences_granted_month")
+      .notNull()
+      .default(0),
+    preferenceFulfillmentRate: real("preference_fulfillment_rate")
+      .notNull()
+      .default(0), // 0-1
+    daysWithoutGoodTime: integer("days_without_good_time").notNull().default(0),
+    priorityScore: real("priority_score").notNull().default(0), // Final calculated score
     lastUpdated: timestamp("last_updated", { withTimezone: true })
       .default(sql`CURRENT_TIMESTAMP`)
       .notNull(),
   },
   (table) => [
+    primaryKey({ columns: [table.memberId, table.currentMonth] }),
     index("member_fairness_scores_priority_idx").on(table.priorityScore),
     index("member_fairness_scores_updated_idx").on(table.lastUpdated),
+    index("member_fairness_scores_month_idx").on(table.currentMonth),
   ],
 );
 
@@ -960,6 +970,44 @@ export const memberFairnessScoresRelations = relations(
   ({ one }) => ({
     member: one(members, {
       fields: [memberFairnessScores.memberId],
+      references: [members.id],
+    }),
+  }),
+);
+
+// Member speed profiles for lottery priority
+export const memberSpeedProfiles = createTable(
+  "member_speed_profiles",
+  {
+    memberId: integer("member_id")
+      .references(() => members.id, { onDelete: "cascade" })
+      .primaryKey(),
+    averageMinutes: real("average_minutes"), // Auto-calculated from pace data (last 3 months)
+    speedTier: varchar("speed_tier", { length: 10 }).default("AVERAGE"), // 'FAST', 'AVERAGE', 'SLOW'
+    adminPriorityAdjustment: integer("admin_priority_adjustment").default(0), // -25 to +25 points
+    manualOverride: boolean("manual_override").default(false), // True if admin manually set
+    lastCalculated: timestamp("last_calculated", { withTimezone: true })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    notes: text("notes"), // Admin notes for manual adjustments
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).$onUpdate(
+      () => new Date(),
+    ),
+  },
+  (table) => [
+    index("member_speed_profiles_speed_tier_idx").on(table.speedTier),
+    index("member_speed_profiles_last_calculated_idx").on(table.lastCalculated),
+  ],
+);
+
+export const memberSpeedProfilesRelations = relations(
+  memberSpeedProfiles,
+  ({ one }) => ({
+    member: one(members, {
+      fields: [memberSpeedProfiles.memberId],
       references: [members.id],
     }),
   }),

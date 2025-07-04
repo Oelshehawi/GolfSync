@@ -488,6 +488,7 @@ export default function TeesheetClient({
         lotteryEntry={lotteryEntry}
         member={member}
         date={date}
+        config={config}
         showDatePicker={showDatePicker}
         swipeLoading={swipeLoading}
         onPreviousDay={goToPreviousDay}

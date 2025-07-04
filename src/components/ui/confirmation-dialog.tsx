@@ -19,6 +19,7 @@ interface ConfirmationDialogProps {
   confirmText?: string;
   cancelText?: string;
   variant?: "default" | "destructive";
+  loading?: boolean;
 }
 
 export function ConfirmationDialog({
@@ -30,6 +31,7 @@ export function ConfirmationDialog({
   confirmText = "Continue",
   cancelText = "Cancel",
   variant = "default",
+  loading = false,
 }: ConfirmationDialogProps) {
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
@@ -39,14 +41,15 @@ export function ConfirmationDialog({
           <AlertDialogDescription>{description}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>{cancelText}</AlertDialogCancel>
+          <AlertDialogCancel disabled={loading}>{cancelText}</AlertDialogCancel>
           <AlertDialogAction
             onClick={onConfirm}
+            disabled={loading}
             className={
               variant === "destructive" ? "bg-red-600 hover:bg-red-700" : ""
             }
           >
-            {confirmText}
+            {loading ? "Loading..." : confirmText}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

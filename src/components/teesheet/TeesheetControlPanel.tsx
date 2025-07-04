@@ -72,15 +72,13 @@ export function TeesheetControlPanel({
     }
   };
 
-  // Get lottery button text based on date status
+  // Get lottery button text - simplified to only Setup and View
   const getLotteryButtonText = () => {
     const today = new Date();
     const teesheetDate = new Date(teesheet.date);
 
     if (teesheetDate < today) {
       return "View Lottery";
-    } else if (teesheetDate.toDateString() === today.toDateString()) {
-      return "Manage Lottery";
     } else {
       return "Setup Lottery";
     }

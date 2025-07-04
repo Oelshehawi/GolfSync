@@ -1,10 +1,10 @@
+import 'server-only'
 import { db } from "~/server/db";
 import { and, eq, or, desc, isNull, lte, gte, sql } from "drizzle-orm";
 
 import {
   teesheetConfigs,
   teesheetConfigRules,
-  courseInfo,
   templates,
 } from "~/server/db/schema";
 import type { TeesheetConfig } from "~/app/types/TeeSheetTypes";

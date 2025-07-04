@@ -8,6 +8,7 @@ import { Play, CheckCircle, AlertCircle, Users } from "lucide-react";
 import { processLotteryForDate } from "~/server/lottery/actions";
 import { toast } from "react-hot-toast";
 import { ConfirmationDialog } from "~/components/ui/confirmation-dialog";
+import type { TeesheetConfig } from "~/app/types/TeeSheetTypes";
 
 interface LotteryStats {
   totalEntries: number;
@@ -22,12 +23,14 @@ interface LotteryProcessorProps {
   date: string;
   stats: LotteryStats;
   onProcessComplete: () => void;
+  config: TeesheetConfig;
 }
 
 export function LotteryProcessor({
   date,
   stats,
   onProcessComplete,
+  config,
 }: LotteryProcessorProps) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
@@ -35,7 +38,7 @@ export function LotteryProcessor({
   const handleProcessLottery = async () => {
     setIsProcessing(true);
     try {
-      const result = await processLotteryForDate(date);
+      const result = await processLotteryForDate(date, config);
       if (result.success) {
         toast.success(
           `Lottery processed successfully! ${result.data.processedCount} out of ${result.data.totalEntries} entries were assigned.`,
@@ -108,36 +111,49 @@ export function LotteryProcessor({
 
           {/* Algorithm Information */}
           <div className="rounded-lg border p-4">
-            <h3 className="mb-3 font-medium">How the Algorithm Works</h3>
+            <h3 className="mb-3 font-medium">
+              How the Enhanced Algorithm Works
+            </h3>
             <div className="space-y-2 text-sm text-gray-600">
               <div className="flex items-start gap-2">
                 <div className="mt-2 h-2 w-2 flex-shrink-0 rounded-full bg-blue-500"></div>
                 <span>
-                  Processes individual entries first (by submission time)
-                </span>
-              </div>
-              <div className="flex items-start gap-2">
-                <div className="mt-2 h-2 w-2 flex-shrink-0 rounded-full bg-blue-500"></div>
-                <span>Matches preferred time windows when possible</span>
-              </div>
-              <div className="flex items-start gap-2">
-                <div className="mt-2 h-2 w-2 flex-shrink-0 rounded-full bg-blue-500"></div>
-                <span>
-                  Falls back to alternate windows if preferred is unavailable
+                  Calculates priority scores based on fairness, speed profiles,
+                  and admin adjustments
                 </span>
               </div>
               <div className="flex items-start gap-2">
                 <div className="mt-2 h-2 w-2 flex-shrink-0 rounded-full bg-blue-500"></div>
                 <span>
-                  Processes group entries ensuring all members are assigned
-                  together
+                  Gives speed bonuses: FAST players get +10 for morning, +5 for
+                  midday slots
                 </span>
               </div>
               <div className="flex items-start gap-2">
                 <div className="mt-2 h-2 w-2 flex-shrink-0 rounded-full bg-blue-500"></div>
                 <span>
-                  Assigns any remaining entries to available slots as last
-                  resort
+                  Tracks monthly fairness scores (members who haven't gotten
+                  preferences get higher priority)
+                </span>
+              </div>
+              <div className="flex items-start gap-2">
+                <div className="mt-2 h-2 w-2 flex-shrink-0 rounded-full bg-blue-500"></div>
+                <span>
+                  Uses dynamic time windows calculated from teesheet
+                  configuration
+                </span>
+              </div>
+              <div className="flex items-start gap-2">
+                <div className="mt-2 h-2 w-2 flex-shrink-0 rounded-full bg-blue-500"></div>
+                <span>
+                  Processes entries in priority order (highest priority first)
+                </span>
+              </div>
+              <div className="flex items-start gap-2">
+                <div className="mt-2 h-2 w-2 flex-shrink-0 rounded-full bg-blue-500"></div>
+                <span>
+                  Updates fairness scores after processing for future lottery
+                  fairness
                 </span>
               </div>
             </div>
