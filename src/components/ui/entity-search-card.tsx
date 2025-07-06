@@ -192,7 +192,7 @@ export function EntitySearchCard<T extends Entity>({
                   onClick={onCreateNew}
                   variant="outline"
                   size="sm"
-                  className="border-blue-300 text-blue-600 hover:bg-blue-50"
+                  className="border-blue-300 text-blue-600 hover:bg-blue-50 hover:text-blue-700"
                 >
                   <UserPlus className="mr-2 h-4 w-4" />
                   {createButtonText}

@@ -7,7 +7,7 @@ import {
   timeBlocks,
   teesheets,
 } from "~/server/db/schema";
-import { eq, and, like, or } from "drizzle-orm";
+import { eq, and, like, or, ilike } from "drizzle-orm";
 
 import { revalidatePath } from "next/cache";
 import { getGuestBookingHistory } from "./data";
@@ -15,30 +15,38 @@ import { formatDateToYYYYMMDD } from "~/lib/utils";
 
 export async function searchGuestsAction(searchTerm: string) {
   const lowerSearchTerm = `%${searchTerm.toLowerCase()}%`;
+  const searchWords = searchTerm.split(" ");
 
-  return await db.query.guests.findMany({
-    where: or(
-      like(guests.firstName, lowerSearchTerm),
-      like(guests.lastName, lowerSearchTerm),
-      like(guests.email, lowerSearchTerm),
-      // Support combined search like "omar elsh" or "elsh omar"
-      and(
-        like(guests.firstName, `%${searchTerm.split(" ")[0]?.toLowerCase()}%`),
-        like(
-          guests.lastName,
-          `%${searchTerm.split(" ").slice(1).join(" ")?.toLowerCase()}%`,
+  try {
+    const results = await db.query.guests.findMany({
+      where: or(
+        ilike(guests.firstName, lowerSearchTerm),
+        ilike(guests.lastName, lowerSearchTerm),
+        ilike(guests.email, lowerSearchTerm),
+        // Support combined search like "omar elsh" or "elsh omar"
+        and(
+          ilike(guests.firstName, `%${searchWords[0]?.toLowerCase()}%`),
+          ilike(
+            guests.lastName,
+            `%${searchWords.slice(1).join(" ")?.toLowerCase()}%`,
+          ),
+        ),
+        and(
+          ilike(guests.lastName, `%${searchWords[0]?.toLowerCase()}%`),
+          ilike(
+            guests.firstName,
+            `%${searchWords.slice(1).join(" ")?.toLowerCase()}%`,
+          ),
         ),
       ),
-      and(
-        like(guests.lastName, `%${searchTerm.split(" ")[0]?.toLowerCase()}%`),
-        like(
-          guests.firstName,
-          `%${searchTerm.split(" ").slice(1).join(" ")?.toLowerCase()}%`,
-        ),
-      ),
-    ),
-    orderBy: [guests.lastName, guests.firstName],
-  });
+      orderBy: [guests.lastName, guests.firstName],
+    });
+
+    return results;
+  } catch (error) {
+    console.error("Error in searchGuestsAction:", error);
+    throw error;
+  }
 }
 
 export async function createGuest(data: {
@@ -48,13 +56,28 @@ export async function createGuest(data: {
   phone?: string;
 }) {
   try {
+    // Check for duplicate guest with same first and last name (case-insensitive)
+    const existingGuest = await db.query.guests.findFirst({
+      where: and(
+        ilike(guests.firstName, data.firstName.trim()),
+        ilike(guests.lastName, data.lastName.trim()),
+      ),
+    });
+
+    if (existingGuest) {
+      return {
+        success: false,
+        error: `A guest with the name "${data.firstName} ${data.lastName}" already exists`,
+      };
+    }
+
     const [newGuest] = await db
       .insert(guests)
       .values({
-        firstName: data.firstName,
-        lastName: data.lastName,
-        email: data.email || null,
-        phone: data.phone || null,
+        firstName: data.firstName.trim(),
+        lastName: data.lastName.trim(),
+        email: data.email?.trim() || null,
+        phone: data.phone?.trim() || null,
       })
       .returning();
 

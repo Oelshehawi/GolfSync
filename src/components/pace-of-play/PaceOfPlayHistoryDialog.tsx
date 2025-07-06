@@ -10,11 +10,8 @@ import {
 } from "~/components/ui/dialog";
 import { Card, CardContent } from "~/components/ui/card";
 import { Calendar, Clock, MessageSquare } from "lucide-react";
-import {
-  formatDateStringToWords,
-  formatTimeStringTo12Hour,
-  formatTime12Hour,
-} from "~/lib/utils";
+import { formatDateStringToWords, formatTimeStringTo12Hour } from "~/lib/utils";
+import { formatTime12Hour } from "~/lib/dates";
 import { PaceOfPlayStatus } from "~/components/pace-of-play/PaceOfPlayStatus";
 import type {
   PaceOfPlayHistoryItem,

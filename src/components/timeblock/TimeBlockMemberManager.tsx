@@ -48,7 +48,6 @@ type Guest = {
   lastName: string;
   email: string | null;
   phone: string | null;
-  handicap: string | null;
 };
 
 interface TimeBlockMemberManagerProps {
@@ -159,7 +158,6 @@ export function TimeBlockMemberManager({
         lastName: result.lastName,
         email: result.email,
         phone: result.phone,
-        handicap: result.handicap || null, // Ensure handicap is included
       }));
       setGuestSearchResults(mappedResults);
     } catch (error) {
@@ -477,18 +475,6 @@ export function TimeBlockMemberManager({
 
   const handleCreateGuest = async (values: GuestFormValues) => {
     try {
-      // Check for duplicates first
-      const isDuplicate = guestSearchResults.some(
-        (guest) =>
-          guest.firstName.toLowerCase() === values.firstName.toLowerCase() &&
-          guest.lastName.toLowerCase() === values.lastName.toLowerCase(),
-      );
-
-      if (isDuplicate) {
-        toast.error("A guest with this name already exists");
-        return;
-      }
-
       const result = await createGuest(values);
       if (result.success && result.data) {
         toast.success("Guest created successfully");
