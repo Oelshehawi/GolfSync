@@ -10,7 +10,7 @@ import { Button } from "~/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { createEvent, updateEvent } from "~/server/events/actions";
 import toast from "react-hot-toast";
-import { EventFormProps } from "~/app/types/events";
+import { type EventFormProps } from "~/app/types/events";
 import { BasicInfoForm } from "./form-sections/BasicInfoForm";
 import { EventDetailsForm } from "./form-sections/EventDetailsForm";
 import { EventSettingsForm } from "./form-sections/EventSettingsForm";

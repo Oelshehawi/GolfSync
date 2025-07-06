@@ -60,9 +60,9 @@ export async function searchMembersList(query: string): Promise<Member[]> {
 }
 
 export async function searchMembers(
-  query: string = "",
-  page: number = 1,
-  pageSize: number = 20,
+  query = "",
+  page = 1,
+  pageSize = 20,
 ) {
   const offset = (page - 1) * pageSize;
 

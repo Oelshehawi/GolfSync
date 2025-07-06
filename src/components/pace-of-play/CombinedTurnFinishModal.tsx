@@ -9,10 +9,10 @@ import {
 } from "~/components/ui/dialog";
 import { Button } from "~/components/ui/button";
 import { Textarea } from "~/components/ui/textarea";
-import { TimeBlockWithPaceOfPlay } from "~/app/types/PaceOfPlayTypes";
+import { type TimeBlockWithPaceOfPlay } from "~/app/types/PaceOfPlayTypes";
 import { updateTurnAndFinishTime } from "~/server/pace-of-play/actions";
 import toast from "react-hot-toast";
-import { formatDisplayTime } from "~/lib/utils";
+import { formatTime12Hour, getBCNow, formatTime } from "~/lib/dates";
 import { Input } from "~/components/ui/input";
 
 interface CombinedTurnFinishModalProps {
@@ -39,7 +39,7 @@ export function CombinedTurnFinishModal({
       setNotes(timeBlock.paceOfPlay?.notes || "");
       // Set default turn time to halfway between start and now
       const startTime = new Date(timeBlock.paceOfPlay?.startTime!);
-      const now = new Date();
+      const now = getBCNow();
       const halfwayTime = new Date((startTime.getTime() + now.getTime()) / 2);
       setTurnTime(formatTimeForInput(halfwayTime));
       setFinishTime(formatTimeForInput(now));
@@ -48,13 +48,13 @@ export function CombinedTurnFinishModal({
 
   // Helper to format Date object for time input
   const formatTimeForInput = (date: Date) => {
-    return date.toTimeString().slice(0, 5); // Get HH:MM format
+    return formatTime(date);
   };
 
   // Helper to create a full Date object from time string
   const createDateFromTimeString = (timeString: string): Date => {
     const [hours, minutes] = timeString.split(":");
-    const date = new Date();
+    const date = getBCNow();
     date.setHours(parseInt(hours || "0", 10));
     date.setMinutes(parseInt(minutes || "0", 10));
     date.setSeconds(0);
@@ -101,7 +101,7 @@ export function CombinedTurnFinishModal({
 
   // Format tee time properly
   const formattedTeeTime = timeBlock?.startTime
-    ? formatDisplayTime(timeBlock.startTime)
+    ? formatTime12Hour(timeBlock.startTime)
     : "";
 
   return (

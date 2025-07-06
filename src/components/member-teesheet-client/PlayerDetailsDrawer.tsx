@@ -4,7 +4,7 @@ import React, { useEffect } from "react";
 import { X, UserIcon, Users, CheckCircle } from "lucide-react";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
-import { TimeBlockMemberView, TimeBlockFill } from "~/app/types/TeeSheetTypes";
+import { type TimeBlockMemberView, type TimeBlockFill } from "~/app/types/TeeSheetTypes";
 import { formatDisplayTime } from "~/lib/utils";
 
 type ClientTimeBlock = {

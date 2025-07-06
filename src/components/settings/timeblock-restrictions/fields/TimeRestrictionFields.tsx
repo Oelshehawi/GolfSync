@@ -9,9 +9,9 @@ import {
 } from "~/components/ui/form";
 import { Input } from "~/components/ui/input";
 import { Checkbox } from "~/components/ui/checkbox";
-import { UseFormReturn } from "react-hook-form";
+import { type UseFormReturn } from "react-hook-form";
 import { DatePicker } from "~/components/ui/date-picker";
-import { TimeblockRestrictionFormValues } from "../TimeblockRestrictionDialog";
+import { type TimeblockRestrictionFormValues } from "../TimeblockRestrictionDialog";
 import { preserveDate } from "~/lib/utils";
 
 interface TimeRestrictionFieldsProps {

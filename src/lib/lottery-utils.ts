@@ -27,7 +27,7 @@ export function calculateDynamicTimeWindows(
     return [];
   }
 
-  const regularConfig = config as RegularConfig;
+  const regularConfig = config;
 
   // Parse start and end times
   const startTime = parseTimeToMinutes(regularConfig.startTime);

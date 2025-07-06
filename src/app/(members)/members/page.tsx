@@ -10,9 +10,9 @@ import {
 } from "~/server/events/data";
 import { CourseInfoClient } from "~/components/course-info/CourseInfoClient";
 import { UpcomingTeeTimes } from "~/components/member-teesheet-client/UpcomingTeeTimes";
-import { Member } from "~/app/types/MemberTypes";
+import { type Member } from "~/app/types/MemberTypes";
 import { EventCard } from "~/components/events/EventCard";
-import { EventType } from "~/app/types/events";
+import { type EventType } from "~/app/types/events";
 import Link from "next/link";
 import { InstallPrompt } from "~/components/pwa/InstallPrompt";
 
@@ -89,7 +89,7 @@ export default async function MembersHome() {
                     id: event.id,
                     name: event.name,
                     description: event.description,
-                    eventType: event.eventType as EventType,
+                    eventType: event.eventType,
                     startDate: event.startDate,
                     endDate: event.endDate,
                     startTime: event.startTime,

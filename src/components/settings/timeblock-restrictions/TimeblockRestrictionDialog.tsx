@@ -7,7 +7,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "~/components/ui/dialog";
-import { TimeblockRestriction } from "./TimeblockRestrictionsSettings";
+import { type TimeblockRestriction } from "./TimeblockRestrictionsSettings";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -188,14 +188,8 @@ export function TimeblockRestrictionDialog({
       const defaultValues = {
         name: existingRestriction.name || "",
         description: existingRestriction.description || "",
-        restrictionCategory: existingRestriction.restrictionCategory as
-          | "MEMBER_CLASS"
-          | "GUEST"
-          | "COURSE_AVAILABILITY",
-        restrictionType: existingRestriction.restrictionType as
-          | "TIME"
-          | "FREQUENCY"
-          | "AVAILABILITY",
+        restrictionCategory: existingRestriction.restrictionCategory,
+        restrictionType: existingRestriction.restrictionType,
         memberClasses: existingRestriction.memberClasses || [],
         isActive: existingRestriction.isActive ?? true,
         priority: existingRestriction.priority ?? 0,

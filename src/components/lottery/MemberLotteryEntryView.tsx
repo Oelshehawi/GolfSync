@@ -32,7 +32,7 @@ import {
 } from "lucide-react";
 import { formatDate, formatTime12Hour } from "~/lib/dates";
 import { cancelLotteryEntry } from "~/server/lottery/actions";
-import { LotteryEntry, LotteryGroup } from "~/app/types/LotteryTypes";
+import { type LotteryEntry, type LotteryGroup } from "~/app/types/LotteryTypes";
 import type { Member } from "~/app/types/MemberTypes";
 
 interface LotteryEntryViewProps {

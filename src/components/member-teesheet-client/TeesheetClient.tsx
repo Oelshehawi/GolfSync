@@ -24,7 +24,7 @@ import { LotteryView } from "../lottery/MemberLotteryView";
 import toast from "react-hot-toast";
 import { isPast, getDateForDB } from "~/lib/dates";
 import { parse } from "date-fns";
-import { Member } from "~/app/types/MemberTypes";
+import { type Member } from "~/app/types/MemberTypes";
 import type {
   TimeBlockMemberView,
   TimeBlockFill,
@@ -178,7 +178,7 @@ export default function TeesheetClient({
     router.refresh();
   }, [router]);
 
-  const goToPreviousDay = useCallback(async () => {
+  const goToPreviousDay = useCallback(() => {
     dispatch({ type: "SET_SWIPE_LOADING", payload: true });
     const newDate = addDays(date, -1);
     // Set to start of day to avoid timezone issues
@@ -192,13 +192,13 @@ export default function TeesheetClient({
       0,
     );
     navigateToDate(adjustedDate);
-    // Clear loading after a short delay to show feedback
-    setTimeout(() => {
+    // Clear loading after navigation completes
+    requestAnimationFrame(() => {
       dispatch({ type: "SET_SWIPE_LOADING", payload: false });
-    }, 500);
+    });
   }, [date, navigateToDate]);
 
-  const goToNextDay = useCallback(async () => {
+  const goToNextDay = useCallback(() => {
     dispatch({ type: "SET_SWIPE_LOADING", payload: true });
     const newDate = addDays(date, 1);
     // Set to start of day to avoid timezone issues
@@ -212,10 +212,10 @@ export default function TeesheetClient({
       0,
     );
     navigateToDate(adjustedDate);
-    // Clear loading after a short delay to show feedback
-    setTimeout(() => {
+    // Clear loading after navigation completes
+    requestAnimationFrame(() => {
       dispatch({ type: "SET_SWIPE_LOADING", payload: false });
-    }, 500);
+    });
   }, [date, navigateToDate]);
 
   const handleDateChange = useCallback(
@@ -270,66 +270,78 @@ export default function TeesheetClient({
     [goToPreviousDay, goToNextDay],
   );
 
-  // Debounced booking handlers
-  const [debouncedBooking] = useDebounce(async (timeBlockId: number) => {
-    if (!timeBlockId) return;
+  // Debounced booking handlers with cleanup
+  const [debouncedBooking] = useDebounce(
+    useCallback(
+      async (timeBlockId: number) => {
+        if (!timeBlockId) return;
 
-    dispatch({ type: "SET_LOADING", payload: true });
-    try {
-      const result = await bookTeeTime(timeBlockId, member);
+        dispatch({ type: "SET_LOADING", payload: true });
+        try {
+          const result = await bookTeeTime(timeBlockId, member);
 
-      if (result.success) {
-        toast.success("Tee time booked successfully!", {
-          icon: <CheckCircle className="h-5 w-5 text-green-500" />,
-          id: `book-${timeBlockId}`,
-          duration: 3000,
-        });
-      } else {
-        toast.error(result.error || "Failed to book tee time", {
-          icon: <X className="h-5 w-5 text-red-500" />,
-          id: `book-error-${timeBlockId}`,
-        });
-      }
-    } catch (error) {
-      console.error("Error booking tee time", error);
-      toast.error("An unexpected error occurred", {
-        icon: <AlertCircle className="h-5 w-5 text-red-500" />,
-        id: `book-error-unexpected-${timeBlockId}`,
-      });
-    } finally {
-      dispatch({ type: "CLEAR_BOOKING" });
-    }
-  }, 300);
+          if (result.success) {
+            toast.success("Tee time booked successfully!", {
+              icon: <CheckCircle className="h-5 w-5 text-green-500" />,
+              id: `book-${timeBlockId}`,
+              duration: 3000,
+            });
+          } else {
+            toast.error(result.error || "Failed to book tee time", {
+              icon: <X className="h-5 w-5 text-red-500" />,
+              id: `book-error-${timeBlockId}`,
+            });
+          }
+        } catch (error) {
+          console.error("Error booking tee time", error);
+          toast.error("An unexpected error occurred", {
+            icon: <AlertCircle className="h-5 w-5 text-red-500" />,
+            id: `book-error-unexpected-${timeBlockId}`,
+          });
+        } finally {
+          dispatch({ type: "CLEAR_BOOKING" });
+        }
+      },
+      [member],
+    ),
+    300,
+  );
 
-  const [debouncedCancelling] = useDebounce(async (timeBlockId: number) => {
-    if (!timeBlockId) return;
+  const [debouncedCancelling] = useDebounce(
+    useCallback(
+      async (timeBlockId: number) => {
+        if (!timeBlockId) return;
 
-    dispatch({ type: "SET_LOADING", payload: true });
-    try {
-      const result = await cancelTeeTime(timeBlockId, member);
+        dispatch({ type: "SET_LOADING", payload: true });
+        try {
+          const result = await cancelTeeTime(timeBlockId, member);
 
-      if (result.success) {
-        toast.success("Tee time cancelled successfully!", {
-          icon: <CheckCircle className="h-5 w-5 text-green-500" />,
-          id: `cancel-${timeBlockId}`,
-          duration: 3000,
-        });
-      } else {
-        toast.error(result.error || "Failed to cancel tee time", {
-          icon: <X className="h-5 w-5 text-red-500" />,
-          id: `cancel-error-${timeBlockId}`,
-        });
-      }
-    } catch (error) {
-      console.error("Error cancelling tee time", error);
-      toast.error("An unexpected error occurred", {
-        icon: <AlertCircle className="h-5 w-5 text-red-500" />,
-        id: `cancel-error-unexpected-${timeBlockId}`,
-      });
-    } finally {
-      dispatch({ type: "CLEAR_CANCELLING" });
-    }
-  }, 300);
+          if (result.success) {
+            toast.success("Tee time cancelled successfully!", {
+              icon: <CheckCircle className="h-5 w-5 text-green-500" />,
+              id: `cancel-${timeBlockId}`,
+              duration: 3000,
+            });
+          } else {
+            toast.error(result.error || "Failed to cancel tee time", {
+              icon: <X className="h-5 w-5 text-red-500" />,
+              id: `cancel-error-${timeBlockId}`,
+            });
+          }
+        } catch (error) {
+          console.error("Error cancelling tee time", error);
+          toast.error("An unexpected error occurred", {
+            icon: <AlertCircle className="h-5 w-5 text-red-500" />,
+            id: `cancel-error-unexpected-${timeBlockId}`,
+          });
+        } finally {
+          dispatch({ type: "CLEAR_CANCELLING" });
+        }
+      },
+      [member],
+    ),
+    300,
+  );
 
   // Booking handlers
   const handleBookTeeTime = useCallback(() => {
@@ -367,15 +379,15 @@ export default function TeesheetClient({
       }
 
       // Check if the timeblock is restricted (pre-checked from server)
-      if (timeBlock.restriction && timeBlock.restriction.isRestricted) {
+      if (timeBlock.restriction?.isRestricted) {
         const violations = timeBlock.restriction.violations || [];
 
         // Check for AVAILABILITY restrictions first (highest priority)
-        const hasAvailabilityViolation = violations.some(
+        const availabilityViolation = violations.find(
           (v: any) => v.type === "AVAILABILITY",
         );
 
-        if (hasAvailabilityViolation) {
+        if (availabilityViolation) {
           // AVAILABILITY restrictions block booking completely
           toast.error(
             timeBlock.restriction.reason ||
@@ -389,9 +401,9 @@ export default function TeesheetClient({
         }
 
         // Check for TIME restrictions second (high priority)
-        const hasTimeViolation = violations.some((v: any) => v.type === "TIME");
+        const timeViolation = violations.find((v: any) => v.type === "TIME");
 
-        if (hasTimeViolation) {
+        if (timeViolation) {
           // TIME restrictions block booking completely
           toast.error(
             timeBlock.restriction.reason ||
@@ -405,15 +417,13 @@ export default function TeesheetClient({
         }
 
         // Check for FREQUENCY restrictions (lower priority)
-        const hasFrequencyViolation = violations.some(
+        const frequencyViolation = violations.find(
           (v: any) => v.type === "FREQUENCY",
         );
 
-        if (hasFrequencyViolation) {
+        if (frequencyViolation) {
           // For frequency restrictions, show a friendly warning but allow booking
-          const frequencyInfo = violations.find(
-            (v: any) => v.type === "FREQUENCY",
-          )?.frequencyInfo;
+          const frequencyInfo = frequencyViolation.frequencyInfo;
 
           if (frequencyInfo) {
             toast(
@@ -471,14 +481,40 @@ export default function TeesheetClient({
 
   const isTimeBlockInPast = useCallback(
     (timeBlock: ClientTimeBlock) => {
-      if (!timeBlock || !timeBlock.startTime) return false;
+      if (!timeBlock?.startTime) return false;
       // Use both date and time parameters for accurate past checking
       return isPast(selectedDate, timeBlock.startTime);
     },
     [selectedDate],
   );
 
-  const hasTimeBlocks = timeBlocks.length > 0;
+  // Check for COURSE AVAILABILITY restrictions that should hide the entire teesheet
+  const hasFullDayRestriction = useMemo(() => {
+    return timeBlocks.some((timeBlock) => {
+      if (!timeBlock.restriction?.isRestricted) return false;
+
+      const violations = timeBlock.restriction.violations || [];
+      // Any AVAILABILITY violation should hide the teesheet
+      return violations.some((v: any) => v.type === "AVAILABILITY");
+    });
+  }, [timeBlocks]);
+
+  // Get course availability restriction message
+  const fullDayRestrictionMessage = useMemo(() => {
+    if (!hasFullDayRestriction) return "";
+
+    const restrictedTimeBlock = timeBlocks.find((timeBlock) => {
+      if (!timeBlock.restriction?.isRestricted) return false;
+
+      const violations = timeBlock.restriction.violations || [];
+      return violations.some((v: any) => v.type === "AVAILABILITY");
+    });
+
+    return (
+      restrictedTimeBlock?.restriction?.reason ||
+      "Course is not available today"
+    );
+  }, [hasFullDayRestriction, timeBlocks]);
 
   // If this is a lottery-eligible date, show lottery interface instead of tee sheet
   if (isLotteryEligible) {
@@ -529,25 +565,41 @@ export default function TeesheetClient({
         </div>
       )}
 
-      {/* Tee Sheet Grid */}
-      <TeesheetGrid
-        date={date}
-        timeBlocks={timeBlocks}
-        config={config}
-        member={member}
-        loading={loading}
-        selectedDate={selectedDate}
-        onTouchStart={handleTouchStart}
-        onTouchEnd={handleTouchEnd}
-        onBook={checkBookingRestrictions}
-        onCancel={(timeBlockId) =>
-          dispatch({ type: "START_CANCELLING", payload: timeBlockId })
-        }
-        onShowDetails={handleShowPlayerDetails}
-        isTimeBlockBooked={isTimeBlockBooked}
-        isTimeBlockAvailable={isTimeBlockAvailable}
-        isTimeBlockInPast={isTimeBlockInPast}
-      />
+      {/* Full Day Restriction Alert or Tee Sheet Grid */}
+      {hasFullDayRestriction ? (
+        <div className="overflow-hidden rounded-xl border border-red-200 bg-white shadow-sm">
+          <div className="border-b border-red-200 bg-red-50 p-4">
+            <h3 className="flex items-center gap-2 text-lg font-bold text-red-900">
+              <AlertCircle className="h-5 w-5 text-red-600" />
+              Course Not Available
+            </h3>
+          </div>
+          <div className="p-4">
+            <div className="border-l-4 border-red-500 pl-4 text-sm leading-relaxed text-red-700">
+              {fullDayRestrictionMessage}
+            </div>
+          </div>
+        </div>
+      ) : (
+        <TeesheetGrid
+          date={date}
+          timeBlocks={timeBlocks}
+          config={config}
+          member={member}
+          loading={loading}
+          selectedDate={selectedDate}
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
+          onBook={checkBookingRestrictions}
+          onCancel={(timeBlockId) =>
+            dispatch({ type: "START_CANCELLING", payload: timeBlockId })
+          }
+          onShowDetails={handleShowPlayerDetails}
+          isTimeBlockBooked={isTimeBlockBooked}
+          isTimeBlockAvailable={isTimeBlockAvailable}
+          isTimeBlockInPast={isTimeBlockInPast}
+        />
+      )}
 
       {/* Date Picker Dialog */}
       {showDatePicker && (

@@ -14,10 +14,10 @@ import {
 } from "drizzle-orm";
 
 import {
-  Event,
-  EventRegistration,
-  EventType,
-  EventWithRegistrations,
+  type Event,
+  type EventRegistration,
+  type EventType,
+  type EventWithRegistrations,
 } from "~/app/types/events";
 import { getBCToday } from "~/lib/dates";
 
@@ -112,7 +112,7 @@ export async function getEvents(options?: {
 
 // Get upcoming events
 export async function getUpcomingEvents(
-  limit: number = 5,
+  limit = 5,
   memberClass?: string,
 ): Promise<Event[]> {
   const today = getBCToday();

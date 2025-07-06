@@ -5,7 +5,7 @@ import type { TimeBlockWithMembers } from "~/app/types/TeeSheetTypes";
 import { Button } from "~/components/ui/button";
 import { X, UserCheck, UserX, UserPlus } from "lucide-react";
 import { toast } from "react-hot-toast";
-import { RestrictionViolation } from "~/app/types/RestrictionTypes";
+import { type RestrictionViolation } from "~/app/types/RestrictionTypes";
 import { formatDisplayTime, getMemberClassStyling } from "~/lib/utils";
 import { Badge } from "~/components/ui/badge";
 import { cn } from "~/lib/utils";
@@ -511,7 +511,7 @@ export function TimeBlock({
           <Button
             variant="outline"
             size="sm"
-            onClick={() => onCheckInAll && onCheckInAll()}
+            onClick={() => onCheckInAll?.()}
             disabled={checkInDisabled}
             title={
               !hasParticipants

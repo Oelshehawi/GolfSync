@@ -12,7 +12,7 @@ import type {
 } from "~/app/types/TeeSheetTypes";
 import type { TimeBlockGuest } from "~/app/types/GuestTypes";
 import { ConfigTypes } from "~/app/types/TeeSheetTypes";
-import { RestrictionViolation } from "~/app/types/RestrictionTypes";
+import { type RestrictionViolation } from "~/app/types/RestrictionTypes";
 import { TimeBlock as TimeBlockComponent } from "../timeblock/TimeBlock";
 import { RestrictionViolationAlert } from "~/components/settings/timeblock-restrictions/RestrictionViolationAlert";
 import type { TimeBlockWithPaceOfPlay } from "~/app/types/PaceOfPlayTypes";
@@ -375,7 +375,7 @@ export function TeesheetView({
               let templateBlock: TemplateBlock | null = null;
 
               if (config?.type === ConfigTypes.CUSTOM) {
-                const customConfig = config as CustomConfig;
+                const customConfig = config;
                 const template = templates?.find(
                   (t) => t.id === customConfig.templateId,
                 );

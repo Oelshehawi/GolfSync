@@ -13,7 +13,7 @@ import {
 import toast from "react-hot-toast";
 import { Plus } from "lucide-react";
 import { SearchBar } from "~/components/ui/search-bar";
-import { BaseGuest } from "~/app/types/GuestTypes";
+import { type BaseGuest } from "~/app/types/GuestTypes";
 import { DeleteConfirmationDialog } from "~/components/ui/delete-confirmation-dialog";
 
 interface GuestsHandlerProps {

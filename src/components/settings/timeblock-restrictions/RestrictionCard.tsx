@@ -10,7 +10,7 @@ import {
   Calendar,
   AlertCircle,
 } from "lucide-react";
-import { TimeblockRestriction } from "./TimeblockRestrictionsSettings";
+import { type TimeblockRestriction } from "./TimeblockRestrictionsSettings";
 import { Button } from "~/components/ui/button";
 import { formatCalendarDate, formatDaysOfWeek } from "~/lib/utils";
 

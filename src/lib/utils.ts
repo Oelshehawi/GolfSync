@@ -513,7 +513,7 @@ export function formatDaysOfWeek(days: number[]): string {
  */
 export function formatCalendarDate(
   date: Date | string | null,
-  formatString: string = "yyyy-MM-dd",
+  formatString = "yyyy-MM-dd",
 ): string {
   if (!date) return "";
 
@@ -745,7 +745,7 @@ export function preserveDate(
   }
 
   // If date is a string like "2025-05-05", parse it directly
-  if (typeof date === "string" && date.match(/^\d{4}-\d{2}-\d{2}$/)) {
+  if (typeof date === "string" && (/^\d{4}-\d{2}-\d{2}$/.exec(date))) {
     // Split the date string into year, month, day
     const parts = date.split("-").map(Number);
     const year = parts[0] || 2000;

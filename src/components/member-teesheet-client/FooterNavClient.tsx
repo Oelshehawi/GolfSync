@@ -9,14 +9,22 @@ import toast from "react-hot-toast";
 import { subscribeUserToPushNotifications } from "~/server/pwa/actions";
 import { urlBase64ToUint8Array } from "~/lib/utils";
 
-interface HeaderNavClientProps {
+interface FooterNavClientProps {
   member?: any;
   isMember?: boolean;
 }
 
-export const HeaderNavClient = ({ member, isMember }: HeaderNavClientProps) => {
+export const FooterNavClient = ({ member, isMember }: FooterNavClientProps) => {
   const [isAccountDialogOpen, setIsAccountDialogOpen] = useState(false);
   const pathname = usePathname();
+
+  // Hide footer navigation on pace of play routes
+  const isPaceOfPlayRoute = pathname.includes("/pace-of-play");
+
+  // Don't render footer on pace of play routes
+  if (isPaceOfPlayRoute) {
+    return null;
+  }
 
   // Show notification toast if push notifications are disabled
   useEffect(() => {

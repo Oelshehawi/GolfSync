@@ -200,7 +200,7 @@ export async function deleteMember(id: number) {
   revalidatePath("/admin/members");
 }
 
-export async function searchMembersAction(query: string = "") {
+export async function searchMembersAction(query = "") {
   const { results } = await searchMembers(query, 1, 10);
   return results.map((member) => ({
     ...member,

@@ -5,7 +5,7 @@ import {
   getMemberEventRegistrations,
 } from "~/server/events/data";
 import { EventCard } from "~/components/events/EventCard";
-import { EventType } from "~/app/types/events";
+import { type EventType } from "~/app/types/events";
 import { Member } from "~/app/types/MemberTypes";
 
 export default async function EventsPage() {
@@ -13,7 +13,7 @@ export default async function EventsPage() {
   const member = await getMemberData(sessionClaims?.userId as string);
 
   // Get all events for the member's class
-  const events = await getEventsForClass(member?.class as string);
+  const events = await getEventsForClass(member?.class!);
 
   // Get member registrations for these events
   const memberRegistrations = member?.id
@@ -39,7 +39,7 @@ export default async function EventsPage() {
               key={event.id}
               event={{
                 ...event,
-                eventType: event.eventType as EventType,
+                eventType: event.eventType,
                 startTime: event.startTime ?? undefined,
                 endTime: event.endTime ?? undefined,
                 location: event.location ?? undefined,

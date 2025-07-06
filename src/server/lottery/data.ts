@@ -62,7 +62,7 @@ export async function getLotteryEntryData(
       where: eq(lotteryGroups.lotteryDate, lotteryDate),
     });
 
-    if (otherGroupEntry && otherGroupEntry.memberIds.includes(member.id)) {
+    if (otherGroupEntry?.memberIds.includes(member.id)) {
       return { type: "group_member", entry: otherGroupEntry as any };
     }
 

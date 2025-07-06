@@ -46,10 +46,9 @@ function isSubscriptionExpired(error: any): boolean {
   return (
     error.statusCode === 410 ||
     (error.statusCode === 400 &&
-      error.body &&
-      error.body.includes("unsubscribed")) ||
-    (error.body && error.body.includes("expired")) ||
-    (error.body && error.body.includes("invalid"))
+      error.body?.includes("unsubscribed")) ||
+    (error.body?.includes("expired")) ||
+    (error.body?.includes("invalid"))
   );
 }
 
@@ -70,7 +69,7 @@ export async function subscribeUserToPushNotifications(subscription: any) {
       .update(members)
       .set({
         pushNotificationsEnabled: true,
-        pushSubscription: subscription as any,
+        pushSubscription: subscription,
       })
       .where(eq(members.id, member.id));
 

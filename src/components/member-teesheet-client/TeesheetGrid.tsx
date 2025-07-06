@@ -115,7 +115,7 @@ export function TeesheetGrid({
 
     for (let i = 0; i < timeBlocks.length; i++) {
       const block = timeBlocks[i];
-      if (!block || !block.startTime) continue;
+      if (!block?.startTime) continue;
 
       // Parse time from HH:MM format
       const timeParts = block.startTime.split(":");

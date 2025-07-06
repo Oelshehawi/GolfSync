@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 const isPublicRoute = createRouteMatcher(["/sign-in(.*)", "/sign-up(.*)"]);
 const isAdminRoute = createRouteMatcher(["/admin(.*)"]);
 const isMemberRoute = createRouteMatcher(["/members(.*)"]);
+const isPaceOfPlayRoute = createRouteMatcher(["/members/pace-of-play(.*)"]);
 const isRootRoute = createRouteMatcher(["/"]);
 
 export default clerkMiddleware(async (auth, req) => {
@@ -28,6 +29,11 @@ export default clerkMiddleware(async (auth, req) => {
     // If trying to access admin route without admin permission, redirect to sign-in
     if (isAdminRoute(req) && !isAdmin) {
       return NextResponse.redirect(new URL("/sign-in", req.url));
+    }
+
+    // Allow admins to access pace-of-play routes in member section
+    if (isPaceOfPlayRoute(req) && isAdmin) {
+      return NextResponse.next();
     }
 
     // If trying to access member route as admin, redirect to admin

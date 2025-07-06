@@ -31,27 +31,6 @@ export async function getTimeBlockGuests(timeBlockId: number) {
   return result;
 }
 
-export async function searchGuests(searchTerm: string) {
-
-  const lowerSearchTerm = searchTerm.toLowerCase();
-
-  // Get all guests
-  const allGuests = await db.query.guests.findMany({
-  });
-
-  // Filter guests based on the search term
-  return allGuests.filter((guest) => {
-    const fullName = `${guest.firstName} ${guest.lastName}`.toLowerCase();
-    const email = (guest.email || "").toLowerCase();
-
-    return (
-      fullName.includes(lowerSearchTerm) ||
-      email.includes(lowerSearchTerm) ||
-      (guest.phone && guest.phone.includes(searchTerm))
-    );
-  });
-}
-
 export async function getGuestBookingHistory(
   guestId: number,
   options: {

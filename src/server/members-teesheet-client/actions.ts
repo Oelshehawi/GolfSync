@@ -6,7 +6,7 @@ import { eq, and, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 import { auth } from "@clerk/nextjs/server";
-import { Member } from "~/app/types/MemberTypes";
+import { type Member } from "~/app/types/MemberTypes";
 import { formatDateToYYYYMMDD } from "~/lib/utils";
 import { formatTime12Hour, formatDate } from "~/lib/dates";
 import { sendNotificationToMember } from "~/server/pwa/actions";

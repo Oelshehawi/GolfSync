@@ -15,7 +15,7 @@ import { Label } from "~/components/ui/label";
 import { registerForEvent } from "~/server/events/actions";
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
-import { RegisterForEventButtonProps } from "~/app/types/events";
+import { type RegisterForEventButtonProps } from "~/app/types/events";
 
 export default function RegisterForEventButton({
   eventId,

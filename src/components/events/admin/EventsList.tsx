@@ -11,7 +11,7 @@ import {
 } from "~/components/ui/select";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
-import { EventWithRegistrations } from "~/app/types/events";
+import { type EventWithRegistrations } from "~/app/types/events";
 
 interface EventsListProps {
   initialEvents: EventWithRegistrations[];
@@ -35,8 +35,7 @@ export default function EventsList({ initialEvents }: EventsListProps) {
     const matchesSearch =
       event.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       event.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (event.location &&
-        event.location.toLowerCase().includes(searchTerm.toLowerCase()));
+      (event.location?.toLowerCase().includes(searchTerm.toLowerCase()));
 
     // Type filter
     const matchesType = filterType === "ALL" || event.eventType === filterType;

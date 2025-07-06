@@ -1,13 +1,13 @@
 import { TurnPageClient } from "~/components/pace-of-play/TurnPageClient";
-import { getBCToday, parseDate } from "~/lib/dates";
 import { getTimeBlocksAtTurn } from "~/server/pace-of-play/data";
+import { getBCToday, parseDate } from "~/lib/dates";
 
 export default async function TurnPage() {
   const timeBlocks = await getTimeBlocksAtTurn(parseDate(getBCToday()));
 
   return (
     <div className="container mx-auto max-w-4xl py-6">
-      <TurnPageClient initialTimeBlocks={timeBlocks} isAdmin={true} />
+      <TurnPageClient initialTimeBlocks={timeBlocks} isAdmin={false} />
     </div>
   );
 }

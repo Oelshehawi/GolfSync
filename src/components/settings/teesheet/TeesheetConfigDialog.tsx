@@ -108,16 +108,16 @@ export function TeesheetConfigDialog({
         name: existingConfig.name,
         type: existingConfig.type,
         startTime: isRegularConfig
-          ? (existingConfig as RegularConfig).startTime
+          ? (existingConfig).startTime
           : undefined,
         endTime: isRegularConfig
-          ? (existingConfig as RegularConfig).endTime
+          ? (existingConfig).endTime
           : undefined,
         interval: isRegularConfig
-          ? (existingConfig as RegularConfig).interval
+          ? (existingConfig).interval
           : undefined,
         maxMembersPerBlock: isRegularConfig
-          ? (existingConfig as RegularConfig).maxMembersPerBlock
+          ? (existingConfig).maxMembersPerBlock
           : undefined,
         isActive: existingConfig.isActive,
         hasScheduleRules: existingConfig.rules?.length > 0,

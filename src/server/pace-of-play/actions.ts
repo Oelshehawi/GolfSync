@@ -178,7 +178,7 @@ export async function updateFinishTime(
 
   const status = determinePaceStatus(
     finishTime,
-    new Date(currentPace.expectedFinishTime!),
+    new Date(currentPace.expectedFinishTime),
     true,
   );
 

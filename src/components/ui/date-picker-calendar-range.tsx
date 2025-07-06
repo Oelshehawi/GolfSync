@@ -21,7 +21,7 @@ import {
   startOfWeek,
   subMonths,
 } from "date-fns";
-import { DateRange } from "~/app/types/UITypes";
+import { type DateRange } from "~/app/types/UITypes";
 
 export interface DatePickerCalendarRangeProps {
   selected?: DateRange;

@@ -149,23 +149,7 @@ export function NotificationPreferences() {
     }
   };
 
-  const handleTestNotification = async () => {
-    try {
-      if (permission === "granted") {
-        // Show a test notification
-        new Notification("Test Notification", {
-          body: "This is a test notification from Quilchena Golf Club",
-          icon: "/quilchena_logo.png",
-          badge: "/quilchena_logo.png",
-        });
-        toast.success("Test notification sent!");
-      } else {
-        toast.error("Notifications not permitted");
-      }
-    } catch (error) {
-      toast.error("Failed to send test notification");
-    }
-  };
+
 
   if (isLoading) {
     return (
@@ -291,21 +275,6 @@ export function NotificationPreferences() {
                   <span>Event updates and reminders</span>
                 </div>
               </div>
-            </div>
-          )}
-
-          {/* Test Button */}
-          {isSubscribed && permission === "granted" && (
-            <div className="border-t pt-4">
-              <Button
-                onClick={handleTestNotification}
-                variant="outline"
-                size="sm"
-                className="w-full"
-              >
-                <Bell className="mr-2 h-4 w-4" />
-                Send Test Notification
-              </Button>
             </div>
           )}
         </div>

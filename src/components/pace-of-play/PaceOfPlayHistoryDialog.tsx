@@ -13,7 +13,7 @@ import { Calendar, Clock, MessageSquare } from "lucide-react";
 import {
   formatDateStringToWords,
   formatTimeStringTo12Hour,
-  formatPaceOfPlayTimestamp,
+  formatTime12Hour,
 } from "~/lib/utils";
 import { PaceOfPlayStatus } from "~/components/pace-of-play/PaceOfPlayStatus";
 import type {
@@ -116,13 +116,17 @@ export function PaceOfPlayHistoryDialog({
                         <div className="space-y-1">
                           <p className="font-medium">Turn</p>
                           <p>
-                            {formatPaceOfPlayTimestamp(item.turn9Time, false)}
+                            {item.turn9Time
+                              ? formatTime12Hour(new Date(item.turn9Time))
+                              : "—"}
                           </p>
                         </div>
                         <div className="space-y-1">
                           <p className="font-medium">Finish</p>
                           <p>
-                            {formatPaceOfPlayTimestamp(item.finishTime, false)}
+                            {item.finishTime
+                              ? formatTime12Hour(new Date(item.finishTime))
+                              : "—"}
                           </p>
                         </div>
                       </div>

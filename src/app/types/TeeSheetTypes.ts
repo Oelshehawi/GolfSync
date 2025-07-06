@@ -1,4 +1,4 @@
-import { TimeBlockGuest } from "./GuestTypes";
+import { type TimeBlockGuest } from "./GuestTypes";
 
 export const FillTypes = {
   GUEST: "guest_fill",

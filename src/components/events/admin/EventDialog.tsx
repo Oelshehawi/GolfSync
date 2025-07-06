@@ -12,7 +12,7 @@ import {
 } from "~/components/ui/dialog";
 import { Plus } from "lucide-react";
 import { EventForm } from "./EventForm";
-import { Event as AppEvent } from "~/app/types/events";
+import { type Event as AppEvent } from "~/app/types/events";
 
 interface EventDialogProps {
   existingEvent?: AppEvent;

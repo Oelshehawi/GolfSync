@@ -8,9 +8,9 @@ import {
 import { Button } from "~/components/ui/button";
 import { Badge } from "~/components/ui/badge";
 import { Card, CardContent } from "~/components/ui/card";
-import { Member } from "~/app/types/MemberTypes";
-import { TimeBlockMemberView } from "~/app/types/TeeSheetTypes";
-import { TimeBlockGuest } from "~/app/types/GuestTypes";
+import { type Member } from "~/app/types/MemberTypes";
+import { type TimeBlockMemberView } from "~/app/types/TeeSheetTypes";
+import { type TimeBlockGuest } from "~/app/types/GuestTypes";
 import {
   User,
   Mail,
@@ -282,38 +282,6 @@ export function AccountDialog({
                       </div>
                     </div>
                   )}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Check-in Status */}
-          {"checkedIn" in member && (
-            <Card
-              className={`border-l-4 ${member.checkedIn ? "border-l-green-500 bg-green-50" : "border-l-gray-300"}`}
-            >
-              <CardContent className="pt-3 pb-3">
-                <div className="flex items-center gap-2">
-                  <div
-                    className={`h-3 w-3 flex-shrink-0 rounded-full ${member.checkedIn ? "bg-green-500" : "bg-gray-300"}`}
-                  />
-                  <div className="min-w-0 flex-1">
-                    <p className="text-xs font-medium text-gray-600">
-                      Check-in Status
-                    </p>
-                    <p
-                      className={`text-sm font-medium ${member.checkedIn ? "text-green-700" : "text-gray-600"}`}
-                    >
-                      {member.checkedIn ? "Checked In" : "Not Checked In"}
-                    </p>
-                    {"checkedInAt" in member &&
-                      member.checkedInAt &&
-                      member.checkedIn && (
-                        <p className="mt-1 text-xs text-gray-500">
-                          at {new Date(member.checkedInAt).toLocaleTimeString()}
-                        </p>
-                      )}
-                  </div>
                 </div>
               </CardContent>
             </Card>

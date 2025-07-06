@@ -451,7 +451,7 @@ export async function populateTimeBlocksWithRandomMembers(
         const selectedMembers = shuffledMembers.slice(0, numMembersToAdd);
 
         // Flag to track if we should initialize pace of play
-        let shouldInitializePaceOfPlay = false;
+        const shouldInitializePaceOfPlay = false;
         const checkInTime = new Date();
 
         // Add each member to the timeblock

@@ -36,7 +36,7 @@ export function NotesEditor({ value, onChange }: NotesEditorProps) {
   }, []);
 
   // Format handlers
-  const handleFormat = (command: string, value: string = "") => {
+  const handleFormat = (command: string, value = "") => {
     document.execCommand(command, false, value);
     if (editorRef.current) {
       onChange(editorRef.current.innerHTML);

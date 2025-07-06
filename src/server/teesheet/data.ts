@@ -82,7 +82,7 @@ export async function createTimeBlocksForTeesheet(
       throw new Error("Failed to create template blocks");
     }
   } else {
-    const regularConfig = config as RegularConfig;
+    const regularConfig = config;
 
     // For regular configurations, generate blocks based on start time, end time, and interval
     const timeBlocksArray = generateTimeBlocks({
@@ -302,8 +302,8 @@ export async function getTimeBlocksForTeesheet(
     if (timeBlock && row.guest?.id) {
       timeBlock.guests.push({
         id: row.guest.id,
-        firstName: row.guest.firstName!,
-        lastName: row.guest.lastName!,
+        firstName: row.guest.firstName,
+        lastName: row.guest.lastName,
         email: row.guest.email,
         phone: row.guest.phone,
         checkedIn: row.checkedIn || false,
@@ -311,9 +311,9 @@ export async function getTimeBlocksForTeesheet(
         invitedByMember: row.invitedByMember
           ? {
               id: row.invitedByMember.id,
-              firstName: row.invitedByMember.firstName!,
-              lastName: row.invitedByMember.lastName!,
-              memberNumber: row.invitedByMember.memberNumber!,
+              firstName: row.invitedByMember.firstName,
+              lastName: row.invitedByMember.lastName,
+              memberNumber: row.invitedByMember.memberNumber,
             }
           : undefined,
       });
@@ -449,36 +449,36 @@ export async function getTimeBlockWithMembers(
   const blockMembers = result
     .filter((row) => row.members?.id)
     .map((row) => ({
-      id: row.members!.id!,
-      firstName: row.members!.firstName!,
-      lastName: row.members!.lastName!,
-      memberNumber: row.members!.memberNumber!,
-      class: row.members!.class!,
-      bagNumber: row.members!.bagNumber,
-      username: row.members!.username!,
-      email: row.members!.email!,
-      gender: row.members!.gender,
-      dateOfBirth: row.members!.dateOfBirth,
-      handicap: row.members!.handicap,
-      checkedIn: row.members!.checkedIn || false,
-      checkedInAt: row.members!.checkedInAt,
+      id: row.members.id!,
+      firstName: row.members.firstName!,
+      lastName: row.members.lastName!,
+      memberNumber: row.members.memberNumber!,
+      class: row.members.class!,
+      bagNumber: row.members.bagNumber,
+      username: row.members.username!,
+      email: row.members.email!,
+      gender: row.members.gender,
+      dateOfBirth: row.members.dateOfBirth,
+      handicap: row.members.handicap,
+      checkedIn: row.members.checkedIn || false,
+      checkedInAt: row.members.checkedInAt,
     }));
 
   // Process guests
   const blockGuests = guestsResult.map((row) => ({
-    id: row.guest!.id!,
-    firstName: row.guest!.firstName!,
-    lastName: row.guest!.lastName!,
-    email: row.guest!.email,
-    phone: row.guest!.phone,
+    id: row.guest.id,
+    firstName: row.guest.firstName,
+    lastName: row.guest.lastName,
+    email: row.guest.email,
+    phone: row.guest.phone,
     checkedIn: row.checkedIn || false,
     checkedInAt: row.checkedInAt,
     invitedByMember: row.invitedByMember
       ? {
           id: row.invitedByMember.id,
-          firstName: row.invitedByMember.firstName!,
-          lastName: row.invitedByMember.lastName!,
-          memberNumber: row.invitedByMember.memberNumber!,
+          firstName: row.invitedByMember.firstName,
+          lastName: row.invitedByMember.lastName,
+          memberNumber: row.invitedByMember.memberNumber,
         }
       : undefined,
   }));

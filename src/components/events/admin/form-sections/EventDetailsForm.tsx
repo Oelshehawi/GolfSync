@@ -1,6 +1,6 @@
 "use client";
 
-import { UseFormReturn } from "react-hook-form";
+import { type UseFormReturn } from "react-hook-form";
 import {
   FormControl,
   FormField,
@@ -10,7 +10,7 @@ import {
 } from "~/components/ui/form";
 import { Input } from "~/components/ui/input";
 import { Textarea } from "~/components/ui/textarea";
-import { EventFormValues } from "../EventForm";
+import { type EventFormValues } from "../EventForm";
 
 interface EventDetailsFormProps {
   form: UseFormReturn<EventFormValues>;

@@ -1,7 +1,7 @@
 "use server";
 
 import { db } from "~/server/db";
-import { eq, and, or, isNull, gte, lte, ilike, desc, sql } from "drizzle-orm";
+import { eq, and, gte, lte, ilike, desc, sql } from "drizzle-orm";
 
 import {
   timeblockRestrictions,
@@ -10,9 +10,7 @@ import {
   timeBlockMembers,
 } from "~/server/db/schema";
 import {
-  formatCalendarDate,
   formatDateToYYYYMMDD,
-  formatDisplayDate,
   formatDisplayTime,
 } from "~/lib/utils";
 import { format } from "date-fns";
@@ -437,7 +435,7 @@ export async function getTimeblockOverrides(params?: {
   try {
 
     // Start with the base query conditions
-    let conditions = [];
+    const conditions = [];
 
     // Add optional filters
     if (params?.restrictionId) {

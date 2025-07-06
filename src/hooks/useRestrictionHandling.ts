@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { RestrictionViolation } from "~/app/types/RestrictionTypes";
+import { type RestrictionViolation } from "~/app/types/RestrictionTypes";
 
 export function useRestrictionHandling() {
   const [violations, setViolations] = useState<RestrictionViolation[]>([]);

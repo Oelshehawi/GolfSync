@@ -1,6 +1,6 @@
 "use client";
 
-import { UseFormReturn } from "react-hook-form";
+import { type UseFormReturn } from "react-hook-form";
 import {
   FormControl,
   FormField,
@@ -19,7 +19,7 @@ import {
   SelectValue,
 } from "~/components/ui/select";
 import { DatePicker } from "~/components/ui/date-picker";
-import { EventFormValues } from "../EventForm";
+import { type EventFormValues } from "../EventForm";
 import { getDateForDB, parseDate, getBCToday } from "~/lib/dates";
 import { MultiSelect } from "~/components/ui/multi-select";
 import { MEMBER_CLASSES } from "~/lib/constants/memberClasses";

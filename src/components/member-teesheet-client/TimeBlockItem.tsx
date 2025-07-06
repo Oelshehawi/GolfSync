@@ -13,8 +13,8 @@ import {
   ClockIcon,
 } from "lucide-react";
 import { formatTime12Hour } from "~/lib/dates";
-import { TimeBlockMemberView, TimeBlockFill } from "~/app/types/TeeSheetTypes";
-import { Member } from "~/app/types/MemberTypes";
+import { type TimeBlockMemberView, type TimeBlockFill } from "~/app/types/TeeSheetTypes";
+import { type Member } from "~/app/types/MemberTypes";
 
 // Define ClientTimeBlock for client-side usage to avoid type conflicts
 type ClientTimeBlock = {

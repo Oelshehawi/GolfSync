@@ -22,8 +22,7 @@ import { format } from "date-fns";
 export async function createTimeblockRestriction(data: any) {
   try {
     if (
-      !data ||
-      !data.name ||
+      !data?.name ||
       !data.restrictionCategory ||
       !data.restrictionType
     ) {
@@ -92,7 +91,7 @@ export async function updateTimeblockRestriction(data: {
   [key: string]: any;
 }) {
   try {
-    if (!data || !data.id) {
+    if (!data?.id) {
       console.error("Missing required data for update:", data);
       return { error: "Missing required data for update" };
     }

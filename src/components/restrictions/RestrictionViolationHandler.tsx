@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { RestrictionViolation } from "~/app/types/RestrictionTypes";
+import { type RestrictionViolation } from "~/app/types/RestrictionTypes";
 import { RestrictionViolationAlert } from "~/components/settings/timeblock-restrictions/RestrictionViolationAlert";
 
 interface RestrictionViolationHandlerProps {

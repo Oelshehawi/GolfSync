@@ -10,7 +10,7 @@ import {
   PopoverTrigger,
 } from "~/components/ui/popover";
 import { cn } from "~/lib/utils";
-import { DateRange } from "~/app/types/UITypes";
+import { type DateRange } from "~/app/types/UITypes";
 import { DatePickerCalendarRange } from "./date-picker-calendar-range";
 
 export interface DateRangePickerProps {

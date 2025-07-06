@@ -38,7 +38,7 @@ function formatTemperature(forecast: string): string {
   const cleanForecast = forecast.replace(/[°℃C]/g, "").trim();
 
   // Try to extract the number
-  const match = cleanForecast.match(/(-?\d+)/);
+  const match = /(-?\d+)/.exec(cleanForecast);
   if (match) {
     const temperature = match[1];
     return `${temperature}°C`;

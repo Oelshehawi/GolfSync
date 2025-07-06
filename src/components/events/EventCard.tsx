@@ -39,7 +39,7 @@ import { useMediaQuery } from "~/hooks/use-media-query";
 import RegisterForEventButton from "./members/RegisterForEventButton";
 import RegistrationsDialog from "./admin/RegistrationsDialog";
 import DeleteEventButton from "./admin/DeleteEventButton";
-import { EventCardProps } from "~/app/types/events";
+import { type EventCardProps } from "~/app/types/events";
 import {
   formatDate,
   formatTime12Hour,

@@ -1,6 +1,6 @@
 "use client";
 
-import { UseFormReturn } from "react-hook-form";
+import { type UseFormReturn } from "react-hook-form";
 import {
   FormControl,
   FormField,
@@ -12,7 +12,7 @@ import {
 import { Input } from "~/components/ui/input";
 import { Switch } from "~/components/ui/switch";
 import { DatePicker } from "~/components/ui/date-picker";
-import { EventFormValues } from "../EventForm";
+import { type EventFormValues } from "../EventForm";
 import { getDateForDB, getBCToday } from "~/lib/dates";
 
 interface EventSettingsFormProps {

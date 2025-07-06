@@ -189,7 +189,7 @@ export async function getLotteryEntry(
       where: eq(lotteryGroups.lotteryDate, lotteryDate),
     });
 
-    if (otherGroupEntry && otherGroupEntry.memberIds.includes(member.id)) {
+    if (otherGroupEntry?.memberIds.includes(member.id)) {
       return {
         success: true,
         data: { type: "group_member", entry: otherGroupEntry },
@@ -366,7 +366,7 @@ export async function updateLotteryGroupAdmin(
  */
 export async function cancelLotteryEntry(
   entryId: number,
-  isGroup: boolean = false,
+  isGroup = false,
 ): Promise<ActionResult> {
   try {
     if (isGroup) {
@@ -406,7 +406,7 @@ export async function cancelLotteryEntry(
 export async function assignLotteryEntry(
   entryId: number,
   timeBlockId: number,
-  isGroup: boolean = false,
+  isGroup = false,
 ): Promise<ActionResult> {
   try {
     const now = new Date();
@@ -485,7 +485,7 @@ export async function assignLotteryEntry(
 async function calculateFairnessScore(
   entry: any,
   timeWindows: any[],
-  isGroup: boolean = false,
+  isGroup = false,
 ): Promise<number> {
   let fairnessScore = 0;
 
@@ -1789,7 +1789,7 @@ function checkPreferenceMatchWithRestrictions(
   preferredWindow: string,
   alternateWindow: string | null,
   timeWindows: any[],
-  wasBlockedByRestrictions: boolean = false,
+  wasBlockedByRestrictions = false,
 ): boolean {
   // First check if they got their preferred/alternate window
   const preferenceGranted = checkPreferenceMatch(

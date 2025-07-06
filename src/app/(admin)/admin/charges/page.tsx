@@ -1,4 +1,4 @@
-import { Metadata } from "next";
+import { type Metadata } from "next";
 import { Card, CardContent, CardHeader } from "~/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { PageHeader } from "~/components/ui/page-header";
@@ -10,6 +10,7 @@ import {
   getFilteredCharges,
 } from "~/server/charges/data";
 import { addDays, format } from "date-fns";
+import { getBCToday } from "~/lib/dates";
 
 export const metadata: Metadata = {
   title: "Charges Dashboard",
@@ -29,7 +30,7 @@ export default async function ChargesDashboard({ searchParams }: PageProps) {
   // Await search params
   const params = await searchParams;
 
-  const today = new Date();
+  const today = getBCToday();
   const thirtyDaysAgo = addDays(today, -30);
 
   // Parse search params

@@ -105,7 +105,7 @@ interface ConfirmDialogState {
 
 // Get shortened member class
 const getShortMemberClass = (memberClass: string) => {
-  const classMap: { [key: string]: string } = {
+  const classMap: Record<string, string> = {
     REGULAR: "REG",
     SENIOR: "SR",
     JUNIOR: "JR",

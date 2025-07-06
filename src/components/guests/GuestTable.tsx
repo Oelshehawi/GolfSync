@@ -9,7 +9,7 @@ import {
   type ActionDef,
   type ColumnDef,
 } from "~/components/ui/BaseDataTable";
-import { BaseGuest, TimeBlockGuest } from "~/app/types/GuestTypes";
+import { type BaseGuest, type TimeBlockGuest } from "~/app/types/GuestTypes";
 import { getGuestBookingHistoryAction } from "~/server/guests/actions";
 import { BookingHistoryDialog } from "~/components/booking/BookingHistoryDialog";
 

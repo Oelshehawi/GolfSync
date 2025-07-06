@@ -224,7 +224,7 @@ export function TeesheetSettings({
             {configs.map((config) => {
               const isRegularConfig = config.type === ConfigTypes.REGULAR;
               const regularConfig = isRegularConfig
-                ? (config as RegularConfig)
+                ? (config)
                 : null;
 
               return (

@@ -22,6 +22,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "~/components/ui/dialog";
+import { ConfirmationDialog } from "~/components/ui/confirmation-dialog";
 import { updateTeesheetConfigForDate } from "~/server/settings/actions";
 import toast from "react-hot-toast";
 import type { TeeSheet, TeesheetConfig } from "~/app/types/TeeSheetTypes";
@@ -45,13 +46,25 @@ export function TeesheetControlPanel({
   const [isUpdating, setIsUpdating] = useState(false);
   const [isPopulating, setIsPopulating] = useState(false);
   const [showAdminEntryDialog, setShowAdminEntryDialog] = useState(false);
+  const [showConfigConfirmation, setShowConfigConfirmation] = useState(false);
+  const [pendingConfigId, setPendingConfigId] = useState<number | null>(null);
 
-  const handleConfigChange = async (configId: number) => {
+  const handleConfigChange = (configId: number) => {
     if (configId === teesheet.configId) return;
+
+    setPendingConfigId(configId);
+    setShowConfigConfirmation(true);
+  };
+
+  const handleConfirmConfigChange = async () => {
+    if (!pendingConfigId) return;
 
     setIsUpdating(true);
     try {
-      const result = await updateTeesheetConfigForDate(teesheet.id, configId);
+      const result = await updateTeesheetConfigForDate(
+        teesheet.id,
+        pendingConfigId,
+      );
       if (result.success) {
         toast.success("Teesheet configuration updated successfully");
       } else {
@@ -61,12 +74,14 @@ export function TeesheetControlPanel({
       toast.error("An unexpected error occurred");
     } finally {
       setIsUpdating(false);
+      setShowConfigConfirmation(false);
+      setPendingConfigId(null);
     }
   };
 
   // DEBUG: Populate timeblocks with random members
   const handlePopulateTimeBlocks = async () => {
-    if (!teesheet || !teesheet.date) return;
+    if (!teesheet?.date) return;
 
     setIsPopulating(true);
     try {
@@ -217,6 +232,19 @@ export function TeesheetControlPanel({
           })()}
         </DialogContent>
       </Dialog>
+
+      {/* Configuration Change Confirmation Dialog */}
+      <ConfirmationDialog
+        open={showConfigConfirmation}
+        onOpenChange={setShowConfigConfirmation}
+        onConfirm={handleConfirmConfigChange}
+        title="Change Teesheet Configuration"
+        description="Changing the configuration will remove all members from this teesheet. Are you sure you want to continue?"
+        confirmText="Change Configuration"
+        cancelText="Cancel"
+        variant="destructive"
+        loading={isUpdating}
+      />
     </div>
   );
 }

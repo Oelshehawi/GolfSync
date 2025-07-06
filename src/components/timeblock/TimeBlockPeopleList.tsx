@@ -10,7 +10,7 @@ import type {
   FillType,
 } from "~/app/types/TeeSheetTypes";
 import { Badge } from "~/components/ui/badge";
-import { TimeBlockGuest } from "~/app/types/GuestTypes";
+import { type TimeBlockGuest } from "~/app/types/GuestTypes";
 import { getMemberClassStyling } from "~/lib/utils";
 
 type PersonType = "member" | "guest" | "fill";
@@ -343,6 +343,7 @@ interface TimeBlockGuestSearchProps {
   members: Member[];
   onMemberSelect: (memberId: number) => void;
   selectedMemberId: number | null;
+  onCreateGuest?: () => void;
 }
 
 export function TimeBlockGuestSearch({
@@ -355,6 +356,7 @@ export function TimeBlockGuestSearch({
   members,
   onMemberSelect,
   selectedMemberId,
+  onCreateGuest,
 }: TimeBlockGuestSearchProps) {
   // Convert members to select options format
   const memberOptions = members.map((member) => ({
@@ -380,6 +382,9 @@ export function TimeBlockGuestSearch({
       limitReachedMessage="This time block is full. Remove a member or guest before adding more."
       noResultsMessage="No guests found matching your search"
       itemsPerPage={5}
+      showCreateButton={true}
+      createButtonText="Create Guest"
+      onCreateNew={onCreateGuest}
       renderEntityCard={(guest) => (
         <div
           key={guest.id}

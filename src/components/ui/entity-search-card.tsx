@@ -44,6 +44,9 @@ interface EntitySearchCardProps<T extends Entity> {
   noResultsMessage?: string;
   limitReachedMessage?: string;
   itemsPerPage?: number;
+  showCreateButton?: boolean;
+  createButtonText?: string;
+  onCreateNew?: () => void;
 }
 
 export function EntitySearchCard<T extends Entity>({
@@ -63,6 +66,9 @@ export function EntitySearchCard<T extends Entity>({
   noResultsMessage = "No results found matching your search",
   limitReachedMessage = "The limit has been reached. Remove an item before adding more.",
   itemsPerPage = 5,
+  showCreateButton = false,
+  createButtonText = "Create New",
+  onCreateNew,
 }: EntitySearchCardProps<T>) {
   const [localQuery, setLocalQuery] = useState(searchQuery);
   const [currentPage, setCurrentPage] = useState(1);
@@ -180,7 +186,18 @@ export function EntitySearchCard<T extends Entity>({
             </div>
           ) : localQuery ? (
             <div className="rounded-lg border border-dashed p-4 text-center text-gray-500">
-              {noResultsMessage}
+              <p className="mb-3">{noResultsMessage}</p>
+              {showCreateButton && onCreateNew && (
+                <Button
+                  onClick={onCreateNew}
+                  variant="outline"
+                  size="sm"
+                  className="border-blue-300 text-blue-600 hover:bg-blue-50"
+                >
+                  <UserPlus className="mr-2 h-4 w-4" />
+                  {createButtonText}
+                </Button>
+              )}
             </div>
           ) : null}
         </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { UseFormReturn } from "react-hook-form";
+import { type UseFormReturn } from "react-hook-form";
 import { useEffect } from "react";
 import {
   FormControl,
@@ -12,7 +12,7 @@ import {
 import { Input } from "~/components/ui/input";
 import { DatePicker } from "~/components/ui/date-picker";
 import { Switch } from "~/components/ui/switch";
-import { TimeblockRestrictionFormValues } from "../TimeblockRestrictionDialog";
+import { type TimeblockRestrictionFormValues } from "../TimeblockRestrictionDialog";
 import { preserveDate } from "~/lib/utils";
 
 interface AvailabilityRestrictionFieldsProps {

@@ -1,7 +1,7 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { memberFormSchema } from "./memberFormSchema";
-import { Member } from "~/app/types/MemberTypes";
+import { type Member } from "~/app/types/MemberTypes";
 import {
   Form,
   FormControl,

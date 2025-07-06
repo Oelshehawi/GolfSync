@@ -5,7 +5,7 @@ import { Ban, Plus } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { RestrictionCard } from "./RestrictionCard";
 import { TimeblockRestrictionDialog } from "./TimeblockRestrictionDialog";
-import { TimeblockRestriction } from "./TimeblockRestrictionsSettings";
+import { type TimeblockRestriction } from "./TimeblockRestrictionsSettings";
 import toast from "react-hot-toast";
 import { deleteTimeblockRestriction } from "~/server/timeblock-restrictions/actions";
 import { DeleteConfirmationDialog } from "~/components/ui/delete-confirmation-dialog";

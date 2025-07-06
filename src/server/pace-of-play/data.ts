@@ -133,6 +133,7 @@ export async function getOngoingPaceOfPlay(date: Date) {
 
 // Get active time blocks at the turn (have started but not recorded turn time)
 export async function getTimeBlocksAtTurn(date: Date) {
+
   const formattedDate = date.toISOString().split("T")[0];
 
   const result = await db
@@ -178,6 +179,7 @@ export async function getTimeBlocksAtFinish(
   missedTurns: TimeBlockWithPaceOfPlay[];
 }> {
   const formattedDate = date.toISOString().split("T")[0];
+
 
   // Base query conditions
   const baseConditions = [

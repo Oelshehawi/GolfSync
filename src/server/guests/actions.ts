@@ -14,16 +14,27 @@ import { getGuestBookingHistory } from "./data";
 import { formatDateToYYYYMMDD } from "~/lib/utils";
 
 export async function searchGuestsAction(searchTerm: string) {
-
-
   const lowerSearchTerm = `%${searchTerm.toLowerCase()}%`;
 
   return await db.query.guests.findMany({
-    where: and(
-      or(
-        like(guests.firstName, lowerSearchTerm),
-        like(guests.lastName, lowerSearchTerm),
-        like(guests.email, lowerSearchTerm),
+    where: or(
+      like(guests.firstName, lowerSearchTerm),
+      like(guests.lastName, lowerSearchTerm),
+      like(guests.email, lowerSearchTerm),
+      // Support combined search like "omar elsh" or "elsh omar"
+      and(
+        like(guests.firstName, `%${searchTerm.split(" ")[0]?.toLowerCase()}%`),
+        like(
+          guests.lastName,
+          `%${searchTerm.split(" ").slice(1).join(" ")?.toLowerCase()}%`,
+        ),
+      ),
+      and(
+        like(guests.lastName, `%${searchTerm.split(" ")[0]?.toLowerCase()}%`),
+        like(
+          guests.firstName,
+          `%${searchTerm.split(" ").slice(1).join(" ")?.toLowerCase()}%`,
+        ),
       ),
     ),
     orderBy: [guests.lastName, guests.firstName],
@@ -100,8 +111,6 @@ export async function addGuestToTimeBlock(
   invitedByMemberId: number,
 ) {
   try {
-
-
     // Get the time block to get its teesheet
     const timeBlock = await db.query.timeBlocks.findFirst({
       where: eq(timeBlocks.id, timeBlockId),

@@ -4,7 +4,7 @@
 "use client";
 
 import * as React from "react";
-import { DialogProps } from "@radix-ui/react-dialog";
+import { type DialogProps } from "@radix-ui/react-dialog";
 import { Command as CommandPrimitive } from "cmdk";
 import { Search } from "lucide-react";
 
@@ -122,7 +122,7 @@ const CommandItem = React.forwardRef<
       onClick();
     }
     if (props.onSelect) {
-      props.onSelect(props.value as string);
+      props.onSelect(props.value!);
     }
   };
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import { useDebouncedCallback } from "use-debounce";
 import { TimeBlockPageHeader } from "./TimeBlockPageHeader";
 import { TimeBlockHeader } from "./TimeBlockHeader";
@@ -34,10 +34,13 @@ import {
 import { TimeBlockFillForm } from "./fills/TimeBlockFillForm";
 import toast from "react-hot-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
-import { RestrictionViolation } from "~/app/types/RestrictionTypes";
+import { type RestrictionViolation } from "~/app/types/RestrictionTypes";
 import { RestrictionViolationAlert } from "~/components/settings/timeblock-restrictions/RestrictionViolationAlert";
 import { formatDateToYYYYMMDD } from "~/lib/utils";
-import { TimeBlockGuest } from "~/app/types/GuestTypes";
+import { type TimeBlockGuest } from "~/app/types/GuestTypes";
+import { AddGuestDialog } from "~/components/guests/AddGuestDialog";
+import { createGuest } from "~/server/guests/actions";
+import type { GuestFormValues } from "~/app/types/GuestTypes";
 
 type Guest = {
   id: number;
@@ -94,16 +97,23 @@ export function TimeBlockMemberManager({
     (() => Promise<void>) | null
   >(null);
 
+  // Guest creation state
+  const [showAddGuestDialog, setShowAddGuestDialog] = useState(false);
+
   // Constants
   const MAX_PEOPLE = 4;
   const totalPeople =
     localMembers.length + localGuests.length + localFills.length;
   const isTimeBlockFull = totalPeople >= MAX_PEOPLE;
 
-  // Create a key that changes when members, guests, or fills change
-  const peopleListKey = `people-list-${localMembers.map((m) => m.id).join("-")}-${localGuests.map((g) => g.id).join("-")}-${localFills.map((f) => f.id).join("-")}`;
+  // Create a key that changes when members, guests, or fills change (memoized for performance)
+  const peopleListKey = useMemo(
+    () =>
+      `people-list-${localMembers.map((m) => m.id).join("-")}-${localGuests.map((g) => g.id).join("-")}-${localFills.map((f) => f.id).join("-")}`,
+    [localMembers, localGuests, localFills],
+  );
 
-  // Member search handler
+  // Member search handler with better error handling
   const handleMemberSearch = useCallback(async (query: string) => {
     if (!query.trim()) {
       setMemberSearchResults([]);
@@ -123,12 +133,16 @@ export function TimeBlockMemberManager({
       }));
 
       setMemberSearchResults(transformedResults as Member[]);
+    } catch (error) {
+      console.error("Error searching members:", error);
+      toast.error("Failed to search members");
+      setMemberSearchResults([]);
     } finally {
       setIsMemberSearching(false);
     }
   }, []);
 
-  // Guest search handler
+  // Guest search handler with better error handling
   const handleGuestSearch = useCallback(async (query: string) => {
     if (!query.trim()) {
       setGuestSearchResults([]);
@@ -138,7 +152,20 @@ export function TimeBlockMemberManager({
     setIsGuestSearching(true);
     try {
       const results = await searchGuestsAction(query);
-      setGuestSearchResults(results as any);
+      // Map results to match the Guest type with all required properties
+      const mappedResults = results.map((result: any) => ({
+        id: result.id,
+        firstName: result.firstName,
+        lastName: result.lastName,
+        email: result.email,
+        phone: result.phone,
+        handicap: result.handicap || null, // Ensure handicap is included
+      }));
+      setGuestSearchResults(mappedResults);
+    } catch (error) {
+      console.error("Error searching guests:", error);
+      toast.error("Failed to search guests");
+      setGuestSearchResults([]);
     } finally {
       setIsGuestSearching(false);
     }
@@ -448,6 +475,54 @@ export function TimeBlockMemberManager({
     setShowViolationAlert(false);
   };
 
+  const handleCreateGuest = async (values: GuestFormValues) => {
+    try {
+      // Check for duplicates first
+      const isDuplicate = guestSearchResults.some(
+        (guest) =>
+          guest.firstName.toLowerCase() === values.firstName.toLowerCase() &&
+          guest.lastName.toLowerCase() === values.lastName.toLowerCase(),
+      );
+
+      if (isDuplicate) {
+        toast.error("A guest with this name already exists");
+        return;
+      }
+
+      const result = await createGuest(values);
+      if (result.success && result.data) {
+        toast.success("Guest created successfully");
+
+        // Close the dialog first
+        setShowAddGuestDialog(false);
+
+        // Add the new guest to the timeblock if a member is selected
+        if (selectedMemberId) {
+          await handleAddGuest(result.data.id);
+        }
+
+        // Always refresh the guest search results to show the new guest
+        await handleGuestSearch(
+          guestSearchQuery || `${values.firstName} ${values.lastName}`,
+        );
+
+        // If no search query was active, set it to the new guest's name to show it in results
+        if (!guestSearchQuery) {
+          setGuestSearchQuery(`${values.firstName} ${values.lastName}`);
+        }
+      } else {
+        toast.error(result.error || "Failed to create guest");
+      }
+    } catch (error) {
+      toast.error("An error occurred while creating the guest");
+      console.error(error);
+    }
+  };
+
+  const handleShowCreateGuestDialog = () => {
+    setShowAddGuestDialog(true);
+  };
+
   const handleAddFill = async (fillType: FillType, customName?: string) => {
     try {
       const result = await addFillToTimeBlock(
@@ -535,6 +610,7 @@ export function TimeBlockMemberManager({
             members={localMembers}
             onMemberSelect={handleMemberSelect}
             selectedMemberId={selectedMemberId}
+            onCreateGuest={handleShowCreateGuestDialog}
           />
         </TabsContent>
 
@@ -570,6 +646,13 @@ export function TimeBlockMemberManager({
           setShowViolationAlert(false);
           setPendingAction(null);
         }}
+      />
+
+      {/* Add Guest Dialog */}
+      <AddGuestDialog
+        open={showAddGuestDialog}
+        onOpenChange={setShowAddGuestDialog}
+        onSubmit={handleCreateGuest}
       />
     </div>
   );

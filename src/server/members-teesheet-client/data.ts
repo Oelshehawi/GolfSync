@@ -10,7 +10,7 @@ import { auth } from "@clerk/nextjs/server";
 
 import { checkBatchTimeblockRestrictions } from "~/server/timeblock-restrictions/data";
 import { formatCalendarDate } from "~/lib/utils";
-import { Member } from "~/app/types/MemberTypes";
+import { type Member } from "~/app/types/MemberTypes";
 import { getBCToday, getBCNow } from "~/lib/dates";
 
 /**

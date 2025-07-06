@@ -118,7 +118,7 @@ export function parseDateTime(dateString: string, timeString: string): Date {
  */
 export function formatDate(
   date: Date | string,
-  formatString: string = "MMMM do, yyyy",
+  formatString = "MMMM do, yyyy",
 ): string {
   if (typeof date === "string") {
     // If it's a YYYY-MM-DD string, parse it to UTC first

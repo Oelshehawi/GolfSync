@@ -9,13 +9,13 @@ import {
 } from "~/components/ui/dialog";
 import { Button } from "~/components/ui/button";
 import { Textarea } from "~/components/ui/textarea";
-import { TimeBlockWithPaceOfPlay } from "~/app/types/PaceOfPlayTypes";
+import { type TimeBlockWithPaceOfPlay } from "~/app/types/PaceOfPlayTypes";
 import {
   updateTurnTime,
   updateFinishTime,
 } from "~/server/pace-of-play/actions";
 import toast from "react-hot-toast";
-import { formatDisplayTime } from "~/lib/utils";
+import { formatTime12Hour, getBCNow } from "~/lib/dates";
 
 interface PaceOfPlayUpdateModalProps {
   timeBlock: TimeBlockWithPaceOfPlay | null;
@@ -56,17 +56,17 @@ export function PaceOfPlayUpdateModal({
 
     setIsSubmitting(true);
     try {
-      const now = new Date();
+      const now = getBCNow();
 
       if (mode === "turn") {
         await updateTurnTime(timeBlock.id, now, userName, notes);
         toast.success(
-          `Turn time for ${formatDisplayTime(timeBlock.startTime)} group has been updated.`,
+          `Turn time for ${formatTime12Hour(timeBlock.startTime)} group has been updated.`,
         );
       } else {
         await updateFinishTime(timeBlock.id, now, userName, notes);
         toast.success(
-          `Finish time for ${formatDisplayTime(timeBlock.startTime)} group has been updated.`,
+          `Finish time for ${formatTime12Hour(timeBlock.startTime)} group has been updated.`,
         );
       }
 
@@ -93,7 +93,7 @@ export function PaceOfPlayUpdateModal({
 
   // Format tee time properly
   const formattedTeeTime = timeBlock?.startTime
-    ? formatDisplayTime(timeBlock.startTime)
+    ? formatTime12Hour(timeBlock.startTime)
     : "";
 
   return (

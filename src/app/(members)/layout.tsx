@@ -1,6 +1,6 @@
 import { Inter } from "next/font/google";
 import "~/styles/globals.css";
-import { HeaderNav } from "../../components/member-teesheet-client/HeaderNav";
+import { FooterNav } from "../../components/member-teesheet-client/FooterNav";
 import { ClerkProvider } from "@clerk/nextjs";
 const inter = Inter({ subsets: ["latin"] });
 
@@ -17,7 +17,7 @@ export default function MembersLayout({
   return (
     <ClerkProvider>
       <div className={`flex min-h-screen flex-col ${inter.className}`}>
-        <HeaderNav />
+        <FooterNav />
         <main className="container mx-auto flex-1 p-4 pb-20">{children}</main>
       </div>
     </ClerkProvider>

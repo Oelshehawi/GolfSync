@@ -19,7 +19,7 @@ import {
   Flag,
   CheckCircle,
 } from "lucide-react";
-import { formatPaceOfPlayTimestamp, formatDisplayTime } from "~/lib/utils";
+import { formatTime12Hour, formatTime, formatDateTime } from "~/lib/dates";
 
 interface PaceOfPlayCardProps {
   timeBlock: TimeBlockWithPaceOfPlay;
@@ -45,15 +45,26 @@ export function PaceOfPlayCard({
   const { paceOfPlay, playerNames, numPlayers, startTime } = timeBlock;
 
   // Format the tee time using our utility function
-  const displayStartTime = startTime ? formatDisplayTime(startTime) : "—";
+  const displayStartTime = startTime ? formatTime12Hour(startTime) : "—";
+
+  // Helper to format pace of play timestamps safely
+  const formatPaceOfPlayTime = (
+    timestamp: Date | string | null | undefined,
+  ): string => {
+    if (!timestamp) return "—";
+    try {
+      const date =
+        typeof timestamp === "string" ? new Date(timestamp) : timestamp;
+      if (isNaN(date.getTime())) return "Invalid Date";
+      return formatTime12Hour(date);
+    } catch (error) {
+      return "Invalid Date";
+    }
+  };
 
   // Use the safe timestamp formatter for pace of play times
-  const displayTurnTime = paceOfPlay
-    ? formatPaceOfPlayTimestamp(paceOfPlay.turn9Time)
-    : "—";
-  const displayFinishTime = paceOfPlay
-    ? formatPaceOfPlayTimestamp(paceOfPlay.finishTime)
-    : "—";
+  const displayTurnTime = formatPaceOfPlayTime(paceOfPlay?.turn9Time);
+  const displayFinishTime = formatPaceOfPlayTime(paceOfPlay?.finishTime);
 
   const statusColor = paceOfPlay
     ? getStatusColor(paceOfPlay.status as PaceOfPlayStatusType)

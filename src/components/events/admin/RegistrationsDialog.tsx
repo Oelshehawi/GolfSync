@@ -74,7 +74,7 @@ export default function RegistrationsDialog({
       reg.member.memberNumber
         ?.toLowerCase()
         .includes(searchTerm.toLowerCase()) ||
-      (reg.notes && reg.notes.toLowerCase().includes(searchTerm.toLowerCase()));
+      (reg.notes?.toLowerCase().includes(searchTerm.toLowerCase()));
 
     const matchesStatus = filterStatus === "ALL" || reg.status === filterStatus;
 

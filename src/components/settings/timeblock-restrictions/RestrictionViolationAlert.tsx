@@ -11,7 +11,7 @@ import {
 } from "~/components/ui/alert-dialog";
 import { useState, useEffect } from "react";
 import { Textarea } from "~/components/ui/textarea";
-import { RestrictionViolation } from "~/app/types/RestrictionTypes";
+import { type RestrictionViolation } from "~/app/types/RestrictionTypes";
 import { recordTimeblockRestrictionOverride } from "~/server/timeblock-restrictions/actions";
 import { useAuth } from "@clerk/nextjs";
 
