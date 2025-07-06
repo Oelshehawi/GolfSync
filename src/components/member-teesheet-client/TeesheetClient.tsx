@@ -516,8 +516,8 @@ export default function TeesheetClient({
     );
   }, [hasFullDayRestriction, timeBlocks]);
 
-  // If this is a lottery-eligible date, show lottery interface instead of tee sheet
-  if (isLotteryEligible) {
+  // If this is a lottery-eligible date AND there's no course availability restriction, show lottery interface instead of tee sheet
+  if (isLotteryEligible && !hasFullDayRestriction) {
     return (
       <LotteryView
         selectedDate={selectedDate}
