@@ -6,6 +6,7 @@ import { useState, useEffect } from "react";
 import { RestrictionCard } from "./RestrictionCard";
 import { TimeblockRestrictionDialog } from "./TimeblockRestrictionDialog";
 import { type TimeblockRestriction } from "./TimeblockRestrictionsSettings";
+import type { MemberClass } from "~/server/db/schema";
 import toast from "react-hot-toast";
 import { deleteTimeblockRestriction } from "~/server/timeblock-restrictions/actions";
 import { DeleteConfirmationDialog } from "~/components/ui/delete-confirmation-dialog";
@@ -18,6 +19,7 @@ interface MemberClassRestrictionsProps {
   onDelete: (restrictionId: number) => void;
   highlightId?: number | null;
   onDialogClose?: () => void;
+  allMemberClasses?: MemberClass[];
 }
 
 export function MemberClassRestrictions({
@@ -28,6 +30,7 @@ export function MemberClassRestrictions({
   onDelete,
   highlightId,
   onDialogClose,
+  allMemberClasses = [],
 }: MemberClassRestrictionsProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedRestriction, setSelectedRestriction] = useState<
@@ -134,7 +137,7 @@ export function MemberClassRestrictions({
         isOpen={isDialogOpen}
         onClose={handleCloseDialog}
         existingRestriction={selectedRestriction}
-        memberClasses={memberClasses}
+        memberClasses={allMemberClasses}
         restrictionCategory="MEMBER_CLASS"
         onSuccess={handleSuccess}
       />

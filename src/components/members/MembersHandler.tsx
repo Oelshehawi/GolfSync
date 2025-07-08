@@ -12,6 +12,7 @@ import {
   DialogTitle,
 } from "~/components/ui/dialog";
 import type { Member } from "~/app/types/MemberTypes";
+import type { MemberClass } from "~/server/db/schema";
 import {
   createMember,
   updateMember,
@@ -25,11 +26,15 @@ import { DeleteConfirmationDialog } from "~/components/ui/delete-confirmation-di
 
 interface MembersHandlerProps {
   initialMembers: Member[];
+  memberClasses: MemberClass[];
 }
 
 const ITEMS_PER_PAGE = 6;
 
-export function MembersHandler({ initialMembers }: MembersHandlerProps) {
+export function MembersHandler({
+  initialMembers,
+  memberClasses,
+}: MembersHandlerProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [members, setMembers] = useState<Member[]>(initialMembers);
   const [currentPage, setCurrentPage] = useState(1);
@@ -51,7 +56,7 @@ export function MembersHandler({ initialMembers }: MembersHandlerProps) {
     const timer = setTimeout(async () => {
       if (searchQuery) {
         const results = await searchMembersAction(searchQuery);
-        setMembers(results);
+        setMembers(results as Member[]);
         setCurrentPage(1);
       } else {
         setMembers(initialMembers);
@@ -158,9 +163,14 @@ export function MembersHandler({ initialMembers }: MembersHandlerProps) {
               member={selectedMember}
               onSubmit={handleUpdateMember}
               onCancel={resetForm}
+              memberClasses={memberClasses}
             />
           ) : (
-            <AddMemberForm onSubmit={handleCreateMember} onCancel={resetForm} />
+            <AddMemberForm
+              onSubmit={handleCreateMember}
+              onCancel={resetForm}
+              memberClasses={memberClasses}
+            />
           )}
         </DialogContent>
       </Dialog>

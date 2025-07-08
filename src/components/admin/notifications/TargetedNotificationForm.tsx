@@ -19,8 +19,8 @@ interface ClassCount {
 }
 
 interface TargetedNotificationFormProps {
-  memberClasses: string[];
-  classCounts: ClassCount[];
+  memberClasses?: string[];
+  classCounts?: ClassCount[];
   hideCard?: boolean;
 }
 
@@ -35,7 +35,7 @@ export function TargetedNotificationForm({
   const [isSending, setIsSending] = useState(false);
 
   // Filter class counts based on selected classes
-  const selectedClassCounts = classCounts.filter((count) =>
+  const selectedClassCounts = (classCounts || []).filter((count) =>
     selectedClasses.includes(count.class),
   );
 
@@ -111,7 +111,7 @@ export function TargetedNotificationForm({
       <div>
         <Label className="text-base font-medium">Select Member Classes</Label>
         <div className="mt-2 grid grid-cols-2 gap-3 md:grid-cols-3">
-          {memberClasses.map((className) => (
+          {(memberClasses || []).map((className) => (
             <div key={className} className="flex items-center space-x-2">
               <Checkbox
                 id={`class-${className}`}

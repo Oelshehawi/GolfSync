@@ -22,7 +22,7 @@ import { DatePicker } from "~/components/ui/date-picker";
 import { type EventFormValues } from "../EventForm";
 import { getDateForDB, parseDate, getBCToday } from "~/lib/dates";
 import { MultiSelect } from "~/components/ui/multi-select";
-import { MEMBER_CLASSES } from "~/lib/constants/memberClasses";
+import type { MemberClass } from "~/server/db/schema";
 
 // Event types
 const EVENT_TYPES = [
@@ -35,9 +35,16 @@ const EVENT_TYPES = [
 
 interface BasicInfoFormProps {
   form: UseFormReturn<EventFormValues>;
+  memberClasses?: MemberClass[];
 }
 
-export function BasicInfoForm({ form }: BasicInfoFormProps) {
+export function BasicInfoForm({ form, memberClasses }: BasicInfoFormProps) {
+  // Convert member classes to options with null check
+  const memberClassOptions = (memberClasses || []).map((mc) => ({
+    label: mc.label,
+    value: mc.label,
+  }));
+
   return (
     <div className="space-y-4">
       <FormField
@@ -184,7 +191,7 @@ export function BasicInfoForm({ form }: BasicInfoFormProps) {
             <FormControl>
               <MultiSelect
                 selected={field.value}
-                options={MEMBER_CLASSES}
+                options={memberClassOptions}
                 onChange={field.onChange}
                 placeholder="Select member classes"
               />

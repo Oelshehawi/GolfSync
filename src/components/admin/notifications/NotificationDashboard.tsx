@@ -19,8 +19,8 @@ interface ClassCount {
 
 interface NotificationDashboardProps {
   stats: PushStats | null;
-  memberClasses: string[];
-  classCounts: ClassCount[];
+  memberClasses?: string[];
+  classCounts?: ClassCount[];
 }
 
 export function NotificationDashboard({

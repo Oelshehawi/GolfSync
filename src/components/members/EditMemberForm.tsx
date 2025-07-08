@@ -2,6 +2,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { memberFormSchema } from "./memberFormSchema";
 import type { Member } from "~/app/types/MemberTypes";
+import type { MemberClass } from "~/server/db/schema";
 import {
   Form,
   FormControl,
@@ -12,32 +13,20 @@ import {
 } from "~/components/ui/form";
 import { Input } from "~/components/ui/input";
 import { Button } from "~/components/ui/button";
-import { cn } from "~/lib/utils";
-import { Check, ChevronsUpDown } from "lucide-react";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-} from "~/components/ui/command";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "~/components/ui/popover";
-import { MEMBER_CLASSES } from "~/lib/constants/memberClasses";
+import { SearchableSelect } from "~/components/ui/searchable-select";
 
 interface EditMemberFormProps {
   member: Member;
-  onSubmit: (values: Member) => Promise<void>;
+  onSubmit: (member: Member) => Promise<void>;
   onCancel: () => void;
+  memberClasses?: MemberClass[];
 }
 
 export function EditMemberForm({
   member,
   onSubmit,
   onCancel,
+  memberClasses,
 }: EditMemberFormProps) {
   const form = useForm<Member>({
     resolver: zodResolver(memberFormSchema) as any,
@@ -56,6 +45,24 @@ export function EditMemberForm({
       bagNumber: member.bagNumber || "",
     },
   });
+
+  // Convert member classes to options with null check
+  const memberClassOptions = (memberClasses || []).map((mc) => ({
+    label: mc.label,
+    value: mc.label,
+  }));
+
+  // Add current member class if it's not in the options (for legacy data)
+  const currentClassInOptions = memberClassOptions.find(
+    (option) => option.value === member.class,
+  );
+
+  if (member.class && !currentClassInOptions) {
+    memberClassOptions.unshift({
+      label: member.class,
+      value: member.class,
+    });
+  }
 
   const handleSubmit = async (values: Member) => {
     await onSubmit(values);
@@ -86,63 +93,16 @@ export function EditMemberForm({
             control={form.control as any}
             name="class"
             render={({ field }) => (
-              <FormItem className="flex flex-col">
+              <FormItem>
                 <FormLabel>Class</FormLabel>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <FormControl>
-                      <Button
-                        variant="outline"
-                        role="combobox"
-                        className={cn(
-                          "w-full justify-between",
-                          !field.value && "text-muted-foreground",
-                        )}
-                      >
-                        {field.value
-                          ? MEMBER_CLASSES.find(
-                              (memberClass) =>
-                                memberClass.value === field.value,
-                            )?.label
-                          : "Select class"}
-                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                      </Button>
-                    </FormControl>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-[200px] p-0">
-                    <Command>
-                      <CommandInput placeholder="Search for class..." />
-                      <CommandEmpty>No class found.</CommandEmpty>
-                      <CommandGroup className="max-h-64 overflow-y-auto">
-                        {MEMBER_CLASSES.map((memberClass) => (
-                          <CommandItem
-                            key={memberClass.value}
-                            value={memberClass.value}
-                            onSelect={(value) => {
-                              field.onChange(
-                                MEMBER_CLASSES.find(
-                                  (item) =>
-                                    item.value.toLowerCase() ===
-                                    value.toLowerCase(),
-                                )?.value,
-                              );
-                            }}
-                          >
-                            <Check
-                              className={cn(
-                                "mr-2 h-4 w-4",
-                                field.value === memberClass.value
-                                  ? "opacity-100"
-                                  : "opacity-0",
-                              )}
-                            />
-                            {memberClass.label}
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
+                <FormControl>
+                  <SearchableSelect
+                    options={memberClassOptions}
+                    value={field.value}
+                    onValueChange={field.onChange}
+                    placeholder="Select or search member class"
+                  />
+                </FormControl>
                 <FormMessage className="text-red-500" />
               </FormItem>
             )}
@@ -201,11 +161,7 @@ export function EditMemberForm({
               <FormItem>
                 <FormLabel>Email</FormLabel>
                 <FormControl>
-                  <Input
-                    type="email"
-                    placeholder="Enter email address"
-                    {...field}
-                  />
+                  <Input placeholder="Enter email" {...field} />
                 </FormControl>
                 <FormMessage className="text-red-500" />
               </FormItem>
@@ -213,7 +169,7 @@ export function EditMemberForm({
           />
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-3 gap-4">
           <FormField
             control={form.control as any}
             name="gender"
@@ -221,7 +177,7 @@ export function EditMemberForm({
               <FormItem>
                 <FormLabel>Gender</FormLabel>
                 <FormControl>
-                  <Input placeholder="Enter gender" {...field} />
+                  <Input placeholder="M/F/O" {...field} />
                 </FormControl>
                 <FormMessage className="text-red-500" />
               </FormItem>
@@ -241,9 +197,7 @@ export function EditMemberForm({
               </FormItem>
             )}
           />
-        </div>
 
-        <div className="grid grid-cols-2 gap-4">
           <FormField
             control={form.control as any}
             name="handicap"
@@ -257,23 +211,23 @@ export function EditMemberForm({
               </FormItem>
             )}
           />
-
-          <FormField
-            control={form.control as any}
-            name="bagNumber"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Bag Number</FormLabel>
-                <FormControl>
-                  <Input placeholder="Enter bag number" {...field} />
-                </FormControl>
-                <FormMessage className="text-red-500" />
-              </FormItem>
-            )}
-          />
         </div>
 
-        <div className="flex justify-end gap-2">
+        <FormField
+          control={form.control as any}
+          name="bagNumber"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Bag Number</FormLabel>
+              <FormControl>
+                <Input placeholder="Enter bag number" {...field} />
+              </FormControl>
+              <FormMessage className="text-red-500" />
+            </FormItem>
+          )}
+        />
+
+        <div className="flex justify-end space-x-2">
           <Button type="button" variant="outline" onClick={onCancel}>
             Cancel
           </Button>

@@ -1,17 +1,12 @@
 import "server-only";
 import { db } from "~/server/db";
-import { events, eventRegistrations, eventDetails } from "~/server/db/schema";
+import { events, eventRegistrations } from "~/server/db/schema";
 import {
   eq,
   sql,
   and,
   desc,
-  asc,
-  gte,
-  inArray,
   or,
-  isNull,
-  type SQL,
 } from "drizzle-orm";
 
 import {

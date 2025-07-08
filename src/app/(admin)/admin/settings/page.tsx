@@ -6,12 +6,13 @@ import {
   getTimeblockRestrictions,
   getTimeblockOverrides,
 } from "~/server/timeblock-restrictions/data";
+import { getAllMemberClasses } from "~/server/member-classes/data";
 import { TimeblockRestrictionsSettings } from "~/components/settings/timeblock-restrictions/TimeblockRestrictionsSettings";
 import { CourseInfoSettings } from "~/components/settings/course-info/CourseInfoSettings";
 import { getCourseInfo } from "~/server/settings/data";
 import { PageHeader } from "~/components/ui/page-header";
 import { OverridesSettings } from "~/components/settings/overrides/OverridesSettings";
-
+import { MemberClassesSettings } from "~/components/settings/member-classes/MemberClassesSettings";
 
 type CourseInfoType = {
   id?: number;
@@ -57,6 +58,9 @@ export default async function SettingsPage() {
   const timeblockOverrides =
     "success" in timeblockOverridesResult ? [] : timeblockOverridesResult;
 
+  // Get all member classes (including inactive for admin)
+  const allMemberClasses = await getAllMemberClasses();
+
   return (
     <div className="mx-auto max-w-[1200px] space-y-6">
       {/* Header */}
@@ -68,12 +72,15 @@ export default async function SettingsPage() {
       {/* Tabbed Interface */}
       <Tabs defaultValue="teesheet" className="w-full">
         <div className="mb-6 flex justify-center">
-          <TabsList className="flex w-[800px]">
+          <TabsList className="flex w-[1000px]">
             <TabsTrigger value="teesheet" className="flex-1">
               Teesheet Settings
             </TabsTrigger>
             <TabsTrigger value="restrictions" className="flex-1">
               Timeblock Restrictions
+            </TabsTrigger>
+            <TabsTrigger value="memberClasses" className="flex-1">
+              Member Classes
             </TabsTrigger>
             <TabsTrigger value="overrides" className="flex-1">
               Override Records
@@ -97,7 +104,13 @@ export default async function SettingsPage() {
           <TimeblockRestrictionsSettings
             initialRestrictions={timeblockRestrictions}
             memberClasses={memberClasses}
+            allMemberClasses={allMemberClasses}
           />
+        </TabsContent>
+
+        <TabsContent value="memberClasses" className="mt-4">
+          {/* Member Classes */}
+          <MemberClassesSettings initialMemberClasses={allMemberClasses} />
         </TabsContent>
 
         <TabsContent value="overrides" className="mt-4">

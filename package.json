@@ -23,7 +23,8 @@
     "fix-member-numbers": "tsx scripts/fix-member-numbers.ts",
     "export-members-for-clerk": "tsx scripts/export-members-for-clerk.ts",
     "import-pace-data": "tsx scripts/import-pace-data-simple.ts",
-    "check-name-mapping": "tsx scripts/check-name-mapping.ts"
+    "check-name-mapping": "tsx scripts/check-name-mapping.ts",
+    "migrate-member-classes": "tsx scripts/run-migration.ts"
   },
   "dependencies": {
     "@clerk/nextjs": "^6.14.3",

@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { createEvent, updateEvent } from "~/server/events/actions";
 import toast from "react-hot-toast";
 import { type EventFormProps } from "~/app/types/events";
+import type { MemberClass } from "~/server/db/schema";
 import { BasicInfoForm } from "./form-sections/BasicInfoForm";
 import { EventDetailsForm } from "./form-sections/EventDetailsForm";
 import { EventSettingsForm } from "./form-sections/EventSettingsForm";
@@ -49,7 +50,15 @@ const formSchema = z.object({
 
 export type EventFormValues = z.infer<typeof formSchema>;
 
-export function EventForm({ existingEvent, onSuccess }: EventFormProps) {
+interface EventFormPropsWithMemberClasses extends EventFormProps {
+  memberClasses: MemberClass[];
+}
+
+export function EventForm({
+  existingEvent,
+  onSuccess,
+  memberClasses,
+}: EventFormPropsWithMemberClasses) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const router = useRouter();
 
@@ -145,7 +154,7 @@ export function EventForm({ existingEvent, onSuccess }: EventFormProps) {
 
           {/* Basic Information Tab */}
           <TabsContent value="basic" className="space-y-4 pt-4">
-            <BasicInfoForm form={form} />
+            <BasicInfoForm form={form} memberClasses={memberClasses} />
           </TabsContent>
 
           {/* Event Details Tab */}

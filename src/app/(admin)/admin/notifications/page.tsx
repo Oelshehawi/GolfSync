@@ -1,23 +1,23 @@
 import {
   getPushNotificationStats,
-  getMemberClassesList,
   getMembersCountByClass,
 } from "~/server/pwa/data";
+import { getMemberClasses } from "~/server/member-classes/data";
 import { NotificationDashboard } from "~/components/admin/notifications/NotificationDashboard";
 import { PageHeader } from "~/components/ui/page-header";
 
 export default async function AdminNotificationsPage() {
   // Fetch data on the server
-  const [statsResult, classesResult, classCountsResult] = await Promise.all([
-    getPushNotificationStats(),
-    getMemberClassesList(),
-    getMembersCountByClass([]), // Fetch counts for all classes
-  ]);
+  const [statsResult, memberClassesData, classCountsResult] = await Promise.all(
+    [
+      getPushNotificationStats(),
+      getMemberClasses(),
+      getMembersCountByClass([]), // Fetch counts for all classes
+    ],
+  );
 
   const stats = statsResult.success ? statsResult.stats! : null;
-  const memberClasses = classesResult.success
-    ? classesResult.classes || []
-    : [];
+  const memberClasses = memberClassesData.map((mc) => mc.label);
   const classCounts = classCountsResult.success
     ? classCountsResult.classCounts || []
     : [];

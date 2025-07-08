@@ -14,14 +14,11 @@ import {
   boolean,
   text,
   real,
-  serial,
-  pgTable,
   jsonb,
   pgEnum,
   primaryKey,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
-import { FillTypes, type FillType } from "~/app/types/TeeSheetTypes";
 
 /**
  * This is an example of how to use the multi-project schema feature of Drizzle ORM. Use the same
@@ -30,6 +27,29 @@ import { FillTypes, type FillType } from "~/app/types/TeeSheetTypes";
  * @see https://orm.drizzle.team/docs/goodies#multi-project-schema
  */
 export const createTable = pgTableCreator((name) => `golfsync_${name}`);
+
+// Member Classes table
+export const memberClasses = createTable(
+  "member_classes",
+  {
+    id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+    label: varchar("label", { length: 100 }).notNull(),
+    isActive: boolean("is_active").notNull().default(true),
+    sortOrder: integer("sort_order").notNull().default(0),
+    isSystemGenerated: boolean("is_system_generated").notNull().default(false),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).$onUpdate(
+      () => new Date(),
+    ),
+  },
+  (table) => [
+    unique("member_classes_label_unq").on(table.label),
+    index("member_classes_sort_order_idx").on(table.sortOrder),
+    index("member_classes_active_idx").on(table.isActive),
+  ],
+);
 
 // Members table
 export const members = createTable(
@@ -1031,3 +1051,7 @@ export const systemMaintenance = createTable(
     ),
   ],
 );
+
+// Type exports for member classes
+export type MemberClass = typeof memberClasses.$inferSelect;
+export type MemberClassInsert = typeof memberClasses.$inferInsert;

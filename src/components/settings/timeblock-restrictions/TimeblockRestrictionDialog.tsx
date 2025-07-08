@@ -29,7 +29,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "~/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { Switch } from "~/components/ui/switch";
 import { TimeRestrictionFields } from "./fields/TimeRestrictionFields";
 import { FrequencyRestrictionFields } from "./fields/FrequencyRestrictionFields";
@@ -41,7 +40,7 @@ import {
 import toast from "react-hot-toast";
 import { preserveDate } from "~/lib/utils";
 import { MultiSelect, type OptionType } from "~/components/ui/multi-select";
-import { MEMBER_CLASSES } from "~/lib/constants/memberClasses";
+import type { MemberClass } from "~/server/db/schema";
 
 // Define the form schema based on the TimeblockRestriction type
 const formSchema = z
@@ -145,7 +144,7 @@ interface TimeblockRestrictionDialogProps {
   isOpen: boolean;
   onClose: () => void;
   existingRestriction?: TimeblockRestriction;
-  memberClasses?: string[];
+  memberClasses?: MemberClass[];
   restrictionCategory: "MEMBER_CLASS" | "GUEST" | "COURSE_AVAILABILITY";
   onSuccess: (restriction: TimeblockRestriction) => void;
 }
@@ -164,10 +163,11 @@ export function TimeblockRestrictionDialog({
   // Add state to track submission attempts for debugging
   const [submitAttempts, setSubmitAttempts] = useState(0);
 
-  // Convert memberClasses to options for MultiSelect
-  const memberClassOptions = MEMBER_CLASSES.filter((option) =>
-    memberClasses.includes(option.value),
-  );
+  // Convert member classes to options for MultiSelect
+  const memberClassOptions = memberClasses.map((mc) => ({
+    label: mc.label,
+    value: mc.label,
+  }));
 
   // Determine default restriction type based on category
   const getDefaultRestrictionType = () => {
@@ -190,7 +190,11 @@ export function TimeblockRestrictionDialog({
         description: existingRestriction.description || "",
         restrictionCategory: existingRestriction.restrictionCategory,
         restrictionType: existingRestriction.restrictionType,
-        memberClasses: existingRestriction.memberClasses || [],
+        memberClasses: Array.isArray(existingRestriction.memberClasses)
+          ? existingRestriction.memberClasses.filter(
+              (mc) => typeof mc === "string",
+            )
+          : [],
         isActive: existingRestriction.isActive ?? true,
         priority: existingRestriction.priority ?? 0,
         canOverride: existingRestriction.canOverride ?? true,
@@ -220,7 +224,7 @@ export function TimeblockRestrictionDialog({
           | "AVAILABILITY",
         memberClasses:
           restrictionCategory === "MEMBER_CLASS"
-            ? [memberClasses[0] || ""]
+            ? [memberClasses[0]?.label || ""]
             : [],
         isActive: true,
         priority: 0,
@@ -255,7 +259,7 @@ export function TimeblockRestrictionDialog({
     // Only reset the form when opening the dialog, not closing it
     if (isOpen && !wasOpen) {
       const defaultValues = getDefaultValues();
-      form.reset(defaultValues);
+      form.reset(defaultValues as any);
       setWasOpen(true);
     } else if (!isOpen && wasOpen) {
       setWasOpen(false);
@@ -331,64 +335,42 @@ export function TimeblockRestrictionDialog({
     }
   };
 
-  // Enhanced direct handler to ensure form validation and submission work
   const handleSubmitClick = () => {
     setSubmitAttempts((prev) => prev + 1);
-
-    try {
-      // Manually trigger form validation first
-      const isValid = form.trigger();
-
-      // Use Promise.resolve to handle both synchronous and asynchronous validation
-      Promise.resolve(isValid).then((valid) => {
-        if (valid) {
-          // If form is valid, get values and call onSubmit directly
-          const values = form.getValues();
-          onSubmit(values);
-        } else {
-          // Show error toast if validation fails
-          toast.error("Please fix form errors before submitting");
-        }
-      });
-    } catch (e) {
-      console.error("Error in handleSubmitClick:", e);
-      toast.error("Error submitting form");
-    }
+    form.handleSubmit(onSubmit)();
   };
 
   const handleDialogChange = (open: boolean) => {
     if (!open) {
+      // Reset submit attempts when closing
+      setSubmitAttempts(0);
       onClose();
     }
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={handleDialogChange}>
-      <DialogContent className="max-h-[90vh] max-w-[600px] overflow-y-auto">
+      <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>
-            {existingRestriction ? "Edit Restriction" : "Add New Restriction"}
+            {existingRestriction
+              ? "Edit Timeblock Restriction"
+              : "Create Timeblock Restriction"}
           </DialogTitle>
         </DialogHeader>
 
         <Form {...form}>
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              form.handleSubmit(onSubmit)(e);
-            }}
-            className="space-y-6"
-          >
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             {/* Basic Information */}
-            <div className="space-y-4">
+            <div className="grid grid-cols-1 gap-4">
               <FormField
                 control={form.control}
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Restriction Name</FormLabel>
+                    <FormLabel>Name</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter a name" {...field} />
+                      <Input placeholder="Enter restriction name" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -403,108 +385,131 @@ export function TimeblockRestrictionDialog({
                     <FormLabel>Description</FormLabel>
                     <FormControl>
                       <Textarea
-                        placeholder="Enter a description that will be shown to members"
-                        {...field}
+                        placeholder="Enter restriction description"
                         value={field.value || ""}
+                        onChange={field.onChange}
                       />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
+            </div>
 
-              {/* Member Class selection for MEMBER_CLASS type only */}
-              {restrictionCategory === "MEMBER_CLASS" && (
-                <FormField
-                  control={form.control}
-                  name="memberClasses"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Member Classes</FormLabel>
-                      <FormControl>
-                        <MultiSelect
-                          options={memberClassOptions}
-                          selected={field.value || []}
-                          onChange={field.onChange}
-                          placeholder="Select member classes"
-                          className="w-full"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+            {/* Restriction Type */}
+            <FormField
+              control={form.control}
+              name="restrictionType"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Restriction Type</FormLabel>
+                  <Select
+                    onValueChange={field.onChange}
+                    defaultValue={field.value}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select restriction type" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="TIME">Time Restriction</SelectItem>
+                      <SelectItem value="FREQUENCY">
+                        Frequency Restriction
+                      </SelectItem>
+                      {restrictionCategory === "COURSE_AVAILABILITY" && (
+                        <SelectItem value="AVAILABILITY">
+                          Course Availability
+                        </SelectItem>
+                      )}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
               )}
+            />
 
-              {/* Restriction Type - Not shown for COURSE_AVAILABILITY or GUEST */}
-              {restrictionCategory === "MEMBER_CLASS" && (
-                <FormField
-                  control={form.control}
-                  name="restrictionType"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Restriction Type</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                        value={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select a restriction type" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="TIME">Time-based</SelectItem>
-                          <SelectItem value="FREQUENCY">
-                            Frequency-based
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              )}
+            {/* Member Classes (only for MEMBER_CLASS category) */}
+            {restrictionCategory === "MEMBER_CLASS" && (
+              <FormField
+                control={form.control}
+                name="memberClasses"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Member Classes</FormLabel>
+                    <FormControl>
+                      <MultiSelect
+                        options={memberClassOptions}
+                        selected={field.value || []}
+                        onChange={field.onChange}
+                        placeholder="Select member classes"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
 
-              {/* Status and Priority */}
-              <div className="flex flex-row gap-4">
-                <FormField
-                  control={form.control}
-                  name="isActive"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-center space-y-0 space-x-3 rounded-md border p-4">
-                      <FormControl>
-                        <Switch
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                      <div className="space-y-1 leading-none">
-                        <FormLabel>Active</FormLabel>
+            {/* Restriction Type-specific Fields */}
+            {watchRestrictionType === "TIME" && (
+              <TimeRestrictionFields
+                form={form}
+                restrictionCategory={restrictionCategory}
+              />
+            )}
+
+            {watchRestrictionType === "FREQUENCY" && (
+              <FrequencyRestrictionFields form={form} />
+            )}
+
+            {watchRestrictionType === "AVAILABILITY" && (
+              <AvailabilityRestrictionFields form={form} />
+            )}
+
+            {/* Settings */}
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <FormField
+                control={form.control}
+                name="isActive"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                    <div className="space-y-0.5">
+                      <FormLabel className="text-base">Active</FormLabel>
+                      <div className="text-muted-foreground text-sm">
+                        Enable this restriction
                       </div>
-                    </FormItem>
-                  )}
-                />
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
 
-                <FormField
-                  control={form.control}
-                  name="canOverride"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-center space-y-0 space-x-3 rounded-md border p-4">
-                      <FormControl>
-                        <Switch
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                      <div className="space-y-1 leading-none">
-                        <FormLabel>Allow Override</FormLabel>
+              <FormField
+                control={form.control}
+                name="canOverride"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                    <div className="space-y-0.5">
+                      <FormLabel className="text-base">Can Override</FormLabel>
+                      <div className="text-muted-foreground text-sm">
+                        Allow admin override
                       </div>
-                    </FormItem>
-                  )}
-                />
-              </div>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
 
               <FormField
                 control={form.control}
@@ -515,8 +520,11 @@ export function TimeblockRestrictionDialog({
                     <FormControl>
                       <Input
                         type="number"
+                        placeholder="0"
                         {...field}
-                        onChange={(e) => field.onChange(Number(e.target.value))}
+                        onChange={(e) =>
+                          field.onChange(parseInt(e.target.value) || 0)
+                        }
                       />
                     </FormControl>
                     <FormMessage />
@@ -525,55 +533,17 @@ export function TimeblockRestrictionDialog({
               />
             </div>
 
-            {/* Type-specific fields */}
-            {restrictionCategory === "MEMBER_CLASS" && (
-              <>
-                {watchRestrictionType === "TIME" && (
-                  <TimeRestrictionFields
-                    form={form as any}
-                    restrictionCategory={restrictionCategory}
-                  />
-                )}
-
-                {watchRestrictionType === "FREQUENCY" && (
-                  <FrequencyRestrictionFields form={form as any} />
-                )}
-              </>
-            )}
-
-            {/* Guest restrictions - always time-based */}
-            {restrictionCategory === "GUEST" && (
-              <TimeRestrictionFields
-                form={form as any}
-                restrictionCategory={restrictionCategory}
-              />
-            )}
-
-            {/* Course Availability Fields */}
-            {restrictionCategory === "COURSE_AVAILABILITY" && (
-              <AvailabilityRestrictionFields form={form as any} />
-            )}
-
             {/* Submit Button */}
-            <div className="flex justify-end gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={onClose}
-                disabled={isSubmitting}
-              >
+            <div className="flex justify-end space-x-2">
+              <Button type="button" variant="outline" onClick={() => onClose()}>
                 Cancel
               </Button>
-              <Button
-                type="button"
-                disabled={isSubmitting}
-                onClick={handleSubmitClick}
-              >
+              <Button type="submit" disabled={isSubmitting}>
                 {isSubmitting
                   ? "Saving..."
                   : existingRestriction
-                    ? "Update"
-                    : "Create"}
+                    ? "Update Restriction"
+                    : "Create Restriction"}
               </Button>
             </div>
           </form>

@@ -22,6 +22,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "~/components/ui/dialog";
+import type { MemberClass } from "~/server/db/schema";
 
 export type TimeblockRestriction = {
   id: number;
@@ -54,11 +55,13 @@ export type TimeblockRestriction = {
 interface TimeblockRestrictionsSettingsProps {
   initialRestrictions: TimeblockRestriction[];
   memberClasses: string[];
+  allMemberClasses?: MemberClass[];
 }
 
 export function TimeblockRestrictionsSettings({
   initialRestrictions,
   memberClasses,
+  allMemberClasses = [],
 }: TimeblockRestrictionsSettingsProps) {
   const [restrictions, setRestrictions] =
     useState<TimeblockRestriction[]>(initialRestrictions);
@@ -192,6 +195,7 @@ export function TimeblockRestrictionsSettings({
                 selectedTab === "memberClass" ? selectedRestrictionId : null
               }
               onDialogClose={handleDialogClosed}
+              allMemberClasses={allMemberClasses}
             />
           </TabsContent>
 
@@ -205,6 +209,7 @@ export function TimeblockRestrictionsSettings({
                 selectedTab === "guest" ? selectedRestrictionId : null
               }
               onDialogClose={handleDialogClosed}
+              memberClasses={allMemberClasses}
             />
           </TabsContent>
 
@@ -220,6 +225,7 @@ export function TimeblockRestrictionsSettings({
                   : null
               }
               onDialogClose={handleDialogClosed}
+              memberClasses={allMemberClasses}
             />
           </TabsContent>
         </Tabs>

@@ -99,6 +99,17 @@ export function TimeBlockMemberManager({
   // Guest creation state
   const [showAddGuestDialog, setShowAddGuestDialog] = useState(false);
 
+  // Course Sponsored member - hard coded
+  const courseSponsoredMember = {
+    id: -1, // Special ID to distinguish from real members
+    username: "course_sponsored",
+    firstName: "Course",
+    lastName: "Sponsored",
+    memberNumber: "CS001",
+    class: "COURSE_SPONSORED",
+    email: "course@golfsync.com",
+  };
+
   // Constants
   const MAX_PEOPLE = 4;
   const totalPeople =
@@ -343,20 +354,31 @@ export function TimeBlockMemberManager({
   };
 
   const handleAddGuest = async (guestId: number) => {
-    if (!selectedMemberId) {
-      toast.error("Please select a member who is inviting this guest");
-      return;
-    }
-
     const guestToAdd = guestSearchResults.find((g) => g.id === guestId);
     if (!guestToAdd) {
       return;
     }
 
-    const invitingMember = localMembers.find((m) => m.id === selectedMemberId);
-    if (!invitingMember) {
-      toast.error("Selected member not found");
-      return;
+    // Determine the inviting member - use Course Sponsored if selectedMemberId is -1 or null
+    let invitingMember;
+    let invitingMemberId: number;
+
+    if (!selectedMemberId || selectedMemberId === -1) {
+      // Use Course Sponsored member
+      if (!courseSponsoredMember) {
+        toast.error("Course Sponsored member not available");
+        return;
+      }
+      invitingMember = courseSponsoredMember;
+      invitingMemberId = courseSponsoredMember.id;
+    } else {
+      // Use selected member
+      invitingMember = localMembers.find((m) => m.id === selectedMemberId);
+      if (!invitingMember) {
+        toast.error("Selected member not found");
+        return;
+      }
+      invitingMemberId = selectedMemberId;
     }
 
     // Check for restrictions
@@ -370,7 +392,7 @@ export function TimeBlockMemberManager({
             const result = await addGuestToTimeBlock(
               timeBlock.id,
               guestId,
-              selectedMemberId,
+              invitingMemberId,
             );
             if (result.success) {
               toast.success("Guest added successfully");
@@ -388,7 +410,7 @@ export function TimeBlockMemberManager({
                   id: invitingMember.id,
                   firstName: invitingMember.firstName,
                   lastName: invitingMember.lastName,
-                  memberNumber: invitingMember.memberNumber,
+                  memberNumber: invitingMember.memberNumber || "COURSE",
                 },
               };
               setLocalGuests((prev) => [...prev, newGuest]);
@@ -411,7 +433,7 @@ export function TimeBlockMemberManager({
       const result = await addGuestToTimeBlock(
         timeBlock.id,
         guestId,
-        selectedMemberId,
+        invitingMemberId,
       );
       if (result.success) {
         toast.success("Guest added successfully");
@@ -429,7 +451,7 @@ export function TimeBlockMemberManager({
             id: invitingMember.id,
             firstName: invitingMember.firstName,
             lastName: invitingMember.lastName,
-            memberNumber: invitingMember.memberNumber,
+            memberNumber: invitingMember.memberNumber || "COURSE",
           },
         };
         setLocalGuests((prev) => [...prev, newGuest]);
@@ -583,21 +605,30 @@ export function TimeBlockMemberManager({
         </TabsContent>
 
         <TabsContent value="guests">
-          <TimeBlockGuestSearch
-            searchQuery={guestSearchQuery}
-            onSearch={(query: string) => {
-              setGuestSearchQuery(query);
-              debouncedGuestSearch(query);
-            }}
-            searchResults={guestSearchResults}
-            isLoading={isGuestSearching}
-            onAddGuest={handleAddGuest}
-            isTimeBlockFull={isTimeBlockFull}
-            members={localMembers}
-            onMemberSelect={handleMemberSelect}
-            selectedMemberId={selectedMemberId}
-            onCreateGuest={handleShowCreateGuestDialog}
-          />
+          <div className="space-y-4">
+            <div className="rounded-lg border border-blue-200 bg-blue-50 p-3">
+              <p className="text-sm text-blue-800">
+                <strong>Guest Hosting:</strong> Select a member from the time
+                block to host a guest, or select Course Sponsored guests
+                (reciprocals, gift certificates, etc.).
+              </p>
+            </div>
+            <TimeBlockGuestSearch
+              searchQuery={guestSearchQuery}
+              onSearch={(query: string) => {
+                setGuestSearchQuery(query);
+                debouncedGuestSearch(query);
+              }}
+              searchResults={guestSearchResults}
+              isLoading={isGuestSearching}
+              onAddGuest={handleAddGuest}
+              isTimeBlockFull={isTimeBlockFull}
+              members={localMembers}
+              onMemberSelect={handleMemberSelect}
+              selectedMemberId={selectedMemberId}
+              onCreateGuest={handleShowCreateGuestDialog}
+            />
+          </div>
         </TabsContent>
 
         <TabsContent value="fills">

@@ -14,6 +14,14 @@ import { type TimeblockRestriction } from "./TimeblockRestrictionsSettings";
 import { Button } from "~/components/ui/button";
 import { formatCalendarDate, formatDaysOfWeek } from "~/lib/utils";
 
+// Utility function to convert member class value to display label
+const formatMemberClassLabel = (value: string): string => {
+  return value
+    .split("_")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(" ");
+};
+
 interface RestrictionCardProps {
   restriction: TimeblockRestriction;
   onEdit: () => void;
@@ -148,7 +156,7 @@ export function RestrictionCard({
 
   return (
     <Card
-      className={`overflow-hidden transition-all duration-200 ${isHighlighted ? "ring-primary ring-2" : ""}`}
+      className={`overflow-hidden transition-all duration-200 ${isHighlighted ? "ring-primary ring-2" : ""} flex flex-col`}
     >
       <div
         className="h-2"
@@ -157,7 +165,7 @@ export function RestrictionCard({
           opacity: restriction.isActive ? 1 : 0.3,
         }}
       />
-      <CardContent className="p-4">
+      <CardContent className="flex-1 p-4">
         <div className="mb-4 flex items-start justify-between">
           <h3 className="font-semibold">{restriction.name}</h3>
           <Badge className={badgeClass}>
@@ -198,7 +206,7 @@ export function RestrictionCard({
                     variant="secondary"
                     className="text-xs"
                   >
-                    {className}
+                    {formatMemberClassLabel(className)}
                   </Badge>
                 ))}
               </div>

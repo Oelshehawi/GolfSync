@@ -358,12 +358,21 @@ export function TimeBlockGuestSearch({
   selectedMemberId,
   onCreateGuest,
 }: TimeBlockGuestSearchProps) {
-  // Convert members to select options format
-  const memberOptions = members.map((member) => ({
-    id: member.id,
-    label: `${member.firstName} ${member.lastName} (${member.memberNumber})`,
-    value: member.id.toString(),
-  }));
+  // Convert members to select options format, including Course Sponsored
+  const courseSponsoredOption = {
+    id: -1,
+    label: "Course Sponsored (Reciprocals, Gift Certificates, etc.)",
+    value: "-1",
+  };
+
+  const memberOptions = [
+    courseSponsoredOption,
+    ...members.map((member) => ({
+      id: member.id,
+      label: `${member.firstName} ${member.lastName} (${member.memberNumber})`,
+      value: member.id.toString(),
+    })),
+  ];
 
   return (
     <EntitySearchCard

@@ -17,6 +17,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "~/components/ui/popover";
+import { ScrollArea } from "~/components/ui/scroll-area";
 import { useEffect, useState, useRef, useMemo } from "react";
 
 export type OptionType = {
@@ -124,34 +125,36 @@ export function SearchableSelect({
             {filteredOptions.length === 0 && (
               <CommandEmpty>{emptyMessage}</CommandEmpty>
             )}
-            <CommandGroup className="max-h-[200px] overflow-y-auto">
-              {filteredOptions.map((option) => (
-                <div
-                  key={option.value}
-                  className="w-full"
-                  onClick={() => handleSelect(option.value)}
-                >
-                  <CommandItem
-                    value={option.value}
-                    className={cn(
-                      "flex w-full cursor-pointer items-center",
-                      option.value === selectedValue &&
-                        "bg-org-primary text-white",
-                    )}
+            <CommandGroup>
+              <ScrollArea className="max-h-[200px]">
+                {filteredOptions.map((option) => (
+                  <div
+                    key={option.value}
+                    className="w-full"
                     onClick={() => handleSelect(option.value)}
                   >
-                    <Check
+                    <CommandItem
+                      value={option.value}
                       className={cn(
-                        "mr-2 h-4 w-4",
-                        option.value === selectedValue
-                          ? "opacity-100"
-                          : "opacity-0",
+                        "flex w-full cursor-pointer items-center",
+                        option.value === selectedValue &&
+                          "bg-org-primary text-white",
                       )}
-                    />
-                    {option.label}
-                  </CommandItem>
-                </div>
-              ))}
+                      onClick={() => handleSelect(option.value)}
+                    >
+                      <Check
+                        className={cn(
+                          "mr-2 h-4 w-4",
+                          option.value === selectedValue
+                            ? "opacity-100"
+                            : "opacity-0",
+                        )}
+                      />
+                      {option.label}
+                    </CommandItem>
+                  </div>
+                ))}
+              </ScrollArea>
             </CommandGroup>
           </Command>
         </PopoverContent>

@@ -65,30 +65,6 @@ export async function getPushNotificationStats(): Promise<{
 }
 
 /**
- * Get a list of all unique member classes
- */
-export async function getMemberClassesList(): Promise<{
-  success: boolean;
-  classes?: string[];
-  error?: string;
-}> {
-  try {
-    const classes = await db
-      .selectDistinct({ class: members.class })
-      .from(members)
-      .orderBy(members.class);
-
-    return {
-      success: true,
-      classes: classes.map((row) => row.class),
-    };
-  } catch (error) {
-    console.error("Error getting member classes:", error);
-    return { success: false, error: "Failed to get member classes" };
-  }
-}
-
-/**
  * Get member counts by class for targeted notifications
  */
 export async function getMembersCountByClass(

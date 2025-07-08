@@ -13,12 +13,14 @@ import {
 import { Plus } from "lucide-react";
 import { EventForm } from "./EventForm";
 import { type Event as AppEvent } from "~/app/types/events";
+import type { MemberClass } from "~/server/db/schema";
 
 interface EventDialogProps {
   existingEvent?: AppEvent;
   triggerButton?: React.ReactNode;
   title?: string;
   description?: string;
+  memberClasses: MemberClass[];
 }
 
 export function EventDialog({
@@ -28,6 +30,7 @@ export function EventDialog({
   description = existingEvent
     ? "Update event details"
     : "Create a new event, tournament or social gathering",
+  memberClasses,
 }: EventDialogProps) {
   const [open, setOpen] = useState(false);
 
@@ -49,6 +52,7 @@ export function EventDialog({
         <EventForm
           existingEvent={existingEvent}
           onSuccess={() => setOpen(false)}
+          memberClasses={memberClasses}
         />
       </DialogContent>
     </Dialog>

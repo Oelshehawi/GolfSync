@@ -40,6 +40,7 @@ import RegisterForEventButton from "./members/RegisterForEventButton";
 import RegistrationsDialog from "./admin/RegistrationsDialog";
 import DeleteEventButton from "./admin/DeleteEventButton";
 import { type EventCardProps } from "~/app/types/events";
+import type { MemberClass } from "~/server/db/schema";
 import {
   formatDate,
   formatTime12Hour,
@@ -89,7 +90,8 @@ export function EventCard({
   registrations = [],
   registrationStatus,
   variant = "default",
-}: EventCardProps & { variant?: "default" | "compact" }) {
+  memberClasses = [],
+}: EventCardProps & { variant?: "default" | "compact"; memberClasses?: MemberClass[] }) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [registrationsDialogOpen, setRegistrationsDialogOpen] = useState(false);
   const isMobile = useMediaQuery("(max-width: 640px)");
@@ -945,6 +947,7 @@ export function EventCard({
                 <>
                   <EventDialog
                     existingEvent={event as any}
+                    memberClasses={memberClasses || []}
                     triggerButton={
                       <Button variant="outline">
                         <Edit className="mr-2 h-4 w-4" />

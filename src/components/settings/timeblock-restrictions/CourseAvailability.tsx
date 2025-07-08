@@ -6,6 +6,7 @@ import { Button } from "~/components/ui/button";
 import { RestrictionCard } from "./RestrictionCard";
 import { TimeblockRestrictionDialog } from "./TimeblockRestrictionDialog";
 import { type TimeblockRestriction } from "./TimeblockRestrictionsSettings";
+import type { MemberClass } from "~/server/db/schema";
 import toast from "react-hot-toast";
 import { deleteTimeblockRestriction } from "~/server/timeblock-restrictions/actions";
 import { DeleteConfirmationDialog } from "~/components/ui/delete-confirmation-dialog";
@@ -17,6 +18,7 @@ interface CourseAvailabilityProps {
   onDelete: (restrictionId: number) => void;
   highlightId?: number | null;
   onDialogClose?: () => void;
+  memberClasses?: MemberClass[];
 }
 
 export function CourseAvailability({
@@ -26,6 +28,7 @@ export function CourseAvailability({
   onDelete,
   highlightId,
   onDialogClose,
+  memberClasses = [],
 }: CourseAvailabilityProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedRestriction, setSelectedRestriction] = useState<
@@ -143,6 +146,7 @@ export function CourseAvailability({
         existingRestriction={selectedRestriction}
         restrictionCategory="COURSE_AVAILABILITY"
         onSuccess={handleSuccess}
+        memberClasses={memberClasses}
       />
 
       {/* Delete Confirmation */}

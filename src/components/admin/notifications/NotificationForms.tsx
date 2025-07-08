@@ -14,8 +14,8 @@ interface ClassCount {
 
 interface NotificationFormsProps {
   validSubscriptions: number;
-  memberClasses: string[];
-  classCounts: ClassCount[];
+  memberClasses?: string[];
+  classCounts?: ClassCount[];
 }
 
 export function NotificationForms({

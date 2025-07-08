@@ -12,12 +12,17 @@ import {
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { type EventWithRegistrations } from "~/app/types/events";
+import type { MemberClass } from "~/server/db/schema";
 
 interface EventsListProps {
   initialEvents: EventWithRegistrations[];
+  memberClasses?: MemberClass[];
 }
 
-export default function EventsList({ initialEvents }: EventsListProps) {
+export default function EventsList({
+  initialEvents,
+  memberClasses,
+}: EventsListProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState<string>("ALL");
   const [filterStatus, setFilterStatus] = useState<string>("ALL");
@@ -35,7 +40,7 @@ export default function EventsList({ initialEvents }: EventsListProps) {
     const matchesSearch =
       event.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       event.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (event.location?.toLowerCase().includes(searchTerm.toLowerCase()));
+      event.location?.toLowerCase().includes(searchTerm.toLowerCase());
 
     // Type filter
     const matchesType = filterType === "ALL" || event.eventType === filterType;
@@ -129,6 +134,7 @@ export default function EventsList({ initialEvents }: EventsListProps) {
               className="h-full"
               isAdmin={true}
               registrations={event.registrations || []}
+              memberClasses={memberClasses}
             />
           ))}
         </div>
