@@ -1,4 +1,4 @@
-"use server";
+import "server-only";
 
 import { db } from "~/server/db";
 import { eq, and, gte, lte, ilike, desc, sql } from "drizzle-orm";

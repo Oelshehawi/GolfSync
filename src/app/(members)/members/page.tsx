@@ -12,7 +12,6 @@ import { CourseInfoClient } from "~/components/course-info/CourseInfoClient";
 import { UpcomingTeeTimes } from "~/components/member-teesheet-client/UpcomingTeeTimes";
 import { type Member } from "~/app/types/MemberTypes";
 import { EventCard } from "~/components/events/EventCard";
-import { type EventType } from "~/app/types/events";
 import Link from "next/link";
 import { InstallPrompt } from "~/components/pwa/InstallPrompt";
 

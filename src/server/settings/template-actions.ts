@@ -109,20 +109,3 @@ export async function deleteTemplate(
     return { success: false };
   }
 }
-
-export async function getTemplates(): Promise<Template[]> {
-  try {
-    const result = await db
-      .select()
-      .from(templates)
-      .orderBy(templates.name);
-
-    return result.map((template) => ({
-      ...template,
-      blocks: template.blocks ? JSON.parse(template.blocks as string) : [],
-    })) as Template[];
-  } catch (error) {
-    console.error("Error fetching templates:", error);
-    return [];
-  }
-}

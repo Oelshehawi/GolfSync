@@ -6,16 +6,22 @@ import { Send, Target } from "lucide-react";
 import { BulkNotificationForm } from "./BulkNotificationForm";
 import { TargetedNotificationForm } from "./TargetedNotificationForm";
 
+interface ClassCount {
+  class: string;
+  totalCount: number;
+  subscribedCount: number;
+}
+
 interface NotificationFormsProps {
   validSubscriptions: number;
   memberClasses: string[];
-  onNotificationSent: () => void;
+  classCounts: ClassCount[];
 }
 
 export function NotificationForms({
   validSubscriptions,
   memberClasses,
-  onNotificationSent,
+  classCounts,
 }: NotificationFormsProps) {
   return (
     <Card>
@@ -41,7 +47,6 @@ export function NotificationForms({
           <TabsContent value="bulk" className="mt-6">
             <BulkNotificationForm
               validSubscriptions={validSubscriptions}
-              onNotificationSent={onNotificationSent}
               hideCard={true}
             />
           </TabsContent>
@@ -49,7 +54,7 @@ export function NotificationForms({
           <TabsContent value="targeted" className="mt-6">
             <TargetedNotificationForm
               memberClasses={memberClasses}
-              onNotificationSent={onNotificationSent}
+              classCounts={classCounts}
               hideCard={true}
             />
           </TabsContent>

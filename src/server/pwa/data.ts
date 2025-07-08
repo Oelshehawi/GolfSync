@@ -1,4 +1,4 @@
-"use server";
+import "server-only";
 
 import { db } from "~/server/db";
 import { members } from "~/server/db/schema";
@@ -217,42 +217,5 @@ export async function getMemberPushSubscription(memberId: number) {
   } catch (error) {
     console.error("Error getting member push subscription:", error);
     return { success: false, error: "Failed to get member subscription" };
-  }
-}
-
-/**
- * Get member push notification status for authenticated user
- */
-export async function getMemberPushNotificationStatus() {
-  try {
-    const { auth } = await import("@clerk/nextjs/server");
-    const { getMemberData } = await import(
-      "~/server/members-teesheet-client/data"
-    );
-
-    const { sessionClaims } = await auth();
-    if (!sessionClaims?.userId) {
-      return { success: false, error: "Not authenticated" };
-    }
-
-    const member = await getMemberData(sessionClaims.userId as string);
-    if (!member?.id) {
-      return { success: false, error: "Member not found" };
-    }
-
-    const memberData = await db.query.members.findFirst({
-      where: eq(members.id, member.id),
-      columns: {
-        pushNotificationsEnabled: true,
-      },
-    });
-
-    return {
-      success: true,
-      enabled: memberData?.pushNotificationsEnabled ?? false,
-    };
-  } catch (error) {
-    console.error("Error getting member push notification status:", error);
-    return { success: false, error: "Failed to get notification status" };
   }
 }

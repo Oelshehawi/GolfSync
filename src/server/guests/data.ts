@@ -1,3 +1,4 @@
+import "server-only";
 import { db } from "~/server/db";
 import { guests, timeBlockGuests, members } from "~/server/db/schema";
 import { eq, and, desc, gte, lte } from "drizzle-orm";

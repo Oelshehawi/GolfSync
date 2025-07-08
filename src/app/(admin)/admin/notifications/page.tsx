@@ -1,20 +1,25 @@
 import {
   getPushNotificationStats,
   getMemberClassesList,
+  getMembersCountByClass,
 } from "~/server/pwa/data";
-import { NotificationDashboardClient } from "~/components/admin/notifications/NotificationDashboardClient";
+import { NotificationDashboard } from "~/components/admin/notifications/NotificationDashboard";
 import { PageHeader } from "~/components/ui/page-header";
 
 export default async function AdminNotificationsPage() {
   // Fetch data on the server
-  const [statsResult, classesResult] = await Promise.all([
+  const [statsResult, classesResult, classCountsResult] = await Promise.all([
     getPushNotificationStats(),
     getMemberClassesList(),
+    getMembersCountByClass([]), // Fetch counts for all classes
   ]);
 
   const stats = statsResult.success ? statsResult.stats! : null;
   const memberClasses = classesResult.success
     ? classesResult.classes || []
+    : [];
+  const classCounts = classCountsResult.success
+    ? classCountsResult.classCounts || []
     : [];
 
   return (
@@ -24,9 +29,10 @@ export default async function AdminNotificationsPage() {
         description="Manage push notifications and member communication"
       />
 
-      <NotificationDashboardClient
-        initialStats={stats}
+      <NotificationDashboard
+        stats={stats}
         memberClasses={memberClasses}
+        classCounts={classCounts}
       />
     </div>
   );

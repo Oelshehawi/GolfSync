@@ -247,31 +247,6 @@ export async function getTeesheetConfigs(): Promise<TeesheetConfig[]> {
   }
 }
 
-export async function getTeesheetConfig(id: number) {
-  const config = await db.query.teesheetConfigs.findFirst({
-    where: eq(teesheetConfigs.id, id),
-    with: {
-      rules: true,
-    },
-  });
-
-  if (!config) {
-    return { success: false, error: "Config not found" };
-  }
-
-  return {
-    success: true,
-    data: {
-      ...config,
-      rules: config.rules.map((rule) => ({
-        ...rule,
-        startDate: rule.startDate ? new Date(rule.startDate) : null,
-        endDate: rule.endDate ? new Date(rule.endDate) : null,
-      })),
-    } as TeesheetConfig,
-  };
-}
-
 // Get course info for the current organization
 export async function getCourseInfo() {
 

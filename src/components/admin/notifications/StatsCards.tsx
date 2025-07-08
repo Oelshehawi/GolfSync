@@ -17,10 +17,9 @@ interface PushStats {
 
 interface StatsCardsProps {
   stats: PushStats | null;
-  onStatsUpdate: () => void;
 }
 
-export function StatsCards({ stats, onStatsUpdate }: StatsCardsProps) {
+export function StatsCards({ stats }: StatsCardsProps) {
   const [isRunningMaintenance, setIsRunningMaintenance] = useState(false);
 
   const handleRunMaintenance = async () => {
@@ -35,7 +34,6 @@ export function StatsCards({ stats, onStatsUpdate }: StatsCardsProps) {
           `Maintenance completed! Cleaned up ${result.cleanedUp} expired subscriptions.`,
           { id: "maintenance" },
         );
-        onStatsUpdate(); // Refresh stats
       } else {
         toast.error("Maintenance failed", { id: "maintenance" });
       }

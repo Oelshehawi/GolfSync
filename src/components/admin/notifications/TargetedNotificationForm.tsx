@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Card, CardHeader, CardContent, CardTitle } from "~/components/ui/card";
 import { Button } from "~/components/ui/button";
 import { Textarea } from "~/components/ui/textarea";
@@ -10,7 +10,6 @@ import { Checkbox } from "~/components/ui/checkbox";
 import { Badge } from "~/components/ui/badge";
 import { Target, Send, Users } from "lucide-react";
 import { sendTargetedNotification } from "~/server/pwa/targeted-actions";
-import { getMembersCountByClass } from "~/server/pwa/data";
 import toast from "react-hot-toast";
 
 interface ClassCount {
@@ -21,44 +20,29 @@ interface ClassCount {
 
 interface TargetedNotificationFormProps {
   memberClasses: string[];
-  onNotificationSent: () => void;
+  classCounts: ClassCount[];
   hideCard?: boolean;
 }
 
 export function TargetedNotificationForm({
   memberClasses,
-  onNotificationSent,
+  classCounts,
   hideCard = false,
 }: TargetedNotificationFormProps) {
   const [title, setTitle] = useState("Quilchena Golf Club");
   const [message, setMessage] = useState("");
   const [selectedClasses, setSelectedClasses] = useState<string[]>([]);
-  const [classCounts, setClassCounts] = useState<ClassCount[]>([]);
   const [isSending, setIsSending] = useState(false);
-  const [isLoadingCounts, setIsLoadingCounts] = useState(false);
 
-  // Load class counts when classes are selected
-  useEffect(() => {
-    if (selectedClasses.length > 0) {
-      loadClassCounts();
-    } else {
-      setClassCounts([]);
-    }
-  }, [selectedClasses]);
+  // Filter class counts based on selected classes
+  const selectedClassCounts = classCounts.filter((count) =>
+    selectedClasses.includes(count.class),
+  );
 
-  const loadClassCounts = async () => {
-    try {
-      setIsLoadingCounts(true);
-      const result = await getMembersCountByClass(selectedClasses);
-      if (result.success && result.classCounts) {
-        setClassCounts(result.classCounts);
-      }
-    } catch (error) {
-      console.error("Error loading class counts:", error);
-    } finally {
-      setIsLoadingCounts(false);
-    }
-  };
+  const totalTargetedMembers = selectedClassCounts.reduce(
+    (sum, count) => sum + count.subscribedCount,
+    0,
+  );
 
   const handleClassSelection = (className: string, checked: boolean) => {
     setSelectedClasses((prev) =>
@@ -91,8 +75,6 @@ export function TargetedNotificationForm({
         );
         setMessage("");
         setSelectedClasses([]);
-        setClassCounts([]);
-        onNotificationSent();
       } else {
         toast.error(result.error || "Failed to send targeted notifications");
       }
@@ -102,11 +84,6 @@ export function TargetedNotificationForm({
       setIsSending(false);
     }
   };
-
-  const totalTargetedMembers = classCounts.reduce(
-    (sum, count) => sum + count.subscribedCount,
-    0,
-  );
 
   const content = (
     <div className="space-y-4">
@@ -160,43 +137,35 @@ export function TargetedNotificationForm({
             <Users className="h-4 w-4" />
             <span className="font-medium">Selected Classes</span>
           </div>
-
-          {isLoadingCounts ? (
-            <div className="flex items-center gap-2 text-sm text-gray-600">
-              <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-gray-600"></div>
-              Loading member counts...
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {classCounts.map((count) => (
-                <div
-                  key={count.class}
-                  className="flex items-center justify-between text-sm"
-                >
-                  <span className="font-medium">{count.class}</span>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="secondary" className="text-xs">
-                      {count.subscribedCount} subscribed
-                    </Badge>
-                    <Badge variant="outline" className="text-xs">
-                      {count.totalCount} total
-                    </Badge>
-                  </div>
+          <div className="space-y-2">
+            {selectedClassCounts.map((count) => (
+              <div
+                key={count.class}
+                className="flex items-center justify-between text-sm"
+              >
+                <span className="font-medium">{count.class}</span>
+                <div className="flex items-center gap-2">
+                  <Badge variant="secondary" className="text-xs">
+                    {count.subscribedCount} subscribed
+                  </Badge>
+                  <Badge variant="outline" className="text-xs">
+                    {count.totalCount} total
+                  </Badge>
                 </div>
-              ))}
+              </div>
+            ))}
 
-              {classCounts.length > 0 && (
-                <div className="mt-2 border-t pt-2">
-                  <div className="flex items-center justify-between text-sm font-medium">
-                    <span>Total Target</span>
-                    <Badge className="bg-org-primary text-white">
-                      {totalTargetedMembers} members
-                    </Badge>
-                  </div>
+            {selectedClassCounts.length > 0 && (
+              <div className="mt-2 border-t pt-2">
+                <div className="flex items-center justify-between text-sm font-medium">
+                  <span>Total Target</span>
+                  <Badge className="bg-org-primary text-white">
+                    {totalTargetedMembers} members
+                  </Badge>
                 </div>
-              )}
-            </div>
-          )}
+              </div>
+            )}
+          </div>
         </div>
       )}
 
@@ -204,15 +173,12 @@ export function TargetedNotificationForm({
         <p className="text-sm text-gray-600">
           {selectedClasses.length > 0
             ? `This will send a notification to ${totalTargetedMembers} members in ${selectedClasses.length} class${selectedClasses.length > 1 ? "es" : ""}`
-            : "Select member classes to see target count"}
+            : "Select member classes to send targeted notification"}
         </p>
         <Button
           onClick={handleSendTargetedNotification}
           disabled={
-            isSending ||
-            !message.trim() ||
-            selectedClasses.length === 0 ||
-            isLoadingCounts
+            isSending || !message.trim() || selectedClasses.length === 0
           }
           className="min-w-[120px]"
         >

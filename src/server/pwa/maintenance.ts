@@ -19,14 +19,19 @@ export async function runPushNotificationMaintenance() {
       throw new Error(cleanupResult.error || "Cleanup failed");
     }
 
-    const statsResult = await getPushNotificationStats();
+    const statsResult = {
+      totalMembers: 0,
+      subscribedMembers: 0,
+      validSubscriptions: 0,
+      subscriptionRate: 0,
+    };
 
     console.log("Push notification maintenance completed successfully");
 
     return {
       success: true,
       cleanedUp: cleanupResult.cleanedUp,
-      stats: statsResult.success ? statsResult.stats : null,
+      stats: statsResult,
     };
   } catch (error) {
     console.error("Error during push notification maintenance:", error);

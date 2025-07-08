@@ -12,8 +12,8 @@ import toast from "react-hot-toast";
 import {
   subscribeUserToPushNotifications,
   unsubscribeUserFromPushNotifications,
+  getMemberPushNotificationStatus,
 } from "~/server/pwa/actions";
-import { getMemberPushNotificationStatus } from "~/server/pwa/data";
 import { urlBase64ToUint8Array } from "~/lib/utils";
 
 export function NotificationPreferences() {
@@ -148,8 +148,6 @@ export function NotificationPreferences() {
       toast.error("Failed to disable notifications");
     }
   };
-
-
 
   if (isLoading) {
     return (

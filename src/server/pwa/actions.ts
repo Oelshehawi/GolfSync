@@ -45,10 +45,9 @@ async function handleExpiredSubscription(memberId: number, error: any) {
 function isSubscriptionExpired(error: any): boolean {
   return (
     error.statusCode === 410 ||
-    (error.statusCode === 400 &&
-      error.body?.includes("unsubscribed")) ||
-    (error.body?.includes("expired")) ||
-    (error.body?.includes("invalid"))
+    (error.statusCode === 400 && error.body?.includes("unsubscribed")) ||
+    error.body?.includes("expired") ||
+    error.body?.includes("invalid")
   );
 }
 
@@ -307,5 +306,37 @@ export async function cleanupExpiredSubscriptions() {
   } catch (error) {
     console.error("Error during subscription cleanup:", error);
     return { success: false, error: "Failed to cleanup subscriptions" };
+  }
+}
+
+/**
+ * Get member push notification status for authenticated user
+ */
+export async function getMemberPushNotificationStatus() {
+  try {
+    const { sessionClaims } = await auth();
+    if (!sessionClaims?.userId) {
+      return { success: false, error: "Not authenticated" };
+    }
+
+    const member = await getMemberData(sessionClaims.userId as string);
+    if (!member?.id) {
+      return { success: false, error: "Member not found" };
+    }
+
+    const memberData = await db.query.members.findFirst({
+      where: eq(members.id, member.id),
+      columns: {
+        pushNotificationsEnabled: true,
+      },
+    });
+
+    return {
+      success: true,
+      enabled: memberData?.pushNotificationsEnabled ?? false,
+    };
+  } catch (error) {
+    console.error("Error getting member push notification status:", error);
+    return { success: false, error: "Failed to get notification status" };
   }
 }

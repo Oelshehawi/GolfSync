@@ -1,3 +1,4 @@
+import "server-only";
 import { db } from "~/server/db";
 import { events, eventRegistrations, eventDetails } from "~/server/db/schema";
 import {

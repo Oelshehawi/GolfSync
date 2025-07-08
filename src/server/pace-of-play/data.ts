@@ -1,3 +1,4 @@
+import "server-only";
 import { and, asc, desc, eq, gte, sql } from "drizzle-orm";
 import { db } from "../db";
 

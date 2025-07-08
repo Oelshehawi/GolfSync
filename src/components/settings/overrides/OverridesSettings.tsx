@@ -19,7 +19,7 @@ import {
   TableRow,
 } from "~/components/ui/table";
 import { DatePicker } from "~/components/ui/date-picker";
-import { getTimeblockOverrides } from "~/server/timeblock-restrictions/data";
+import { getTimeblockOverrides } from "~/server/timeblock-restrictions/actions";
 import { formatDate } from "~/lib/dates";
 import { Search } from "lucide-react";
 import toast from "react-hot-toast";

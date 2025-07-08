@@ -21,11 +21,7 @@ import { format } from "date-fns";
 
 export async function createTimeblockRestriction(data: any) {
   try {
-    if (
-      !data?.name ||
-      !data.restrictionCategory ||
-      !data.restrictionType
-    ) {
+    if (!data?.name || !data.restrictionCategory || !data.restrictionType) {
       console.error("Missing required data for creation:", data);
       return { error: "Missing required fields for restriction creation" };
     }
@@ -234,6 +230,81 @@ export async function recordTimeblockRestrictionOverride(params: {
  * More efficient version of restriction checking that only queries the necessary restrictions
  * This is optimized for checking one timeblock at a time using local date from client
  */
+/**
+ * Get timeblock restriction overrides with optional filtering
+ */
+export async function getTimeblockOverrides(params?: {
+  restrictionId?: number;
+  timeBlockId?: number;
+  memberId?: number;
+  guestId?: number;
+  startDate?: Date;
+  endDate?: Date;
+  searchTerm?: string;
+}) {
+  try {
+    // Start with the base query conditions
+    const conditions = [];
+
+    // Add optional filters
+    if (params?.restrictionId) {
+      conditions.push(
+        eq(timeblockOverrides.restrictionId, params.restrictionId),
+      );
+    }
+
+    if (params?.timeBlockId) {
+      conditions.push(eq(timeblockOverrides.timeBlockId, params.timeBlockId));
+    }
+
+    if (params?.memberId) {
+      conditions.push(eq(timeblockOverrides.memberId, params.memberId));
+    }
+
+    if (params?.guestId) {
+      conditions.push(eq(timeblockOverrides.guestId, params.guestId));
+    }
+
+    // Date range filter
+    if (params?.startDate) {
+      conditions.push(gte(timeblockOverrides.createdAt, params.startDate));
+    }
+
+    if (params?.endDate) {
+      const endOfDay = new Date(params.endDate);
+      endOfDay.setHours(23, 59, 59, 999);
+      conditions.push(lte(timeblockOverrides.createdAt, endOfDay));
+    }
+
+    // Text search for reason field
+    if (params?.searchTerm) {
+      conditions.push(
+        or(
+          sql`${timeblockOverrides.reason} ILIKE ${"%" + params.searchTerm + "%"}`,
+          sql`${timeblockOverrides.overriddenBy} ILIKE ${"%" + params.searchTerm + "%"}`,
+        ),
+      );
+    }
+
+    // Execute the query with relations
+    const overrides = await db.query.timeblockOverrides.findMany({
+      where: conditions.length > 0 ? and(...conditions) : undefined,
+      with: {
+        restriction: true,
+        timeBlock: true,
+        member: true,
+        guest: true,
+      },
+      orderBy: [desc(timeblockOverrides.createdAt)],
+    });
+
+    return overrides;
+  } catch (error) {
+    console.error("Error getting timeblock overrides:", error);
+    return { error: "Failed to get overrides" };
+  }
+}
+
 export async function checkTimeblockRestrictionsAction(params: {
   memberId?: number;
   memberClass?: string;
@@ -260,7 +331,6 @@ export async function checkTimeblockRestrictionsAction(params: {
       bookingTimeLocal = bookingTime || "00:00";
 
       // Parse date to get day of week - ensure correct UTC handling
-      // Use the same date parsing approach as in checkBatchTimeblockRestrictions
       const dateParts = bookingDateStr.split("-");
       if (dateParts.length !== 3) {
         return { success: false, error: "Invalid date format" };
@@ -283,7 +353,8 @@ export async function checkTimeblockRestrictionsAction(params: {
     const courseRestrictions = await db.query.timeblockRestrictions.findMany({
       where: and(
         eq(timeblockRestrictions.restrictionCategory, "COURSE_AVAILABILITY"),
-        eq(timeblockRestrictions.isActive, true))
+        eq(timeblockRestrictions.isActive, true),
+      ),
     });
 
     // Check course availability (date-based) restrictions

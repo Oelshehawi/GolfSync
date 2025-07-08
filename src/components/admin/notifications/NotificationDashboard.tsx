@@ -11,24 +11,30 @@ interface PushStats {
   subscriptionRate: number;
 }
 
+interface ClassCount {
+  class: string;
+  totalCount: number;
+  subscribedCount: number;
+}
+
 interface NotificationDashboardProps {
   stats: PushStats | null;
   memberClasses: string[];
-  onStatsUpdate: () => void;
+  classCounts: ClassCount[];
 }
 
 export function NotificationDashboard({
   stats,
   memberClasses,
-  onStatsUpdate,
+  classCounts,
 }: NotificationDashboardProps) {
   return (
     <div className="space-y-6">
-      <StatsCards stats={stats} onStatsUpdate={onStatsUpdate} />
+      <StatsCards stats={stats} />
       <NotificationForms
         validSubscriptions={stats?.validSubscriptions ?? 0}
         memberClasses={memberClasses}
-        onNotificationSent={onStatsUpdate}
+        classCounts={classCounts}
       />
       <NotificationInfo />
     </div>

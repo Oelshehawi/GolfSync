@@ -12,13 +12,11 @@ import toast from "react-hot-toast";
 
 interface BulkNotificationFormProps {
   validSubscriptions: number;
-  onNotificationSent: () => void;
   hideCard?: boolean;
 }
 
 export function BulkNotificationForm({
   validSubscriptions,
-  onNotificationSent,
   hideCard = false,
 }: BulkNotificationFormProps) {
   const [title, setTitle] = useState("Quilchena Golf Club");
@@ -40,7 +38,6 @@ export function BulkNotificationForm({
           `Notification sent to ${result.sent} members! ${result.expired} expired subscriptions cleaned up.`,
         );
         setMessage("");
-        onNotificationSent();
       } else {
         toast.error("Failed to send notifications");
       }
