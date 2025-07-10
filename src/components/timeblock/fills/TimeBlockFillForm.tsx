@@ -66,7 +66,7 @@ export function TimeBlockFillForm({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="p-1 space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-4 p-1">
       <div className="space-y-2">
         <Label htmlFor="fillType">Fill Type</Label>
         <Select

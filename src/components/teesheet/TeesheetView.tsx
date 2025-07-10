@@ -1,32 +1,22 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, memo, useCallback } from "react";
+import { type TeeSheet } from "~/app/types/TeeSheetTypes";
 import type {
-  TeeSheet,
   TimeBlockWithMembers,
-  TeesheetConfig,
-  TemplateBlock,
-  CustomConfig,
-  Template,
   TimeBlockMemberView,
+  TemplateBlock,
 } from "~/app/types/TeeSheetTypes";
 import type { TimeBlockGuest } from "~/app/types/GuestTypes";
-import { ConfigTypes } from "~/app/types/TeeSheetTypes";
-import { type RestrictionViolation } from "~/app/types/RestrictionTypes";
-import { TimeBlock as TimeBlockComponent } from "../timeblock/TimeBlock";
-import { RestrictionViolationAlert } from "~/components/settings/timeblock-restrictions/RestrictionViolationAlert";
 import type { TimeBlockWithPaceOfPlay } from "~/app/types/PaceOfPlayTypes";
-import { TeesheetControlPanel } from "./TeesheetControlPanel";
+import type { PaceOfPlayRecord } from "~/server/pace-of-play/data";
+import { type Template, ConfigTypes } from "~/app/types/TeeSheetTypes";
+import type { TeesheetConfig } from "~/app/types/TeeSheetTypes";
+import { TimeBlock as TimeBlockComponent } from "~/components/timeblock/TimeBlock";
 import { TeesheetGeneralNotes } from "./TeesheetGeneralNotes";
-import {
-  TimeBlockNote,
-  TimeBlockNoteEditor,
-  TimeBlockNoteAddIndicator,
-} from "../timeblock/TimeBlockNotes";
-import { AddPlayerModal } from "../timeblock/AddPlayerModal";
-import { useTeesheetPolling } from "~/hooks/useTeesheetPolling";
-import { useRestrictionHandling } from "~/hooks/useRestrictionHandling";
-import { toast } from "react-hot-toast";
+import { TimeBlockNote } from "~/components/timeblock/TimeBlockNotes";
+import { TimeBlockNoteEditor } from "~/components/timeblock/TimeBlockNotes";
+import { TimeBlockNoteAddIndicator } from "~/components/timeblock/TimeBlockNotes";
 import {
   removeTimeBlockMember,
   removeTimeBlockGuest,
@@ -36,6 +26,12 @@ import {
   updateTimeBlockNotes,
   removeFillFromTimeBlock,
 } from "~/server/teesheet/actions";
+import { type RestrictionViolation } from "~/app/types/RestrictionTypes";
+import toast from "react-hot-toast";
+import { useTeesheetPolling } from "~/hooks/useTeesheetPolling";
+import { useRestrictionHandling } from "~/hooks/useRestrictionHandling";
+import { AddPlayerModal } from "../timeblock/AddPlayerModal";
+import { RestrictionViolationAlert } from "~/components/settings/timeblock-restrictions/RestrictionViolationAlert";
 import { AccountDialog } from "../member-teesheet-client/AccountDialog";
 
 // Extended ActionResult type to include violations
@@ -52,232 +48,316 @@ interface TeesheetViewProps {
   paceOfPlayData?: TimeBlockWithPaceOfPlay[];
   templates?: Template[];
   isAdmin?: boolean;
+  mutations?: any; // SWR mutations for immediate UI updates
 }
 
-export function TeesheetView({
+export const TeesheetView = memo(function TeesheetView({
   teesheet,
   timeBlocks,
   availableConfigs,
   paceOfPlayData = [],
   templates = [],
   isAdmin = true,
+  mutations,
 }: TeesheetViewProps) {
-  const [selectedTimeBlock, setSelectedTimeBlock] =
-    useState<TimeBlockWithMembers | null>(null);
-  const [addPlayerModalOpen, setAddPlayerModalOpen] = useState(false);
+  // Enable polling for real-time updates only for admin users
+  useTeesheetPolling(isAdmin);
+
+  // Restriction handling hook
+  const {
+    violations,
+    showRestrictionAlert,
+    setShowRestrictionAlert,
+    handleRestrictionViolation,
+    handleOverrideContinue,
+    handleRestrictionCancel,
+  } = useRestrictionHandling();
+
+  // State management
   const [editingTimeBlockNote, setEditingTimeBlockNote] = useState<
     number | null
   >(null);
-  const [violations, setViolations] = useState<RestrictionViolation[]>([]);
-  const [showRestrictionAlert, setShowRestrictionAlert] = useState(false);
-  const [pendingAction, setPendingAction] = useState<
-    (() => Promise<void>) | null
-  >(null);
-
-  // Account dialog state
+  const [selectedTimeBlock, setSelectedTimeBlock] =
+    useState<TimeBlockWithMembers | null>(null);
+  const [addPlayerModalOpen, setAddPlayerModalOpen] = useState(false);
   const [selectedAccountData, setSelectedAccountData] = useState<
     TimeBlockMemberView | TimeBlockGuest | null
   >(null);
   const [isAccountDialogOpen, setIsAccountDialogOpen] = useState(false);
+  const [pendingAction, setPendingAction] = useState<
+    (() => Promise<void>) | null
+  >(null);
 
-  // Use shared hooks
-  useTeesheetPolling(isAdmin);
-  const { handleOverrideContinue, handleRestrictionCancel } =
-    useRestrictionHandling();
-
-  // Sort time blocks by sortOrder
+  // Memoized computations for performance
   const sortedTimeBlocks = useMemo(() => {
-    return [...timeBlocks].sort(
-      (a, b) => (a.sortOrder || 0) - (b.sortOrder || 0),
+    return [...timeBlocks].sort((a, b) =>
+      a.startTime.localeCompare(b.startTime),
     );
   }, [timeBlocks]);
 
-  // Create a map of timeBlockId to pace of play data for quick lookup
   const paceOfPlayMap = useMemo(() => {
-    return paceOfPlayData.reduce((map, item) => {
-      if (item.id && item.paceOfPlay) {
-        map.set(item.id, item.paceOfPlay);
-      }
-      return map;
-    }, new Map());
+    return new Map(paceOfPlayData.map((item) => [item.id, item.paceOfPlay]));
   }, [paceOfPlayData]);
 
-  // Handle restriction alerts for admins
-  const handleRestrictionViolations = (violations: RestrictionViolation[]) => {
-    if (violations.length > 0) {
-      setViolations(violations);
-      setShowRestrictionAlert(true);
-    }
-  };
+  // Memoized callback functions to prevent unnecessary re-renders
+  const handleRestrictionViolations = useCallback(
+    (violations: RestrictionViolation[]) => {
+      handleRestrictionViolation(violations);
+    },
+    [handleRestrictionViolation],
+  );
 
-  // Handle removing a member from a timeblock
-  const handleRemoveMember = async (timeBlockId: number, memberId: number) => {
-    try {
-      const result = (await removeTimeBlockMember(
-        timeBlockId,
-        memberId,
-      )) as ExtendedActionResult;
-      if (result.success) {
-        toast.success("Member removed successfully");
-      } else if (result.violations) {
-        handleRestrictionViolations(result.violations);
-        setPendingAction(() => async () => {
-          await removeTimeBlockMember(timeBlockId, memberId);
-          toast.success("Member removed successfully (override)");
-        });
-      } else {
-        toast.error(result.error || "Failed to remove member");
+  const handleRemoveMember = useCallback(
+    async (timeBlockId: number, memberId: number) => {
+      try {
+        // Use SWR mutation if available for immediate UI updates
+        let result;
+        if (mutations?.removeMember) {
+          result = await mutations.removeMember(timeBlockId, memberId, {
+            optimisticUpdate: true,
+            revalidate: true,
+          });
+        } else {
+          result = await removeTimeBlockMember(timeBlockId, memberId);
+        }
+
+        if (result.success) {
+          toast.success("Member removed successfully");
+        } else {
+          toast.error(result.error || "Failed to remove member");
+        }
+      } catch (error) {
+        toast.error("An unexpected error occurred");
       }
-    } catch (error) {
-      toast.error("An unexpected error occurred");
-    }
-  };
+    },
+    [mutations],
+  );
 
-  // Handle removing a guest from a timeblock
-  const handleRemoveGuest = async (timeBlockId: number, guestId: number) => {
-    try {
-      const result = (await removeTimeBlockGuest(
-        timeBlockId,
-        guestId,
-      )) as ExtendedActionResult;
-      if (result.success) {
-        toast.success("Guest removed successfully");
-      } else if (result.violations) {
-        handleRestrictionViolations(result.violations);
-        setPendingAction(() => async () => {
-          await removeTimeBlockGuest(timeBlockId, guestId);
-          toast.success("Guest removed successfully (override)");
-        });
-      } else {
-        toast.error(result.error || "Failed to remove guest");
+  const handleRemoveGuest = useCallback(
+    async (timeBlockId: number, guestId: number) => {
+      try {
+        // Use SWR mutation if available for immediate UI updates
+        let result;
+        if (mutations?.removeGuest) {
+          result = await mutations.removeGuest(timeBlockId, guestId, {
+            optimisticUpdate: true,
+            revalidate: true,
+          });
+        } else {
+          result = await removeTimeBlockGuest(timeBlockId, guestId);
+        }
+
+        if (result.success) {
+          toast.success("Guest removed successfully");
+        } else {
+          toast.error(result.error || "Failed to remove guest");
+        }
+      } catch (error) {
+        toast.error("An unexpected error occurred");
       }
-    } catch (error) {
-      toast.error("An unexpected error occurred");
-    }
-  };
+    },
+    [mutations],
+  );
 
-  // Handle checking in a member
-  const handleCheckInMember = async (
-    timeBlockId: number,
-    memberId: number,
-    isCheckedIn: boolean,
-  ) => {
-    try {
-      const result = (await checkInMember(
-        timeBlockId,
-        memberId,
-        !isCheckedIn,
-      )) as ExtendedActionResult;
-      if (result.success) {
-        toast.success(
-          `Member ${!isCheckedIn ? "checked in" : "check-in removed"} successfully`,
-        );
-      } else if (result.violations) {
-        handleRestrictionViolations(result.violations);
-        setPendingAction(() => async () => {
-          await checkInMember(timeBlockId, memberId, !isCheckedIn);
-          toast.success(
-            `Member ${!isCheckedIn ? "checked in" : "check-in removed"} successfully (override)`,
+  const handleCheckInMember = useCallback(
+    async (timeBlockId: number, memberId: number, isCheckedIn: boolean) => {
+      try {
+        // Use SWR mutation if available for immediate UI updates
+        let result;
+        if (mutations?.checkInMember) {
+          result = await mutations.checkInMember(
+            timeBlockId,
+            memberId,
+            !isCheckedIn,
+            {
+              optimisticUpdate: true,
+              revalidate: true,
+            },
           );
-        });
-      } else {
-        toast.error(result.error || "Failed to update check-in status");
-      }
-    } catch (error) {
-      toast.error("An unexpected error occurred");
-    }
-  };
+        } else {
+          result = await checkInMember(timeBlockId, memberId, !isCheckedIn);
+        }
 
-  // Handle checking in a guest
-  const handleCheckInGuest = async (
-    timeBlockId: number,
-    guestId: number,
-    isCheckedIn: boolean,
-  ) => {
-    try {
-      const result = (await checkInGuest(
-        timeBlockId,
-        guestId,
-        !isCheckedIn,
-      )) as ExtendedActionResult;
-      if (result.success) {
-        toast.success(
-          `Guest ${!isCheckedIn ? "checked in" : "check-in removed"} successfully`,
-        );
-      } else if (result.violations) {
-        handleRestrictionViolations(result.violations);
-        setPendingAction(() => async () => {
-          await checkInGuest(timeBlockId, guestId, !isCheckedIn);
-          toast.success(
-            `Guest ${!isCheckedIn ? "checked in" : "check-in removed"} successfully (override)`,
+        if (result.success) {
+          const action = !isCheckedIn ? "checked in" : "checked out";
+          toast.success(`Member ${action} successfully`);
+        } else {
+          toast.error(result.error || "Failed to update check-in status");
+        }
+      } catch (error) {
+        toast.error("An unexpected error occurred");
+      }
+    },
+    [mutations],
+  );
+
+  const handleCheckInGuest = useCallback(
+    async (timeBlockId: number, guestId: number, isCheckedIn: boolean) => {
+      try {
+        // Use SWR mutation if available for immediate UI updates
+        let result;
+        if (mutations?.checkInGuest) {
+          result = await mutations.checkInGuest(
+            timeBlockId,
+            guestId,
+            !isCheckedIn,
+            {
+              optimisticUpdate: true,
+              revalidate: true,
+            },
           );
-        });
-      } else {
-        toast.error(result.error || "Failed to update check-in status");
-      }
-    } catch (error) {
-      toast.error("An unexpected error occurred");
-    }
-  };
+        } else {
+          result = await checkInGuest(timeBlockId, guestId, !isCheckedIn);
+        }
 
-  // Handle checking in all participants for a timeblock
-  const handleCheckInAll = async (timeBlockId: number) => {
-    try {
-      const result = (await checkInAllTimeBlockParticipants(
-        timeBlockId,
-        true,
-      )) as ExtendedActionResult;
-      if (result.success) {
-        toast.success("All participants checked in successfully");
-      } else if (result.violations) {
-        handleRestrictionViolations(result.violations);
-        setPendingAction(() => async () => {
-          await checkInAllTimeBlockParticipants(timeBlockId, true);
-          toast.success("All participants checked in successfully (override)");
-        });
-      } else {
-        toast.error(result.error || "Failed to check in all participants");
+        if (result.success) {
+          const action = !isCheckedIn ? "checked in" : "checked out";
+          toast.success(`Guest ${action} successfully`);
+        } else {
+          toast.error(result.error || "Failed to update check-in status");
+        }
+      } catch (error) {
+        toast.error("An unexpected error occurred");
       }
-    } catch (error) {
-      toast.error("An unexpected error occurred");
-    }
-  };
+    },
+    [mutations],
+  );
 
-  // Handle saving notes for a timeblock
-  const handleSaveNotes = async (timeBlockId: number, notes: string) => {
-    try {
-      const result = await updateTimeBlockNotes(timeBlockId, notes || null);
-      if (result.success) {
-        toast.success("Notes updated successfully");
-        return true;
-      } else {
-        toast.error(result.error || "Failed to update notes");
+  const handleCheckInAll = useCallback(
+    async (timeBlockId: number) => {
+      try {
+        // Find the time block to determine current check-in state
+        const timeBlock = timeBlocks.find((block) => block.id === timeBlockId);
+        if (!timeBlock) {
+          toast.error("Time block not found");
+          return;
+        }
+
+        const members = timeBlock.members || [];
+        const guests = timeBlock.guests || [];
+
+        // Determine if we should check in or check out
+        // If everyone is checked in, then check them out; otherwise check them in
+        const allCheckedIn =
+          members.length > 0 &&
+          guests.length > 0 &&
+          members.every((m) => m.checkedIn) &&
+          guests.every((g) => g.checkedIn);
+
+        const shouldCheckIn = !allCheckedIn;
+
+        // Use SWR mutation if available for immediate UI updates
+        let result;
+        if (mutations?.checkInAllParticipants) {
+          result = await mutations.checkInAllParticipants(
+            timeBlockId,
+            shouldCheckIn,
+            {
+              optimisticUpdate: true,
+              revalidate: true,
+            },
+          );
+        } else {
+          result = await checkInAllTimeBlockParticipants(
+            timeBlockId,
+            shouldCheckIn,
+          );
+        }
+
+        if (result.success) {
+          const action = shouldCheckIn ? "checked in" : "checked out";
+          toast.success(`All participants ${action} successfully`);
+        } else {
+          toast.error(result.error || "Failed to check in all participants");
+        }
+      } catch (error) {
+        toast.error("An unexpected error occurred");
+      }
+    },
+    [mutations, timeBlocks],
+  );
+
+  const handleSaveNotes = useCallback(
+    async (timeBlockId: number, notes: string): Promise<boolean> => {
+      try {
+        // Use SWR mutation if available for immediate UI updates
+        let result;
+        if (mutations?.updateNotes) {
+          result = await mutations.updateNotes(timeBlockId, notes, {
+            optimisticUpdate: true,
+            revalidate: true,
+          });
+        } else {
+          result = await updateTimeBlockNotes(timeBlockId, notes);
+        }
+
+        if (result.success) {
+          toast.success("Notes updated successfully");
+          return true;
+        } else {
+          toast.error(result.error || "Failed to update notes");
+          return false;
+        }
+      } catch (error) {
+        toast.error("An unexpected error occurred");
         return false;
       }
-    } catch (error) {
-      toast.error("An unexpected error occurred");
-      return false;
-    }
-  };
+    },
+    [mutations],
+  );
 
-  // Handle removing a fill from a timeblock
-  const handleRemoveFill = async (timeBlockId: number, fillId: number) => {
-    try {
-      const result = await removeFillFromTimeBlock(timeBlockId, fillId);
-      if (result.success) {
-        toast.success("Fill removed successfully");
-      } else {
-        toast.error(result.error || "Failed to remove fill");
+  const handleRemoveFill = useCallback(
+    async (timeBlockId: number, fillId: number) => {
+      try {
+        // Use SWR mutation if available for immediate UI updates
+        let result;
+        if (mutations?.removeFill) {
+          result = await mutations.removeFill(timeBlockId, fillId, {
+            optimisticUpdate: true,
+            revalidate: true,
+          });
+        } else {
+          result = await removeFillFromTimeBlock(timeBlockId, fillId);
+        }
+
+        if (result.success) {
+          toast.success("Fill removed successfully");
+        } else {
+          toast.error(result.error || "Failed to remove fill");
+        }
+      } catch (error) {
+        toast.error("An unexpected error occurred");
       }
-    } catch (error) {
-      toast.error("An unexpected error occurred");
-    }
-  };
+    },
+    [mutations],
+  );
 
   // Toggle timeblock note editing
-  const toggleTimeBlockNoteEdit = (timeBlockId: number | null) => {
+  const toggleTimeBlockNoteEdit = useCallback((timeBlockId: number | null) => {
     setEditingTimeBlockNote(timeBlockId);
-  };
+  }, []);
+
+  // Handle modal close
+  const handleModalOpenChange = useCallback((open: boolean) => {
+    setAddPlayerModalOpen(open);
+    if (!open) {
+      setSelectedTimeBlock(null);
+    }
+  }, []);
+
+  // Handle opening account dialog
+  const handleShowAccount = useCallback(
+    (data: TimeBlockMemberView | TimeBlockGuest) => {
+      setSelectedAccountData(data);
+      setIsAccountDialogOpen(true);
+    },
+    [],
+  );
+
+  const handleCloseAccountDialog = useCallback(() => {
+    setIsAccountDialogOpen(false);
+    setSelectedAccountData(null);
+  }, []);
 
   // Add event listener for opening the add player modal
   useEffect(() => {
@@ -303,25 +383,6 @@ export function TeesheetView({
     };
   }, [timeBlocks]);
 
-  // Handle modal close
-  const handleModalOpenChange = (open: boolean) => {
-    setAddPlayerModalOpen(open);
-    if (!open) {
-      setSelectedTimeBlock(null);
-    }
-  };
-
-  // Handle opening account dialog
-  const handleShowAccount = (data: TimeBlockMemberView | TimeBlockGuest) => {
-    setSelectedAccountData(data);
-    setIsAccountDialogOpen(true);
-  };
-
-  const handleCloseAccountDialog = () => {
-    setIsAccountDialogOpen(false);
-    setSelectedAccountData(null);
-  };
-
   // Add event listener for opening the account dialog
   useEffect(() => {
     const handleOpenAccountDialog = (event: Event) => {
@@ -342,12 +403,6 @@ export function TeesheetView({
 
   return (
     <div className="rounded-lg bg-white p-4 shadow">
-      <TeesheetControlPanel
-        teesheet={teesheet}
-        availableConfigs={availableConfigs}
-        isAdmin={isAdmin}
-      />
-
       {/* General Notes Section */}
       <TeesheetGeneralNotes key={`notes-${teesheet.id}`} teesheet={teesheet} />
 
@@ -356,14 +411,13 @@ export function TeesheetView({
         <table className="w-full table-auto">
           <thead className="bg-gray-100 text-xs font-semibold text-gray-600 uppercase">
             <tr>
-              <th className="w-[10%] px-3 py-2 text-left whitespace-nowrap">
+              <th className="w-[8%] px-3 py-2 text-left whitespace-nowrap">
                 Time
               </th>
-              <th className="w-[12%] px-3 py-2 text-left whitespace-nowrap">
-                Status
+              <th className="w-[85%] px-3 py-2 text-left">Players</th>
+              <th className="w-[7%] px-2 py-2 text-center whitespace-nowrap">
+                <span className="sr-only">Actions</span>
               </th>
-              <th className="w-[60%] px-3 py-2 text-left">Players</th>
-              <th className="w-[18%] px-3 py-2 text-left">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
@@ -393,8 +447,8 @@ export function TeesheetView({
                   {block.notes && block.notes.trim() !== "" && (
                     <tr>
                       <td
-                        colSpan={4}
-                        className="border-b border-org-primary-light p-0"
+                        colSpan={3}
+                        className="border-org-primary-light border-b p-0"
                       >
                         <TimeBlockNote
                           notes={block.notes}
@@ -408,7 +462,7 @@ export function TeesheetView({
 
                   {/* Add note indicator or editor after timeblock */}
                   <tr className="hover:bg-gray-50">
-                    <td colSpan={4} className="h-2 p-0">
+                    <td colSpan={3} className="h-2 p-0">
                       {editingTimeBlockNote === block.id ? (
                         <TimeBlockNoteEditor
                           timeBlockId={block.id}
@@ -485,6 +539,7 @@ export function TeesheetView({
           onOpenChange={handleModalOpenChange}
           timeBlock={selectedTimeBlock}
           timeBlockGuests={selectedTimeBlock.guests}
+          mutations={mutations}
         />
       )}
 
@@ -497,4 +552,4 @@ export function TeesheetView({
       />
     </div>
   );
-}
+});

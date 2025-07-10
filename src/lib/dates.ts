@@ -242,22 +242,29 @@ export function isToday(date: Date | string): boolean {
 
 /**
  * Checks if a date/time is in the past in BC timezone
+ * Returns true only if the specific date/time has actually passed
+ * For same-day bookings, allows booking for any future time
  */
 export function isPast(date: Date | string, time?: string): boolean {
   const now = getBCNow();
 
   if (typeof date === "string") {
     if (time) {
-      // Compare date + time
+      // Compare date + time - this is the main use case for tee time booking
       const dateTime = parseDateTime(date, time);
       return dateTime < now;
     } else {
-      // Compare just date (end of day)
-      const endOfDay = parseDateTime(date, "23:59");
-      return endOfDay < now;
+      // For date-only comparison, only consider it past if it's a previous date
+      // Same day should never be considered "past" when no time is specified
+      const today = getBCToday();
+      const dateString = date;
+
+      // Only consider dates before today as "past"
+      return dateString < today;
     }
   }
 
+  // For Date objects, simple comparison
   return date < now;
 }
 

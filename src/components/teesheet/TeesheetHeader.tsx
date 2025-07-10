@@ -1,6 +1,5 @@
 "use client";
 
-import { isSameDay } from "date-fns";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "~/components/ui/button";
 import { Card } from "~/components/ui/card";
@@ -16,7 +15,15 @@ import type {
   TeesheetConfig,
   TimeBlockWithMembers,
 } from "~/app/types/TeeSheetTypes";
-import { formatDate } from "~/lib/dates";
+import {
+  formatDate,
+  isToday,
+  formatDateToYYYYMMDD,
+  getBCToday,
+  isSameDay,
+} from "~/lib/dates";
+import { addDays, subDays } from "date-fns";
+import { useState, useCallback } from "react";
 
 interface TeesheetHeaderProps {
   teesheetDate: Date;
@@ -24,6 +31,7 @@ interface TeesheetHeaderProps {
   teesheetId: number;
   timeBlocks: TimeBlockWithMembers[];
   isAdmin?: boolean;
+  onDateChange?: (newDate: Date) => void; // Callback for client-side navigation
 }
 
 export function TeesheetHeader({
@@ -32,19 +40,75 @@ export function TeesheetHeader({
   teesheetId,
   timeBlocks,
   isAdmin,
+  onDateChange,
 }: TeesheetHeaderProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const [isNavigating, setIsNavigating] = useState(false);
 
-  const handleDateChange = (days: number) => {
-    const newDate = new Date(teesheetDate);
-    newDate.setDate(teesheetDate.getDate() + days);
-    const params = new URLSearchParams(searchParams.toString());
-    params.set("date", formatDate(newDate, "yyyy-MM-dd"));
-    router.push(`?${params.toString()}`);
-  };
+  const handleDateChange = useCallback(
+    async (days: number) => {
+      if (isNavigating) return; // Prevent double-clicks
 
-  const today = new Date();
+      setIsNavigating(true);
+      const newDate =
+        days === 1
+          ? addDays(teesheetDate, 1)
+          : subDays(teesheetDate, Math.abs(days));
+
+      try {
+        if (onDateChange) {
+          // Use client-side navigation for faster performance
+          await onDateChange(newDate);
+
+          // Update URL without page reload
+          const params = new URLSearchParams(searchParams.toString());
+          params.set("date", formatDate(newDate, "yyyy-MM-dd"));
+          const newUrl = `${window.location.pathname}?${params.toString()}`;
+          window.history.pushState({}, "", newUrl);
+        } else {
+          // Fallback to server-side navigation
+          const params = new URLSearchParams(searchParams.toString());
+          params.set("date", formatDate(newDate, "yyyy-MM-dd"));
+          router.push(`?${params.toString()}`);
+        }
+      } finally {
+        setIsNavigating(false);
+      }
+    },
+    [teesheetDate, onDateChange, router, searchParams, isNavigating],
+  );
+
+  const handleCalendarSelect = useCallback(
+    async (newDate: Date | undefined) => {
+      if (!newDate || isSameDay(newDate, teesheetDate)) return;
+
+      setIsNavigating(true);
+
+      try {
+        if (onDateChange) {
+          // Use client-side navigation for faster performance
+          await onDateChange(newDate);
+
+          // Update URL without page reload
+          const params = new URLSearchParams(searchParams.toString());
+          params.set("date", formatDate(newDate, "yyyy-MM-dd"));
+          const newUrl = `${window.location.pathname}?${params.toString()}`;
+          window.history.pushState({}, "", newUrl);
+        } else {
+          // Fallback to server-side navigation
+          const params = new URLSearchParams(searchParams.toString());
+          params.set("date", formatDate(newDate, "yyyy-MM-dd"));
+          router.push(`?${params.toString()}`);
+        }
+      } finally {
+        setIsNavigating(false);
+      }
+    },
+    [onDateChange, router, searchParams, isNavigating, teesheetDate],
+  );
+
+  const today = getBCToday();
 
   const modifiers = {
     today: (day: Date) => isSameDay(day, today),
@@ -72,6 +136,7 @@ export function TeesheetHeader({
             variant="outline"
             size="icon"
             onClick={() => handleDateChange(-1)}
+            disabled={isNavigating}
           >
             <ChevronLeft className="h-4 w-4" />
           </Button>
@@ -80,9 +145,15 @@ export function TeesheetHeader({
             variant="outline"
             size="icon"
             onClick={() => handleDateChange(1)}
+            disabled={isNavigating}
           >
             <ChevronRight className="h-4 w-4" />
           </Button>
+
+          {/* Loading indicator for navigation */}
+          {isNavigating && (
+            <div className="text-sm text-gray-500">Loading...</div>
+          )}
         </div>
         <Button
           variant={isCalendarVisible ? "default" : "outline"}
@@ -112,13 +183,8 @@ export function TeesheetHeader({
           <Calendar
             selected={teesheetDate}
             modifiers={modifiers}
-            onSelect={(newDate: Date | undefined) => {
-              if (newDate) {
-                const params = new URLSearchParams(searchParams.toString());
-                params.set("date", formatDate(newDate, "yyyy-MM-dd"));
-                router.push(`?${params.toString()}`);
-              }
-            }}
+            onSelect={handleCalendarSelect}
+            disabled={isNavigating}
           />
         </Card>
       )}

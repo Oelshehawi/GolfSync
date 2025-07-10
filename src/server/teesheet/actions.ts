@@ -19,6 +19,13 @@ import { initializePaceOfPlay } from "~/server/pace-of-play/actions";
 import type { FillType } from "~/app/types/TeeSheetTypes";
 import { formatDateToYYYYMMDD } from "~/lib/utils";
 import { format } from "date-fns";
+import {
+  getOrCreateTeesheet,
+  getTimeBlocksForTeesheet,
+} from "~/server/teesheet/data";
+import { getTeesheetConfigs } from "~/server/settings/data";
+import { getAllPaceOfPlayForDate } from "~/server/pace-of-play/actions";
+import { parseDate } from "~/lib/dates";
 
 type ActionResult = {
   success: boolean;
@@ -28,6 +35,73 @@ type ActionResult = {
 type FillActionResult = ActionResult & {
   fill?: typeof timeBlockFills.$inferSelect;
 };
+
+type TeesheetDataResult = {
+  success: boolean;
+  error?: string;
+  data?: {
+    teesheet: any;
+    config: any;
+    timeBlocks: any[];
+    availableConfigs: any[];
+    paceOfPlayData: any[];
+    date: string;
+  };
+};
+
+/**
+ * Server action to fetch teesheet data for client-side navigation
+ * This can be called from client components with SWR
+ */
+export async function getTeesheetDataAction(
+  dateString: string,
+): Promise<TeesheetDataResult> {
+  try {
+    // Parse the date string into a Date object (BC timezone)
+    const date = parseDate(dateString);
+
+    // Get teesheet data - same logic as the admin page
+    const { teesheet, config } = await getOrCreateTeesheet(date);
+
+    if (!teesheet) {
+      return {
+        success: false,
+        error: "Failed to load teesheet",
+      };
+    }
+
+    const timeBlocks = await getTimeBlocksForTeesheet(teesheet.id);
+    const configsResult = await getTeesheetConfigs();
+    const paceOfPlayData = await getAllPaceOfPlayForDate(date);
+
+    if (!Array.isArray(configsResult)) {
+      return {
+        success: false,
+        error: "Failed to load configurations",
+      };
+    }
+
+    // Return the same data structure as the server-side page
+    return {
+      success: true,
+      data: {
+        teesheet,
+        config,
+        timeBlocks,
+        availableConfigs: configsResult,
+        paceOfPlayData,
+        date: date.toISOString(), // Include the date for client-side use
+      },
+    };
+  } catch (error) {
+    console.error("Error in getTeesheetDataAction:", error);
+    return {
+      success: false,
+      error:
+        error instanceof Error ? error.message : "Failed to load teesheet data",
+    };
+  }
+}
 
 export async function removeTimeBlockMember(
   timeBlockId: number,

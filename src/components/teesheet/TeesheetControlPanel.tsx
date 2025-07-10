@@ -8,6 +8,8 @@ import {
   Bug,
   Dice1,
   UserPlus,
+  CalendarDays,
+  Calendar,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -28,20 +30,31 @@ import toast from "react-hot-toast";
 import type { TeeSheet, TeesheetConfig } from "~/app/types/TeeSheetTypes";
 import { populateTimeBlocksWithRandomMembers } from "~/server/teesheet/actions";
 import { AdminLotteryEntryForm } from "~/components/lottery/AdminLotteryEntryForm";
+import { getBCToday, formatDate } from "~/lib/dates";
 
 // Check if we're in development mode
-const isDev = process.env.NODE_ENV === "development" || process.env.NODE_ENV === "production";
+const isDev =
+  process.env.NODE_ENV === "development" ||
+  process.env.NODE_ENV === "production";
 
 interface TeesheetControlPanelProps {
   teesheet: TeeSheet;
   availableConfigs: TeesheetConfig[];
   isAdmin?: boolean;
+  isTwoDayView?: boolean;
+  onToggleTwoDayView?: (enabled: boolean) => void;
+  mutations?: {
+    revalidate?: () => Promise<void>;
+  };
 }
 
 export function TeesheetControlPanel({
   teesheet,
   availableConfigs,
   isAdmin = true,
+  isTwoDayView = false,
+  onToggleTwoDayView,
+  mutations,
 }: TeesheetControlPanelProps) {
   const [isUpdating, setIsUpdating] = useState(false);
   const [isPopulating, setIsPopulating] = useState(false);
@@ -67,6 +80,8 @@ export function TeesheetControlPanel({
       );
       if (result.success) {
         toast.success("Teesheet configuration updated successfully");
+        // Trigger SWR revalidation to update the local data
+        await mutations?.revalidate?.();
       } else {
         toast.error(result.error || "Failed to update teesheet configuration");
       }
@@ -105,10 +120,11 @@ export function TeesheetControlPanel({
 
   // Get lottery button text - simplified to only Setup and View
   const getLotteryButtonText = () => {
-    const today = new Date();
-    const teesheetDate = new Date(teesheet.date);
+    const today = getBCToday();
+    const teesheetDateString = formatDate(teesheet.date, "yyyy-MM-dd");
 
-    if (teesheetDate < today) {
+
+    if (teesheetDateString <= today) {
       return "View Lottery";
     } else {
       return "Setup Lottery";
@@ -118,6 +134,23 @@ export function TeesheetControlPanel({
   return (
     <div className="mb-4 flex items-center justify-between">
       <div className="flex items-center gap-2">
+        {/* Two-Day View Toggle - Only show on desktop */}
+        <div className="hidden lg:block">
+          <Button
+            variant={isTwoDayView ? "default" : "outline"}
+            size="sm"
+            onClick={() => onToggleTwoDayView?.(!isTwoDayView)}
+            className="shadow-sm transition-all"
+          >
+            {isTwoDayView ? (
+              <Calendar className="mr-2 h-4 w-4" />
+            ) : (
+              <CalendarDays className="mr-2 h-4 w-4" />
+            )}
+            {isTwoDayView ? "Single Day" : "Two Days"}
+          </Button>
+        </div>
+
         <Link href={`/admin/pace-of-play/turn`} passHref>
           <Button
             variant="outline"

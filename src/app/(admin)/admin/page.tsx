@@ -2,8 +2,7 @@ import {
   getOrCreateTeesheet,
   getTimeBlocksForTeesheet,
 } from "~/server/teesheet/data";
-import { TeesheetView } from "~/components/teesheet/TeesheetView";
-import { TeesheetHeader } from "~/components/teesheet/TeesheetHeader";
+import { TeesheetPageClient } from "~/components/teesheet/TeesheetPageClient";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { getTeesheetConfigs } from "~/server/settings/data";
 import { getAllPaceOfPlayForDate } from "~/server/pace-of-play/actions";
@@ -54,27 +53,21 @@ export default async function AdminPage({ searchParams }: PageProps) {
       throw new Error("Failed to load configurations");
     }
 
-    // Pass the Date object to the client component
+    // Pass the initial data to the client component for SWR optimization
+    const initialData = {
+      teesheet,
+      config,
+      timeBlocks,
+      availableConfigs: configsResult,
+      paceOfPlayData,
+    };
+
     return (
-      <div className="container mx-auto space-y-2 p-6">
-        <TeesheetHeader
-          teesheetDate={date}
-          config={config}
-          teesheetId={teesheet.id}
-          timeBlocks={timeBlocks}
-          isAdmin={true}
-        />
-        <Card>
-          <CardContent>
-            <TeesheetView
-              teesheet={teesheet}
-              timeBlocks={timeBlocks}
-              availableConfigs={configsResult}
-              paceOfPlayData={paceOfPlayData}
-            />
-          </CardContent>
-        </Card>
-      </div>
+      <TeesheetPageClient
+        initialDate={date}
+        initialData={initialData}
+        isAdmin={true}
+      />
     );
   } catch (error) {
     console.error("Error in AdminPage:", error);

@@ -78,23 +78,6 @@ export async function bookTeeTime(
       };
     }
 
-    // Check if member already has a tee time on the same day
-    const existingBookingsOnSameDay = await db.query.timeBlockMembers.findFirst(
-      {
-        where: and(
-          eq(timeBlockMembers.memberId, member.id),
-          eq(timeBlockMembers.bookingDate, bookingDate),
-        ),
-      },
-    );
-
-    if (existingBookingsOnSameDay) {
-      return {
-        success: false,
-        error: "You already have a tee time booked on this day",
-      };
-    }
-
     // Book the time slot
     await db.insert(timeBlockMembers).values({
       timeBlockId,

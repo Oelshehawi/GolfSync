@@ -1,9 +1,11 @@
 "use client";
 
-import { useState, useCallback, useEffect, useMemo } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useDebouncedCallback } from "use-debounce";
 import { TimeBlockPageHeader } from "./TimeBlockPageHeader";
 import { TimeBlockHeader } from "./TimeBlockHeader";
+import { useMutationContext } from "~/hooks/useMutationContext";
+import { useTeesheetData } from "~/hooks/useTeesheetData";
 import {
   searchMembersAction,
   addMemberToTimeBlock,
@@ -36,7 +38,7 @@ import toast from "react-hot-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { type RestrictionViolation } from "~/app/types/RestrictionTypes";
 import { RestrictionViolationAlert } from "~/components/settings/timeblock-restrictions/RestrictionViolationAlert";
-import { formatDateToYYYYMMDD } from "~/lib/utils";
+import { formatDateToYYYYMMDD, parseDate, getBCToday } from "~/lib/dates";
 import { type TimeBlockGuest } from "~/app/types/GuestTypes";
 import { AddGuestDialog } from "~/components/guests/AddGuestDialog";
 import { createGuest } from "~/server/guests/actions";
@@ -53,28 +55,36 @@ type Guest = {
 interface TimeBlockMemberManagerProps {
   timeBlock: TimeBlockWithMembers;
   timeBlockGuests?: TimeBlockGuest[];
+  // Optional mutations - if not provided, will fall back to direct server actions
+  mutations?: any;
 }
 
 export function TimeBlockMemberManager({
-  timeBlock,
-  timeBlockGuests = [],
+  timeBlock: initialTimeBlock,
+  timeBlockGuests: initialTimeBlockGuests = [],
+  mutations: providedMutations,
 }: TimeBlockMemberManagerProps) {
-  // Track members, guests, and fills in local state
-  const [localMembers, setLocalMembers] = useState<TimeBlockMemberView[]>(
-    timeBlock.members,
-  );
-  const [localGuests, setLocalGuests] =
-    useState<TimeBlockGuest[]>(timeBlockGuests);
-  const [localFills, setLocalFills] = useState<TimeBlockFill[]>(
-    timeBlock.fills || [],
-  );
+  // Use provided mutations or get from context as fallback
+  const contextMutations = useMutationContext();
+  const mutations = providedMutations || contextMutations;
 
-  // Update local state when props change
-  useEffect(() => {
-    setLocalMembers(timeBlock.members);
-    setLocalGuests(timeBlockGuests);
-    setLocalFills(timeBlock.fills || []);
-  }, [timeBlock.members, timeBlockGuests, timeBlock.fills]);
+  // Get live SWR data instead of using static props
+  // This ensures we see updates immediately when mutations happen
+  // Fix: Use proper date functions from dates.ts to handle BC timezone
+  const dateForSWR = initialTimeBlock.date
+    ? parseDate(initialTimeBlock.date) // Use parseDate from dates.ts for proper BC timezone handling
+    : new Date();
+  const { data: swrData } = useTeesheetData(dateForSWR);
+
+  // Find the current timeblock in the SWR data
+  const timeBlock =
+    swrData?.timeBlocks?.find((tb) => tb.id === initialTimeBlock.id) ||
+    initialTimeBlock;
+
+  // Use live data from SWR for immediate updates
+  const members = timeBlock.members || [];
+  const guests = timeBlock.guests || [];
+  const fills = timeBlock.fills || [];
 
   // Member state
   const [memberSearchQuery, setMemberSearchQuery] = useState("");
@@ -112,16 +122,10 @@ export function TimeBlockMemberManager({
 
   // Constants
   const MAX_PEOPLE = 4;
-  const totalPeople =
-    localMembers.length + localGuests.length + localFills.length;
-  const isTimeBlockFull = totalPeople >= MAX_PEOPLE;
 
-  // Create a key that changes when members, guests, or fills change (memoized for performance)
-  const peopleListKey = useMemo(
-    () =>
-      `people-list-${localMembers.map((m) => m.id).join("-")}-${localGuests.map((g) => g.id).join("-")}-${localFills.map((f) => f.id).join("-")}`,
-    [localMembers, localGuests, localFills],
-  );
+  // Calculate current people count
+  const currentPeople = members.length + guests.length + fills.length;
+  const isTimeBlockFull = currentPeople >= MAX_PEOPLE;
 
   // Member search handler with better error handling
   const handleMemberSearch = useCallback(async (query: string) => {
@@ -189,9 +193,8 @@ export function TimeBlockMemberManager({
     memberClass: string,
   ) => {
     try {
-      // Use the timeblock's date rather than today's date
-      const bookingDateString =
-        timeBlock.date || formatDateToYYYYMMDD(new Date());
+      // Use the timeblock's date with proper BC timezone handling
+      const bookingDateString = timeBlock.date || getBCToday();
 
       // Check for restrictions first
       const checkResult = await checkTimeblockRestrictionsAction({
@@ -223,9 +226,8 @@ export function TimeBlockMemberManager({
   // Check for restrictions before adding a guest
   const checkGuestRestrictions = async (guestId: number) => {
     try {
-      // Use the timeblock's date rather than today's date
-      const bookingDateString =
-        timeBlock.date || formatDateToYYYYMMDD(new Date());
+      // Use the timeblock's date with proper BC timezone handling
+      const bookingDateString = timeBlock.date || getBCToday();
 
       // Check for restrictions
       const checkResult = await checkTimeblockRestrictionsAction({
@@ -254,16 +256,21 @@ export function TimeBlockMemberManager({
   };
 
   const handleAddMember = async (memberId: number) => {
+    // Check if timeblock is full
+    if (isTimeBlockFull) {
+      return;
+    }
+
     try {
       const memberToAdd = memberSearchResults.find((m) => m.id === memberId);
       if (!memberToAdd) {
         return;
       }
 
-      // Check for restrictions
+      // Check for restrictions first
       const hasViolations = await checkMemberRestrictions(
         memberId,
-        memberToAdd.class,
+        memberToAdd.class || "",
       );
 
       if (hasViolations) {
@@ -271,24 +278,16 @@ export function TimeBlockMemberManager({
         setPendingAction(() => {
           return async () => {
             try {
-              const result = await addMemberToTimeBlock(timeBlock.id, memberId);
+              // Use SWR mutation with optimistic updates enabled for immediate feedback
+              const result = mutations.addMember
+                ? await mutations.addMember(timeBlock.id, memberId, {
+                    optimisticUpdate: true, // Enable optimistic update for faster UI
+                    revalidate: true,
+                  })
+                : await addMemberToTimeBlock(timeBlock.id, memberId);
+
               if (result.success) {
                 toast.success("Member added successfully");
-
-                // Add member to local state for immediate UI update
-                const newMember: TimeBlockMemberView = {
-                  id: memberToAdd.id,
-                  username: memberToAdd.username,
-                  email: memberToAdd.email,
-                  firstName: memberToAdd.firstName,
-                  lastName: memberToAdd.lastName,
-                  memberNumber: memberToAdd.memberNumber,
-                  class: memberToAdd.class,
-                  bagNumber: memberToAdd.bagNumber,
-                  checkedIn: false,
-                  checkedInAt: null,
-                };
-                setLocalMembers((prev) => [...prev, newMember]);
               } else {
                 toast.error(result.error || "Failed to add member");
               }
@@ -303,47 +302,42 @@ export function TimeBlockMemberManager({
 
       // No violations, proceed as normal
       try {
-        const result = await addMemberToTimeBlock(timeBlock.id, memberId);
+        // Use SWR mutation with optimistic updates for immediate UI feedback
+        const result = mutations.addMember
+          ? await mutations.addMember(timeBlock.id, memberId, {
+              optimisticUpdate: true, // Enable optimistic update for immediate feedback
+              revalidate: true,
+            })
+          : await addMemberToTimeBlock(timeBlock.id, memberId);
+
         if (result.success) {
           toast.success("Member added successfully");
-
-          // Add member to local state for immediate UI update
-          const newMember: TimeBlockMemberView = {
-            id: memberToAdd.id,
-            username: memberToAdd.username,
-            email: memberToAdd.email,
-            firstName: memberToAdd.firstName,
-            lastName: memberToAdd.lastName,
-            memberNumber: memberToAdd.memberNumber,
-            class: memberToAdd.class,
-            bagNumber: memberToAdd.bagNumber,
-            checkedIn: false,
-            checkedInAt: null,
-          };
-          setLocalMembers((prev) => [...prev, newMember]);
         } else {
           toast.error(result.error || "Failed to add member");
         }
       } catch (error) {
+        console.error("Error adding member:", error);
         toast.error("An error occurred while adding the member");
-        console.error(error);
       }
     } catch (error) {
-      console.error("Error handling member addition:", error);
+      console.error("Error adding member:", error);
       toast.error("An error occurred while adding the member");
     }
   };
 
   const handleRemoveMember = async (memberId: number) => {
     try {
-      const result = await removeTimeBlockMember(timeBlock.id, memberId);
+      // Use SWR mutation with optimistic updates for immediate UI feedback
+      const result = mutations.removeMember
+        ? await mutations.removeMember(timeBlock.id, memberId, {
+            optimisticUpdate: true, // Optimistic update for immediate UI feedback
+            revalidate: true,
+          })
+        : await removeTimeBlockMember(timeBlock.id, memberId);
+
       if (result.success) {
         toast.success("Member removed successfully");
-
-        // Remove member from local state for immediate UI update
-        setLocalMembers((prev) =>
-          prev.filter((member) => member.id !== memberId),
-        );
+        // SWR mutation handles immediate UI update
       } else {
         toast.error(result.error || "Failed to remove member");
       }
@@ -354,6 +348,11 @@ export function TimeBlockMemberManager({
   };
 
   const handleAddGuest = async (guestId: number) => {
+    // Check if timeblock is full
+    if (isTimeBlockFull) {
+      return;
+    }
+
     const guestToAdd = guestSearchResults.find((g) => g.id === guestId);
     if (!guestToAdd) {
       return;
@@ -373,7 +372,7 @@ export function TimeBlockMemberManager({
       invitingMemberId = courseSponsoredMember.id;
     } else {
       // Use selected member
-      invitingMember = localMembers.find((m) => m.id === selectedMemberId);
+      invitingMember = members.find((m: any) => m.id === selectedMemberId);
       if (!invitingMember) {
         toast.error("Selected member not found");
         return;
@@ -381,81 +380,58 @@ export function TimeBlockMemberManager({
       invitingMemberId = selectedMemberId;
     }
 
-    // Check for restrictions
-    const hasViolations = await checkGuestRestrictions(guestId);
-
-    if (hasViolations) {
-      // Save the action for later if admin overrides
-      setPendingAction(() => {
-        return async () => {
-          try {
-            const result = await addGuestToTimeBlock(
-              timeBlock.id,
-              guestId,
-              invitingMemberId,
-            );
-            if (result.success) {
-              toast.success("Guest added successfully");
-
-              // Add guest to local state for immediate UI update
-              const newGuest: TimeBlockGuest = {
-                id: guestToAdd.id,
-                firstName: guestToAdd.firstName,
-                lastName: guestToAdd.lastName,
-                email: guestToAdd.email,
-                phone: guestToAdd.phone,
-                checkedIn: false,
-                checkedInAt: null,
-                invitedByMember: {
-                  id: invitingMember.id,
-                  firstName: invitingMember.firstName,
-                  lastName: invitingMember.lastName,
-                  memberNumber: invitingMember.memberNumber || "COURSE",
-                },
-              };
-              setLocalGuests((prev) => [...prev, newGuest]);
-
-              setSelectedMemberId(null);
-            } else {
-              toast.error(result.error || "Failed to add guest");
-            }
-          } catch (error) {
-            toast.error("An error occurred while adding the guest");
-            console.error(error);
-          }
-        };
-      });
-      return;
-    }
-
-    // No violations, proceed as normal
     try {
-      const result = await addGuestToTimeBlock(
-        timeBlock.id,
-        guestId,
-        invitingMemberId,
-      );
+      // Check for restrictions
+      const hasViolations = await checkGuestRestrictions(guestId);
+
+      if (hasViolations) {
+        // Save the action for later if admin overrides
+        setPendingAction(() => {
+          return async () => {
+            try {
+              // Use SWR mutation with optimistic updates for immediate feedback
+              const result = mutations.addGuest
+                ? await mutations.addGuest(
+                    timeBlock.id,
+                    guestId,
+                    invitingMemberId,
+                    {
+                      optimisticUpdate: true, // Enable optimistic update for faster UI
+                      revalidate: true,
+                    },
+                  )
+                : await addGuestToTimeBlock(
+                    timeBlock.id,
+                    guestId,
+                    invitingMemberId,
+                  );
+
+              if (result.success) {
+                toast.success("Guest added successfully");
+                setSelectedMemberId(null);
+              } else {
+                toast.error(result.error || "Failed to add guest");
+              }
+            } catch (error) {
+              toast.error("An error occurred while adding the guest");
+              console.error(error);
+            }
+          };
+        });
+        return;
+      }
+
+      // No violations, proceed as normal
+      // Use SWR mutation with optimistic updates for immediate UI feedback
+      const result = mutations.addGuest
+        ? await mutations.addGuest(timeBlock.id, guestId, invitingMemberId, {
+            optimisticUpdate: true, // Enable optimistic update for immediate feedback
+            revalidate: true,
+          })
+        : await addGuestToTimeBlock(timeBlock.id, guestId, invitingMemberId);
+
       if (result.success) {
         toast.success("Guest added successfully");
-
-        // Add guest to local state for immediate UI update
-        const newGuest: TimeBlockGuest = {
-          id: guestToAdd.id,
-          firstName: guestToAdd.firstName,
-          lastName: guestToAdd.lastName,
-          email: guestToAdd.email,
-          phone: guestToAdd.phone,
-          checkedIn: false,
-          checkedInAt: null,
-          invitedByMember: {
-            id: invitingMember.id,
-            firstName: invitingMember.firstName,
-            lastName: invitingMember.lastName,
-            memberNumber: invitingMember.memberNumber || "COURSE",
-          },
-        };
-        setLocalGuests((prev) => [...prev, newGuest]);
-
         setSelectedMemberId(null);
       } else {
         toast.error(result.error || "Failed to add guest");
@@ -468,12 +444,17 @@ export function TimeBlockMemberManager({
 
   const handleRemoveGuest = async (guestId: number) => {
     try {
-      const result = await removeGuestFromTimeBlock(timeBlock.id, guestId);
+      // Use SWR mutation with optimistic updates for immediate UI feedback
+      const result = mutations.removeGuest
+        ? await mutations.removeGuest(timeBlock.id, guestId, {
+            optimisticUpdate: true, // Optimistic update for immediate UI feedback
+            revalidate: true,
+          })
+        : await removeGuestFromTimeBlock(timeBlock.id, guestId);
+
       if (result.success) {
         toast.success("Guest removed successfully");
-
-        // Remove guest from local state for immediate UI update
-        setLocalGuests((prev) => prev.filter((guest) => guest.id !== guestId));
+        // SWR mutation handles immediate UI update
       } else {
         toast.error(result.error || "Failed to remove guest");
       }
@@ -532,45 +513,51 @@ export function TimeBlockMemberManager({
   };
 
   const handleAddFill = async (fillType: FillType, customName?: string) => {
+    // Check if timeblock is full
+    if (isTimeBlockFull) {
+      return;
+    }
+
     try {
-      const result = await addFillToTimeBlock(
-        timeBlock.id,
-        fillType,
-        1, // Always add one fill at a time
-        customName,
-      );
+      // Use SWR mutation with optimistic updates for immediate UI feedback
+      const result = mutations.addFill
+        ? await mutations.addFill(timeBlock.id, fillType, customName, {
+            optimisticUpdate: true, // Optimistic update for immediate UI feedback
+            revalidate: true,
+          })
+        : await addFillToTimeBlock(timeBlock.id, fillType, 1, customName);
 
       if (result.success) {
         toast.success("Fill added successfully");
-        // Add fill to local state
-        const newFill = {
-          id: result.fill?.id ?? 0,
-          timeBlockId: timeBlock.id,
-          fillType,
-          customName: customName || null,
-        } as TimeBlockFill; // Schema will add createdAt with defaultNow()
-        setLocalFills((prev) => [...prev, newFill]);
+        // SWR mutation handles immediate UI update
       } else {
         toast.error(result.error || "Failed to add fill");
       }
     } catch (error) {
-      console.error("Error adding fill:", error);
       toast.error("An error occurred while adding the fill");
+      console.error(error);
     }
   };
 
   const handleRemoveFill = async (fillId: number) => {
     try {
-      const result = await removeFillFromTimeBlock(timeBlock.id, fillId);
+      // Use SWR mutation with optimistic updates for immediate UI feedback
+      const result = mutations.removeFill
+        ? await mutations.removeFill(timeBlock.id, fillId, {
+            optimisticUpdate: true, // Optimistic update for immediate UI feedback
+            revalidate: true,
+          })
+        : await removeFillFromTimeBlock(timeBlock.id, fillId);
+
       if (result.success) {
         toast.success("Fill removed successfully");
-        setLocalFills((prev) => prev.filter((fill) => fill.id !== fillId));
+        // SWR mutation handles immediate UI update
       } else {
         toast.error(result.error || "Failed to remove fill");
       }
     } catch (error) {
-      console.error("Error removing fill:", error);
       toast.error("An error occurred while removing the fill");
+      console.error(error);
     }
   };
 
@@ -579,7 +566,7 @@ export function TimeBlockMemberManager({
       <TimeBlockPageHeader timeBlock={timeBlock} />
       <TimeBlockHeader
         timeBlock={timeBlock}
-        guestsCount={localGuests.length}
+        guestsCount={guests.length}
         maxPeople={MAX_PEOPLE}
       />
 
@@ -623,7 +610,7 @@ export function TimeBlockMemberManager({
               isLoading={isGuestSearching}
               onAddGuest={handleAddGuest}
               isTimeBlockFull={isTimeBlockFull}
-              members={localMembers}
+              members={members}
               onMemberSelect={handleMemberSelect}
               selectedMemberId={selectedMemberId}
               onCreateGuest={handleShowCreateGuestDialog}
@@ -636,17 +623,17 @@ export function TimeBlockMemberManager({
             onAddFill={handleAddFill}
             isTimeBlockFull={isTimeBlockFull}
             maxPeople={MAX_PEOPLE}
-            currentPeopleCount={totalPeople}
+            currentPeopleCount={currentPeople}
           />
         </TabsContent>
       </Tabs>
 
       {/* Combined People List - always visible */}
       <TimeBlockPeopleList
-        key={peopleListKey}
-        members={localMembers}
-        guests={localGuests}
-        fills={localFills}
+        key={`people-${timeBlock.id}-${members.length}-${guests.length}-${fills.length}`}
+        members={members}
+        guests={guests}
+        fills={fills}
         onRemoveMember={handleRemoveMember}
         onRemoveGuest={handleRemoveGuest}
         onRemoveFill={handleRemoveFill}

@@ -10,6 +10,7 @@ interface AddPlayerModalProps {
   onOpenChange: (open: boolean) => void;
   timeBlock: TimeBlockWithMembers;
   timeBlockGuests?: TimeBlockGuest[];
+  mutations?: any;
 }
 
 export function AddPlayerModal({
@@ -17,23 +18,17 @@ export function AddPlayerModal({
   onOpenChange,
   timeBlock,
   timeBlockGuests = [],
+  mutations,
 }: AddPlayerModalProps) {
-  // Create a key that changes when members, guests, or fills are added/removed
-  const membersKey = timeBlock.members.map((m) => m.id).join("-");
-  const guestsKey = timeBlockGuests.map((g) => g.id).join("-");
-  const fillsKey =
-    timeBlock.fills?.map((f) => `${f.id}`).join("-") || "";
-  const componentKey = `modal-timeblock-${timeBlock.id}-members-${membersKey}-guests-${guestsKey}-fills-${fillsKey}`;
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="flex max-h-[85vh] max-w-4xl flex-col overflow-hidden">
         <DialogTitle>Add Players to {timeBlock.startTime}</DialogTitle>
         <div className="flex-grow overflow-y-auto pr-1">
           <TimeBlockMemberManager
-            key={componentKey}
             timeBlock={timeBlock}
             timeBlockGuests={timeBlockGuests}
+            mutations={mutations}
           />
         </div>
       </DialogContent>

@@ -63,21 +63,6 @@ export async function addMemberToTimeBlock(
     const bookingDate = formatDateToYYYYMMDD(teesheet.date);
     const bookingTime = timeBlock.startTime;
 
-    // Check if the member already has a booking on this date
-    const existingBooking = await db.query.timeBlockMembers.findFirst({
-      where: and(
-        eq(timeBlockMembers.memberId, memberId),
-        eq(timeBlockMembers.bookingDate, bookingDate),
-      ),
-    });
-
-    if (existingBooking) {
-      return {
-        success: false,
-        error: "This member already has a tee time booked on this day",
-      };
-    }
-
     // Add member to time block
     await db.insert(timeBlockMembers).values({
       timeBlockId,
