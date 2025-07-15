@@ -30,6 +30,7 @@ import toast from "react-hot-toast";
 import type { TeeSheet, TeesheetConfig } from "~/app/types/TeeSheetTypes";
 import { populateTimeBlocksWithRandomMembers } from "~/server/teesheet/actions";
 import { AdminLotteryEntryForm } from "~/components/lottery/AdminLotteryEntryForm";
+import { TeesheetSettingsModal } from "./TeesheetSettingsModal";
 import { getBCToday, formatDate } from "~/lib/dates";
 
 // Check if we're in development mode
@@ -40,6 +41,7 @@ const isDev =
 interface TeesheetControlPanelProps {
   teesheet: TeeSheet;
   availableConfigs: TeesheetConfig[];
+  lotterySettings?: any;
   isAdmin?: boolean;
   isTwoDayView?: boolean;
   onToggleTwoDayView?: (enabled: boolean) => void;
@@ -51,6 +53,7 @@ interface TeesheetControlPanelProps {
 export function TeesheetControlPanel({
   teesheet,
   availableConfigs,
+  lotterySettings,
   isAdmin = true,
   isTwoDayView = false,
   onToggleTwoDayView,
@@ -61,13 +64,8 @@ export function TeesheetControlPanel({
   const [showAdminEntryDialog, setShowAdminEntryDialog] = useState(false);
   const [showConfigConfirmation, setShowConfigConfirmation] = useState(false);
   const [pendingConfigId, setPendingConfigId] = useState<number | null>(null);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
 
-  const handleConfigChange = (configId: number) => {
-    if (configId === teesheet.configId) return;
-
-    setPendingConfigId(configId);
-    setShowConfigConfirmation(true);
-  };
 
   const handleConfirmConfigChange = async () => {
     if (!pendingConfigId) return;
@@ -122,7 +120,6 @@ export function TeesheetControlPanel({
   const getLotteryButtonText = () => {
     const today = getBCToday();
     const teesheetDateString = formatDate(teesheet.date, "yyyy-MM-dd");
-
 
     if (teesheetDateString <= today) {
       return "View Lottery";
@@ -209,32 +206,16 @@ export function TeesheetControlPanel({
         )}
       </div>
 
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={isUpdating}
-            className="cursor-pointer shadow-sm transition-colors hover:text-white"
-          >
-            <Settings className="mr-2 h-4 w-4" />
-            Change Configuration
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent className="rounded-md border bg-white shadow-lg">
-          {availableConfigs.map((config) => (
-            <DropdownMenuItem
-              key={config.id}
-              onClick={() => handleConfigChange(config.id)}
-              disabled={config.id === teesheet.configId || isUpdating}
-              className="hover:bg-org-primary cursor-pointer transition-colors hover:text-white"
-            >
-              {config.name}
-              {config.id === teesheet.configId && " (Current)"}
-            </DropdownMenuItem>
-          ))}
-        </DropdownMenuContent>
-      </DropdownMenu>
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => setShowSettingsModal(true)}
+        disabled={isUpdating}
+        className="cursor-pointer shadow-sm transition-colors hover:text-white"
+      >
+        <Settings className="mr-2 h-4 w-4" />
+        Teesheet Settings
+      </Button>
 
       {/* Admin Lottery Entry Dialog */}
       <Dialog
@@ -277,6 +258,19 @@ export function TeesheetControlPanel({
         cancelText="Cancel"
         variant="destructive"
         loading={isUpdating}
+      />
+
+      {/* Teesheet Settings Modal */}
+      <TeesheetSettingsModal
+        isOpen={showSettingsModal}
+        onClose={() => setShowSettingsModal(false)}
+        teesheet={teesheet}
+        availableConfigs={availableConfigs}
+        lotterySettings={lotterySettings || null}
+        onSuccess={() => {
+          setShowSettingsModal(false);
+          mutations?.revalidate?.();
+        }}
       />
     </div>
   );

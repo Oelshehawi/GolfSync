@@ -7,6 +7,7 @@ import { Search } from "lucide-react";
 import { LotteryIndividualEntriesList } from "./LotteryIndividualEntriesList";
 import { LotteryGroupEntriesList } from "./LotteryGroupEntriesList";
 import { LotteryEditDialog } from "./LotteryEditDialog";
+import { ConfirmationDialog } from "~/components/ui/confirmation-dialog";
 import type { TeesheetConfig } from "~/app/types/TeeSheetTypes";
 
 interface LotteryEntryData {
@@ -43,6 +44,17 @@ export function LotteryAllEntries({
     open: false,
     entry: null,
     isGroup: false,
+  });
+  const [confirmCancelDialog, setConfirmCancelDialog] = useState<{
+    open: boolean;
+    entryId: number | null;
+    isGroup: boolean;
+    entryName: string;
+  }>({
+    open: false,
+    entryId: null,
+    isGroup: false,
+    entryName: "",
   });
 
   // Filter and sort entries based on search term
@@ -115,6 +127,50 @@ export function LotteryAllEntries({
     });
   };
 
+  const handleCancelEntryClick = (entryId: number, isGroup: boolean) => {
+    // Find the entry to get its name for the confirmation dialog
+    let entryName = "";
+    if (isGroup) {
+      const groupEntry = entries.groups.find((g) => g.id === entryId);
+      if (groupEntry) {
+        entryName = `${groupEntry.leader.firstName} ${groupEntry.leader.lastName} (Group)`;
+      }
+    } else {
+      const individualEntry = entries.individual.find((i) => i.id === entryId);
+      if (individualEntry) {
+        entryName = `${individualEntry.member.firstName} ${individualEntry.member.lastName}`;
+      }
+    }
+
+    setConfirmCancelDialog({
+      open: true,
+      entryId,
+      isGroup,
+      entryName,
+    });
+  };
+
+  const handleConfirmCancel = () => {
+    if (confirmCancelDialog.entryId !== null) {
+      onCancelEntry(confirmCancelDialog.entryId, confirmCancelDialog.isGroup);
+    }
+    setConfirmCancelDialog({
+      open: false,
+      entryId: null,
+      isGroup: false,
+      entryName: "",
+    });
+  };
+
+  const handleCancelCancel = () => {
+    setConfirmCancelDialog({
+      open: false,
+      entryId: null,
+      isGroup: false,
+      entryName: "",
+    });
+  };
+
   const totalEntries =
     filteredAndSortedEntries.individual.length +
     filteredAndSortedEntries.groups.length;
@@ -148,7 +204,7 @@ export function LotteryAllEntries({
               <div>
                 <LotteryIndividualEntriesList
                   entries={filteredAndSortedEntries.individual}
-                  onCancelEntry={onCancelEntry}
+                  onCancelEntry={handleCancelEntryClick}
                   onEditEntry={(entry) => handleEditEntry(entry, false)}
                   getTimeWindowLabel={getTimeWindowLabel}
                 />
@@ -158,7 +214,7 @@ export function LotteryAllEntries({
               <div>
                 <LotteryGroupEntriesList
                   entries={filteredAndSortedEntries.groups}
-                  onCancelEntry={onCancelEntry}
+                  onCancelEntry={handleCancelEntryClick}
                   onEditEntry={(entry) => handleEditEntry(entry, true)}
                   getTimeWindowLabel={getTimeWindowLabel}
                 />
@@ -175,6 +231,21 @@ export function LotteryAllEntries({
         isGroup={editDialog.isGroup}
         members={members}
         config={config}
+      />
+
+      <ConfirmationDialog
+        open={confirmCancelDialog.open}
+        onOpenChange={(open) => {
+          if (!open) {
+            handleCancelCancel();
+          }
+        }}
+        onConfirm={handleConfirmCancel}
+        title="Cancel Lottery Entry"
+        description={`Are you sure you want to cancel the lottery entry for "${confirmCancelDialog.entryName}"? This action cannot be undone.`}
+        confirmText="Cancel Entry"
+        cancelText="Keep Entry"
+        variant="destructive"
       />
     </>
   );

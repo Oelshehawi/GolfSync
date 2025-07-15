@@ -7,8 +7,15 @@ import {
   teesheets,
   timeBlocks,
   courseInfo,
+  lotterySettings,
+  lotteryEntries,
+  lotteryGroups,
 } from "~/server/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
+import {
+  type LotterySettingsType,
+  type LotterySettingsInsert,
+} from "~/server/db/schema";
 
 import { revalidatePath } from "next/cache";
 import { createTimeBlocksForTeesheet } from "~/server/teesheet/data";
@@ -151,9 +158,7 @@ export async function deleteTeesheetConfig(
   configId: number,
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    await db
-      .delete(teesheetConfigs)
-      .where(eq(teesheetConfigs.id, configId));
+    await db.delete(teesheetConfigs).where(eq(teesheetConfigs.id, configId));
 
     revalidatePath("/settings/teesheet");
     revalidatePath("/settings/teesheet/configuration");
@@ -267,10 +272,31 @@ export async function updateTeesheetConfigForDate(
       return { success: false, error: "Failed to update teesheet" };
     }
 
-    // Delete existing time blocks
-    await db
-      .delete(timeBlocks)
+    // Clear foreign key references before deleting time blocks
+    // First, get all timeblock IDs that will be deleted
+    const timeBlockIds = await db
+      .select({ id: timeBlocks.id })
+      .from(timeBlocks)
       .where(eq(timeBlocks.teesheetId, teesheetId));
+
+    const timeBlockIdArray = timeBlockIds.map((tb) => tb.id);
+
+    if (timeBlockIdArray.length > 0) {
+      // Clear assignedTimeBlockId from lottery entries that reference these timeblocks
+      await db
+        .update(lotteryEntries)
+        .set({ assignedTimeBlockId: null })
+        .where(inArray(lotteryEntries.assignedTimeBlockId, timeBlockIdArray));
+
+      // Clear assignedTimeBlockId from lottery groups that reference these timeblocks
+      await db
+        .update(lotteryGroups)
+        .set({ assignedTimeBlockId: null })
+        .where(inArray(lotteryGroups.assignedTimeBlockId, timeBlockIdArray));
+    }
+
+    // Now delete existing time blocks
+    await db.delete(timeBlocks).where(eq(timeBlocks.teesheetId, teesheetId));
 
     // Create new time blocks with the new config
     const fullConfig = {
@@ -356,3 +382,104 @@ export async function updateCourseInfo(data: {
     return { success: false, error: "Error updating course info" };
   }
 }
+
+/**
+ * Update teesheet visibility settings
+ */
+export async function updateTeesheetVisibility(
+  teesheetId: number,
+  isPublic: boolean,
+  privateMessage?: string,
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const { userId } = await auth();
+    const publishedBy = userId || "Unknown";
+
+    const updateData: any = {
+      isPublic,
+      updatedAt: new Date(),
+    };
+
+    if (isPublic) {
+      updateData.publishedAt = new Date();
+      updateData.publishedBy = publishedBy;
+    } else {
+      updateData.publishedAt = null;
+      updateData.publishedBy = null;
+      if (privateMessage !== undefined) {
+        updateData.privateMessage = privateMessage;
+      }
+    }
+
+    const [updatedTeesheet] = await db
+      .update(teesheets)
+      .set(updateData)
+      .where(eq(teesheets.id, teesheetId))
+      .returning();
+
+    if (!updatedTeesheet) {
+      return { success: false, error: "Failed to update teesheet visibility" };
+    }
+
+    revalidatePath("/admin/teesheet");
+    revalidatePath("/members/teesheet");
+
+    return { success: true };
+  } catch (error) {
+    console.error("Error updating teesheet visibility:", error);
+    return { success: false, error: "Failed to update teesheet visibility" };
+  }
+}
+
+/**
+ * Update lottery settings for a teesheet
+ */
+export async function updateLotterySettings(
+  teesheetId: number,
+  settings: {
+    enabled: boolean;
+    disabledMessage?: string;
+  },
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    // Check if lottery settings exist for this teesheet
+    const existingSettings = await db
+      .select()
+      .from(lotterySettings)
+      .where(eq(lotterySettings.teesheetId, teesheetId))
+      .limit(1);
+
+    if (existingSettings.length > 0) {
+      // Update existing settings
+      await db
+        .update(lotterySettings)
+        .set({
+          enabled: settings.enabled,
+          disabledMessage:
+            settings.disabledMessage ||
+            "Lottery signup is disabled for this date",
+          updatedAt: new Date(),
+        })
+        .where(eq(lotterySettings.teesheetId, teesheetId));
+    } else {
+      // Create new settings
+      await db.insert(lotterySettings).values({
+        teesheetId,
+        enabled: settings.enabled,
+        disabledMessage:
+          settings.disabledMessage ||
+          "Lottery signup is disabled for this date",
+      });
+    }
+
+    revalidatePath("/admin/teesheet");
+    revalidatePath("/members/teesheet");
+
+    return { success: true };
+  } catch (error) {
+    console.error("Error updating lottery settings:", error);
+    return { success: false, error: "Failed to update lottery settings" };
+  }
+}
+
+// getLotterySettings moved to src/server/settings/data.ts

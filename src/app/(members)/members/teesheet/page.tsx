@@ -52,6 +52,7 @@ export default async function MemberTeesheetPage({ searchParams }: PageProps) {
     config,
     timeBlocks = [],
     member,
+    lotterySettings,
   } = await getMemberTeesheetDataWithRestrictions(date, userId as string);
 
   return (
@@ -63,6 +64,7 @@ export default async function MemberTeesheetPage({ searchParams }: PageProps) {
       selectedDate={dateString}
       lotteryEntry={lotteryEntry}
       isLotteryEligible={isLotteryEligible}
+      lotterySettings={lotterySettings}
     />
   );
 }

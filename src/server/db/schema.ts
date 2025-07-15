@@ -211,6 +211,12 @@ export const teesheets = createTable(
     date: date("date").notNull(),
     configId: integer("config_id").notNull(),
     generalNotes: text("general_notes"),
+    isPublic: boolean("is_public").default(false).notNull(),
+    publishedAt: timestamp("published_at", { withTimezone: true }),
+    publishedBy: varchar("published_by", { length: 100 }),
+    privateMessage: text("private_message").default(
+      "This teesheet is not yet available for booking.",
+    ),
     createdAt: timestamp("created_at", { withTimezone: true })
       .default(sql`CURRENT_TIMESTAMP`)
       .notNull(),
@@ -218,7 +224,35 @@ export const teesheets = createTable(
       () => new Date(),
     ),
   },
-  (table) => [index("teesheets_date_idx").on(table.date)],
+  (table) => [
+    index("teesheets_date_idx").on(table.date),
+    index("teesheets_is_public_idx").on(table.isPublic),
+  ],
+);
+
+// Lottery settings table
+export const lotterySettings = createTable(
+  "lottery_settings",
+  {
+    id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+    teesheetId: integer("teesheet_id")
+      .references(() => teesheets.id, { onDelete: "cascade" })
+      .notNull(),
+    enabled: boolean("enabled").default(true).notNull(),
+    disabledMessage: text("disabled_message").default(
+      "Lottery signup is disabled for this date",
+    ),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).$onUpdate(
+      () => new Date(),
+    ),
+  },
+  (table) => [
+    unique("lottery_settings_teesheet_id_unq").on(table.teesheetId),
+    index("lottery_settings_teesheet_id_idx").on(table.teesheetId),
+  ],
 );
 
 // Time blocks
@@ -295,7 +329,22 @@ export const teesheetsRelations = relations(teesheets, ({ many, one }) => ({
     fields: [teesheets.configId],
     references: [teesheetConfigs.id],
   }),
+  lotterySettings: one(lotterySettings, {
+    fields: [teesheets.id],
+    references: [lotterySettings.teesheetId],
+  }),
 }));
+
+// Define relations for lottery settings
+export const lotterySettingsRelations = relations(
+  lotterySettings,
+  ({ one }) => ({
+    teesheet: one(teesheets, {
+      fields: [lotterySettings.teesheetId],
+      references: [teesheets.id],
+    }),
+  }),
+);
 
 // Time block members (join table)
 export const timeBlockMembers = createTable(
@@ -1055,3 +1104,7 @@ export const systemMaintenance = createTable(
 // Type exports for member classes
 export type MemberClass = typeof memberClasses.$inferSelect;
 export type MemberClassInsert = typeof memberClasses.$inferInsert;
+
+// Type exports for lottery settings
+export type LotterySettingsType = typeof lotterySettings.$inferSelect;
+export type LotterySettingsInsert = typeof lotterySettings.$inferInsert;

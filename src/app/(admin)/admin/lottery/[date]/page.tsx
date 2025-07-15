@@ -15,6 +15,7 @@ import {
   getActiveTimeRestrictionsForDate,
 } from "~/server/lottery/data";
 import { checkAndRunMonthlyMaintenance } from "~/server/lottery/maintenance-actions";
+import { getTeesheetDataAction } from "~/server/teesheet/actions";
 
 interface PageProps {
   params: {
@@ -50,6 +51,7 @@ export default async function LotteryManagementPage({ params }: PageProps) {
     timeBlocks,
     config,
     restrictions,
+    teesheetData,
   ] = await Promise.all([
     getMembers(),
     getLotteryStatsForDate(date),
@@ -57,6 +59,7 @@ export default async function LotteryManagementPage({ params }: PageProps) {
     getAvailableTimeBlocksForDate(date),
     getConfigForDate(lotteryDate),
     getActiveTimeRestrictionsForDate(date),
+    getTeesheetDataAction(date),
   ]);
 
   // Determine lottery status
@@ -103,6 +106,7 @@ export default async function LotteryManagementPage({ params }: PageProps) {
         initialTimeBlocks={timeBlocks}
         config={config}
         restrictions={restrictions}
+        teesheetData={teesheetData.success ? teesheetData.data : null}
       />
     </div>
   );

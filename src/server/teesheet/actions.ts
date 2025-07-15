@@ -12,24 +12,26 @@ import {
   timeBlockFills,
   generalCharges,
   timeblockRestrictions,
+  lotteryEntries,
+  lotteryGroups,
 } from "~/server/db/schema";
-import { and, eq, sql, gte, lte } from "drizzle-orm";
+import { and, eq, sql, gte, lte, asc } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { initializePaceOfPlay } from "~/server/pace-of-play/actions";
 import type { FillType } from "~/app/types/TeeSheetTypes";
 import { formatDateToYYYYMMDD } from "~/lib/utils";
-import { format } from "date-fns";
 import {
   getOrCreateTeesheet,
   getTimeBlocksForTeesheet,
 } from "~/server/teesheet/data";
-import { getTeesheetConfigs } from "~/server/settings/data";
+import { getTeesheetConfigs, getLotterySettings } from "~/server/settings/data";
 import { getAllPaceOfPlayForDate } from "~/server/pace-of-play/actions";
 import { parseDate } from "~/lib/dates";
 
 type ActionResult = {
   success: boolean;
   error?: string;
+  data?: any;
 };
 
 type FillActionResult = ActionResult & {
@@ -45,6 +47,7 @@ type TeesheetDataResult = {
     timeBlocks: any[];
     availableConfigs: any[];
     paceOfPlayData: any[];
+    lotterySettings?: any;
     date: string;
   };
 };
@@ -73,6 +76,7 @@ export async function getTeesheetDataAction(
     const timeBlocks = await getTimeBlocksForTeesheet(teesheet.id);
     const configsResult = await getTeesheetConfigs();
     const paceOfPlayData = await getAllPaceOfPlayForDate(date);
+    const lotterySettings = await getLotterySettings(teesheet.id);
 
     if (!Array.isArray(configsResult)) {
       return {
@@ -90,6 +94,7 @@ export async function getTeesheetDataAction(
         timeBlocks,
         availableConfigs: configsResult,
         paceOfPlayData,
+        lotterySettings,
         date: date.toISOString(), // Include the date for client-side use
       },
     };
@@ -710,5 +715,292 @@ export async function removeFillFromTimeBlock(
       success: false,
       error: "Failed to remove fill from time block",
     };
+  }
+}
+
+/**
+ * Swap two timeblocks in the teesheet
+ */
+export async function swapTimeBlocks(
+  teesheetId: number,
+  sourceTimeBlockId: number,
+  targetTimeBlockId: number,
+): Promise<ActionResult> {
+  try {
+    // Get both timeblocks
+    const sourceBlock = await db.query.timeBlocks.findFirst({
+      where: eq(timeBlocks.id, sourceTimeBlockId),
+    });
+    const targetBlock = await db.query.timeBlocks.findFirst({
+      where: eq(timeBlocks.id, targetTimeBlockId),
+    });
+
+    if (!sourceBlock || !targetBlock) {
+      return { success: false, error: "Timeblocks not found" };
+    }
+
+    // Verify both belong to the same teesheet
+    if (
+      sourceBlock.teesheetId !== teesheetId ||
+      targetBlock.teesheetId !== teesheetId
+    ) {
+      return {
+        success: false,
+        error: "Timeblocks must belong to the same teesheet",
+      };
+    }
+
+    // Swap the sortOrder values (without transaction for neon-http compatibility)
+    const tempSortOrder = -1; // Temporary value to avoid conflicts
+
+    // Step 1: Set source to temp value
+    await db
+      .update(timeBlocks)
+      .set({ sortOrder: tempSortOrder })
+      .where(eq(timeBlocks.id, sourceTimeBlockId));
+
+    // Step 2: Set target to source's original value
+    await db
+      .update(timeBlocks)
+      .set({ sortOrder: sourceBlock.sortOrder || 0 })
+      .where(eq(timeBlocks.id, targetTimeBlockId));
+
+    // Step 3: Set source to target's original value
+    await db
+      .update(timeBlocks)
+      .set({ sortOrder: targetBlock.sortOrder || 0 })
+      .where(eq(timeBlocks.id, sourceTimeBlockId));
+
+    revalidatePath("/admin");
+    return { success: true };
+  } catch (error) {
+    console.error("Error swapping timeblocks:", error);
+    return { success: false, error: "Failed to swap timeblocks" };
+  }
+}
+
+/**
+ * Move a timeblock up or down in the sort order
+ */
+export async function moveTimeBlockPosition(
+  teesheetId: number,
+  timeBlockId: number,
+  direction: "up" | "down",
+): Promise<ActionResult> {
+  try {
+    // Get all timeblocks for this teesheet ordered by sortOrder
+    const allBlocks = await db.query.timeBlocks.findMany({
+      where: eq(timeBlocks.teesheetId, teesheetId),
+      orderBy: [asc(timeBlocks.sortOrder)],
+    });
+
+    const currentIndex = allBlocks.findIndex(
+      (block) => block.id === timeBlockId,
+    );
+    if (currentIndex === -1) {
+      return { success: false, error: "Timeblock not found" };
+    }
+
+    // Calculate target index
+    const targetIndex =
+      direction === "up" ? currentIndex - 1 : currentIndex + 1;
+
+    // Check bounds
+    if (targetIndex < 0 || targetIndex >= allBlocks.length) {
+      return { success: false, error: `Cannot move timeblock ${direction}` };
+    }
+
+    // Swap with the target timeblock
+    return await swapTimeBlocks(
+      teesheetId,
+      timeBlockId,
+      allBlocks[targetIndex]?.id || 0,
+    );
+  } catch (error) {
+    console.error("Error moving timeblock:", error);
+    return { success: false, error: "Failed to move timeblock" };
+  }
+}
+
+/**
+ * Insert a new timeblock between two existing timeblocks
+ */
+export async function insertTimeBlock(
+  teesheetId: number,
+  afterTimeBlockId: number,
+  newTimeBlockData: {
+    startTime: string;
+    endTime: string;
+    displayName?: string;
+    maxMembers?: number;
+  },
+): Promise<ActionResult> {
+  try {
+    // Get the timeblock we're inserting after
+    const afterBlock = await db.query.timeBlocks.findFirst({
+      where: eq(timeBlocks.id, afterTimeBlockId),
+    });
+
+    if (!afterBlock) {
+      return { success: false, error: "Reference timeblock not found" };
+    }
+
+    // Get all timeblocks for this teesheet ordered by sortOrder
+    const allBlocks = await db.query.timeBlocks.findMany({
+      where: eq(timeBlocks.teesheetId, teesheetId),
+      orderBy: [asc(timeBlocks.sortOrder)],
+    });
+
+    const afterIndex = allBlocks.findIndex(
+      (block) => block.id === afterTimeBlockId,
+    );
+    if (afterIndex === -1) {
+      return {
+        success: false,
+        error: "Reference timeblock not found in teesheet",
+      };
+    }
+
+    // Calculate the new sort order (between current and next) as integer
+    const currentSortOrder = allBlocks[afterIndex]?.sortOrder || 0;
+    const nextSortOrder =
+      afterIndex + 1 < allBlocks.length
+        ? allBlocks[afterIndex + 1]?.sortOrder || currentSortOrder + 100
+        : currentSortOrder + 100;
+
+    // Ensure we have at least 1 unit of space for integer sortOrder
+    let newSortOrder: number;
+    if (nextSortOrder - currentSortOrder <= 1) {
+      // No space between, so renumber all subsequent blocks
+      newSortOrder = currentSortOrder + 50;
+
+      // Update all blocks after this position to make room
+      for (let i = afterIndex + 1; i < allBlocks.length; i++) {
+        await db
+          .update(timeBlocks)
+          .set({ sortOrder: allBlocks[i]!.sortOrder! + 100 })
+          .where(eq(timeBlocks.id, allBlocks[i]!.id));
+      }
+    } else {
+      // Calculate midpoint as integer
+      newSortOrder = Math.floor(
+        currentSortOrder + (nextSortOrder - currentSortOrder) / 2,
+      );
+
+      // Ensure it's different from currentSortOrder
+      if (newSortOrder === currentSortOrder) {
+        newSortOrder = currentSortOrder + 1;
+      }
+    }
+
+    // Insert the new timeblock
+    const [newBlock] = await db
+      .insert(timeBlocks)
+      .values({
+        teesheetId,
+        startTime: newTimeBlockData.startTime,
+        endTime: newTimeBlockData.endTime,
+        displayName: newTimeBlockData.displayName,
+        maxMembers: newTimeBlockData.maxMembers || 4,
+        sortOrder: newSortOrder,
+      })
+      .returning();
+
+    revalidatePath("/admin");
+    return { success: true, data: newBlock };
+  } catch (error) {
+    console.error("Error inserting timeblock:", error);
+    return { success: false, error: "Failed to insert timeblock" };
+  }
+}
+
+/**
+ * Delete a timeblock and all its related data
+ */
+export async function deleteTimeBlock(
+  teesheetId: number,
+  timeBlockId: number,
+): Promise<ActionResult> {
+  try {
+    // Verify the timeblock exists and belongs to the specified teesheet
+    const timeBlock = await db.query.timeBlocks.findFirst({
+      where: eq(timeBlocks.id, timeBlockId),
+    });
+
+    if (!timeBlock) {
+      return { success: false, error: "Time block not found" };
+    }
+
+    if (timeBlock.teesheetId !== teesheetId) {
+      return {
+        success: false,
+        error: "Time block does not belong to this teesheet",
+      };
+    }
+
+    // Delete the timeblock - cascade will handle related records
+    // (timeBlockMembers, timeBlockGuests, paceOfPlay, etc.)
+    const result = await db
+      .delete(timeBlocks)
+      .where(eq(timeBlocks.id, timeBlockId))
+      .returning();
+
+    if (!result || result.length === 0) {
+      return { success: false, error: "Failed to delete time block" };
+    }
+
+    // Revalidate paths to refresh the UI
+    revalidatePath("/admin");
+    revalidatePath("/admin/lottery");
+    revalidatePath("/admin/teesheet");
+
+    return { success: true };
+  } catch (error) {
+    console.error("Error deleting timeblock:", error);
+    return { success: false, error: "Failed to delete time block" };
+  }
+}
+
+/**
+ * Get arrange results data for a teesheet
+ */
+export async function getArrangeResultsData(
+  teesheetId: number,
+): Promise<ActionResult> {
+  try {
+    const teesheet = await db.query.teesheets.findFirst({
+      where: eq(teesheets.id, teesheetId),
+    });
+
+    if (!teesheet) {
+      return { success: false, error: "Teesheet not found" };
+    }
+
+    // Check if lottery has been processed
+    const hasLotteryEntries = await db.query.lotteryEntries.findFirst({
+      where: eq(lotteryEntries.lotteryDate, teesheet.date),
+    });
+
+    const hasLotteryGroups = await db.query.lotteryGroups.findFirst({
+      where: eq(lotteryGroups.lotteryDate, teesheet.date),
+    });
+
+    const lotteryProcessed = hasLotteryEntries || hasLotteryGroups;
+
+    // Get timeblocks with their assignments
+    const timeBlocksWithData = await getTimeBlocksForTeesheet(teesheetId);
+
+    return {
+      success: true,
+      data: {
+        teesheet,
+        timeBlocks: timeBlocksWithData,
+        lotteryProcessed: !!lotteryProcessed,
+        canArrange: !!lotteryProcessed && !teesheet.isPublic,
+      },
+    };
+  } catch (error) {
+    console.error("Error getting arrange results data:", error);
+    return { success: false, error: "Failed to get arrange results data" };
   }
 }

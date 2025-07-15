@@ -126,6 +126,7 @@ export default function TeesheetClient({
   member,
   lotteryEntry = null,
   isLotteryEligible = false,
+  lotterySettings = null,
 }: {
   teesheet: any;
   config: any;
@@ -134,6 +135,7 @@ export default function TeesheetClient({
   member: Member;
   lotteryEntry?: LotteryEntryData;
   isLotteryEligible?: boolean;
+  lotterySettings?: any;
 }) {
   const [state, dispatch] = useReducer(bookingReducer, initialState);
   const {
@@ -516,24 +518,92 @@ export default function TeesheetClient({
     );
   }, [hasFullDayRestriction, timeBlocks]);
 
-  // If this is a lottery-eligible date AND there's no course availability restriction, show lottery interface instead of tee sheet
-  if (isLotteryEligible && !hasFullDayRestriction) {
-    return (
-      <LotteryView
-        selectedDate={selectedDate}
-        lotteryEntry={lotteryEntry}
-        member={member}
-        date={date}
-        config={config}
-        showDatePicker={showDatePicker}
-        swipeLoading={swipeLoading}
-        onPreviousDay={goToPreviousDay}
-        onNextDay={goToNextDay}
-        onDatePickerToggle={() => dispatch({ type: "TOGGLE_DATE_PICKER" })}
-        onDataChange={handleDataChange}
-        onDateChange={handleDateChange}
-      />
-    );
+  // Determine what to show based on visibility and lottery settings
+  const isTeesheetPublic = teesheet?.isPublic || false;
+  const isLotteryEnabled = lotterySettings?.enabled !== false; // Default to enabled if no settings
+  const lotteryDisabledMessage =
+    lotterySettings?.disabledMessage ||
+    "Lottery signup is disabled for this date";
+  const privateMessage =
+    teesheet?.privateMessage ||
+    "This teesheet is not yet available for booking.";
+
+  // Logic based on user requirements:
+  // 1. If lottery enabled AND teesheet not public → show lottery
+  // 2. If lottery disabled AND teesheet not public → show "both not available" message
+  // 3. If teesheet public AND lottery disabled → show teesheet
+  // 4. If both enabled → teesheet takes precedence
+
+  // If teesheet is public, show teesheet (both enabled = teesheet takes precedence)
+  if (isTeesheetPublic) {
+    // For public teesheets, always show the teesheet (not lottery)
+    // This handles cases 3 and 4 from user requirements
+    // Skip to regular teesheet rendering below
+  } else {
+    // Teesheet is private
+    if (isLotteryEligible && isLotteryEnabled && !hasFullDayRestriction) {
+      // Case 1: lottery enabled AND teesheet not public → show lottery
+      return (
+        <LotteryView
+          selectedDate={selectedDate}
+          lotteryEntry={lotteryEntry}
+          member={member}
+          date={date}
+          config={config}
+          showDatePicker={showDatePicker}
+          swipeLoading={swipeLoading}
+          onPreviousDay={goToPreviousDay}
+          onNextDay={goToNextDay}
+          onDatePickerToggle={() => dispatch({ type: "TOGGLE_DATE_PICKER" })}
+          onDataChange={handleDataChange}
+          onDateChange={handleDateChange}
+        />
+      );
+    } else {
+      // Case 2: lottery disabled AND teesheet not public → show "both not available" message
+      return (
+        <div className="space-y-4 px-3 pb-6">
+          <DateNavigationHeader
+            date={date}
+            onPreviousDay={goToPreviousDay}
+            onNextDay={goToNextDay}
+            onDatePickerToggle={() => dispatch({ type: "TOGGLE_DATE_PICKER" })}
+            loading={loading}
+            swipeLoading={swipeLoading}
+          />
+
+          <div className="overflow-hidden rounded-xl border border-orange-200 bg-white shadow-sm">
+            <div className="border-b border-orange-200 bg-orange-50 p-4">
+              <h3 className="flex items-center gap-2 text-lg font-bold text-orange-900">
+                <AlertCircle className="h-5 w-5 text-orange-600" />
+                Not Available
+              </h3>
+            </div>
+            <div className="p-4">
+              <div className="border-l-4 border-orange-500 pl-4 text-sm leading-relaxed text-orange-700">
+                {isLotteryEligible && !isLotteryEnabled
+                  ? lotteryDisabledMessage
+                  : privateMessage}
+              </div>
+            </div>
+          </div>
+
+          {showDatePicker && (
+            <Dialog
+              open={showDatePicker}
+              onOpenChange={() => dispatch({ type: "TOGGLE_DATE_PICKER" })}
+            >
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Select Date</DialogTitle>
+                </DialogHeader>
+                <DatePicker selected={date} onChange={handleDateChange} />
+              </DialogContent>
+            </Dialog>
+          )}
+        </div>
+      );
+    }
   }
 
   return (

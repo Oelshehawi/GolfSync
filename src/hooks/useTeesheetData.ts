@@ -24,6 +24,7 @@ type TeesheetData = {
   timeBlocks: any[];
   availableConfigs: any[];
   paceOfPlayData: any[];
+  lotterySettings?: any;
   date: string;
 };
 

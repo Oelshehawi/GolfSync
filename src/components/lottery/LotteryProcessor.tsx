@@ -41,7 +41,7 @@ export function LotteryProcessor({
       const result = await processLotteryForDate(date, config);
       if (result.success) {
         toast.success(
-          `Lottery processed successfully! ${result.data.processedCount} out of ${result.data.totalEntries} entries were assigned.`,
+          `Lottery processed successfully! ${result.data.processedCount} out of ${result.data.totalEntries} entries processed and ${result.data.bookingsCreated} bookings created.`,
         );
         onProcessComplete();
       } else {
@@ -197,8 +197,8 @@ export function LotteryProcessor({
                   )}
                 </Button>
                 <p className="text-sm text-gray-600">
-                  This will assign all pending entries to available time blocks
-                  based on preferences
+                  This will create actual teesheet bookings for all pending
+                  entries based on preferences and fairness scores
                 </p>
               </div>
             )}
@@ -240,7 +240,7 @@ export function LotteryProcessor({
           handleProcessLottery();
         }}
         title="Process Lottery Algorithm?"
-        description="Are you sure you want to process the lottery? This will assign all pending entries to available time blocks based on their preferences."
+        description="Are you sure you want to process the lottery? This will create actual teesheet bookings for all pending entries based on their preferences."
         confirmText="Process Lottery"
         cancelText="Cancel"
       />

@@ -18,6 +18,7 @@ interface TeesheetPageClientProps {
     timeBlocks: any[];
     availableConfigs: any[];
     paceOfPlayData: any[];
+    lotterySettings?: any;
   };
   isAdmin?: boolean;
 }
@@ -75,6 +76,7 @@ export function TeesheetPageClient({
         <TeesheetControlPanel
           teesheet={displayData.teesheet}
           availableConfigs={displayData.availableConfigs}
+          lotterySettings={displayData.lotterySettings}
           isAdmin={isAdmin}
           isTwoDayView={isTwoDayView}
           onToggleTwoDayView={handleToggleTwoDayView}

@@ -1,4 +1,4 @@
-import 'server-only'
+import "server-only";
 import { db } from "~/server/db";
 import { and, eq, or, desc, isNull, lte, gte, sql } from "drizzle-orm";
 
@@ -6,17 +6,21 @@ import {
   teesheetConfigs,
   teesheetConfigRules,
   templates,
+  lotterySettings,
+  lotteryEntries,
+  lotteryGroups,
+  timeBlocks,
+  timeBlockMembers,
 } from "~/server/db/schema";
 import type { TeesheetConfig } from "~/app/types/TeeSheetTypes";
 import { ConfigTypes } from "~/app/types/TeeSheetTypes";
 import { format } from "date-fns";
+import type { LotterySettingsType } from "~/server/db/schema";
 
 export async function initializeDefaultConfigs() {
   try {
-
     // First check if we already have configs
-    const existingConfigs = await db.query.teesheetConfigs.findMany({
-    });
+    const existingConfigs = await db.query.teesheetConfigs.findMany({});
 
     if (existingConfigs.length > 0) {
       return; // Configs already exist, no need to create defaults
@@ -91,7 +95,6 @@ export async function initializeDefaultConfigs() {
 }
 
 export async function getConfigForDate(date: Date): Promise<TeesheetConfig> {
-
   // First ensure we have default configs
   await initializeDefaultConfigs();
 
@@ -249,10 +252,8 @@ export async function getTeesheetConfigs(): Promise<TeesheetConfig[]> {
 
 // Get course info for the current organization
 export async function getCourseInfo() {
-
   try {
-    const info = await db.query.courseInfo.findFirst({
-    });
+    const info = await db.query.courseInfo.findFirst({});
 
     return info ?? null;
   } catch (error) {
@@ -271,5 +272,78 @@ export async function getTemplates() {
   } catch (error) {
     console.error("Error fetching templates:", error);
     return [];
+  }
+}
+
+/**
+ * Get lottery settings for a teesheet
+ */
+export async function getLotterySettings(
+  teesheetId: number,
+): Promise<LotterySettingsType | null> {
+  try {
+    const [settings] = await db
+      .select()
+      .from(lotterySettings)
+      .where(eq(lotterySettings.teesheetId, teesheetId))
+      .limit(1);
+
+    return settings || null;
+  } catch (error) {
+    console.error("Error getting lottery settings:", error);
+    return null;
+  }
+}
+
+/**
+ * Check if teesheet has bookings or lottery entries (for validation)
+ */
+export async function checkTeesheetHasBookingsOrLotteryEntries(
+  teesheetId: number,
+  date: string,
+): Promise<{
+  hasBookings: boolean;
+  hasLotteryEntries: boolean;
+  bookingCount: number;
+  lotteryEntryCount: number;
+}> {
+  try {
+    // Check for member bookings
+    const bookingCount = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(timeBlockMembers)
+      .innerJoin(timeBlocks, eq(timeBlockMembers.timeBlockId, timeBlocks.id))
+      .where(eq(timeBlocks.teesheetId, teesheetId))
+      .then((res) => res[0]?.count || 0);
+
+    // Check for lottery entries (both individual and group)
+    const individualCount = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(lotteryEntries)
+      .where(eq(lotteryEntries.lotteryDate, date))
+      .then((res) => res[0]?.count || 0);
+
+    const groupCount = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(lotteryGroups)
+      .where(eq(lotteryGroups.lotteryDate, date))
+      .then((res) => res[0]?.count || 0);
+
+    const totalLotteryEntries = individualCount + groupCount;
+
+    return {
+      hasBookings: bookingCount > 0,
+      hasLotteryEntries: totalLotteryEntries > 0,
+      bookingCount,
+      lotteryEntryCount: totalLotteryEntries,
+    };
+  } catch (error) {
+    console.error("Error checking teesheet bookings/lottery entries:", error);
+    return {
+      hasBookings: false,
+      hasLotteryEntries: false,
+      bookingCount: 0,
+      lotteryEntryCount: 0,
+    };
   }
 }

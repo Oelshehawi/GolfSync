@@ -4,7 +4,7 @@ import {
 } from "~/server/teesheet/data";
 import { TeesheetPageClient } from "~/components/teesheet/TeesheetPageClient";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
-import { getTeesheetConfigs } from "~/server/settings/data";
+import { getTeesheetConfigs, getLotterySettings } from "~/server/settings/data";
 import { getAllPaceOfPlayForDate } from "~/server/pace-of-play/actions";
 import { getBCToday, parseDate } from "~/lib/dates";
 
@@ -49,6 +49,9 @@ export default async function AdminPage({ searchParams }: PageProps) {
     // Fetch pace of play data for all time blocks - pass the Date object
     const paceOfPlayData = await getAllPaceOfPlayForDate(date);
 
+    // Fetch lottery settings for the settings modal
+    const lotterySettings = await getLotterySettings(teesheet.id);
+
     if (!Array.isArray(configsResult)) {
       throw new Error("Failed to load configurations");
     }
@@ -60,6 +63,7 @@ export default async function AdminPage({ searchParams }: PageProps) {
       timeBlocks,
       availableConfigs: configsResult,
       paceOfPlayData,
+      lotterySettings,
     };
 
     return (

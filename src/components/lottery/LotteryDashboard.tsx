@@ -6,7 +6,7 @@ import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { Settings } from "lucide-react";
 import { LotteryProcessor } from "./LotteryProcessor";
-import { LotteryConfirmationAndEdit } from "./LotteryConfirmationAndEdit";
+import { LotteryResultsView } from "./LotteryResultsView";
 import { LoadingSpinner } from "~/components/ui/loading-spinner";
 import { ConfirmationDialog } from "~/components/ui/confirmation-dialog";
 import type { TeesheetConfig } from "~/app/types/TeeSheetTypes";
@@ -40,6 +40,15 @@ interface LotteryDashboardProps {
   initialTimeBlocks: any;
   config: TeesheetConfig;
   restrictions: any[];
+  teesheetData: {
+    teesheet: any;
+    config: any;
+    timeBlocks: any[];
+    availableConfigs: any[];
+    paceOfPlayData: any[];
+    lotterySettings?: any;
+    date: string;
+  } | null;
 }
 
 interface LotteryStats {
@@ -68,6 +77,7 @@ export function LotteryDashboard({
   initialTimeBlocks,
   config,
   restrictions,
+  teesheetData,
 }: LotteryDashboardProps) {
   const [stats, setStats] = useState<LotteryStats>(initialStats);
   const [isLoading, setIsLoading] = useState(false);
@@ -220,15 +230,14 @@ export function LotteryDashboard({
         )}
       </Card>
 
-      {/* Main Lottery Management */}
-      <LotteryConfirmationAndEdit
+      {/* Lottery Results - always show for preview and arrangement */}
+      <LotteryResultsView
         date={date}
         onComplete={handleConfirmationComplete}
         members={members}
         initialLotteryEntries={initialLotteryEntries}
-        initialTimeBlocks={initialTimeBlocks}
-        restrictions={restrictions}
         config={config}
+        teesheetData={teesheetData}
       />
 
       <ConfirmationDialog

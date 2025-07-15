@@ -10,7 +10,7 @@ import {
   timeBlocks,
   memberSpeedProfiles,
 } from "~/server/db/schema";
-import { eq, and, sql } from "drizzle-orm";
+import { eq, and, sql, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import type {
   LotteryEntryInsert,
@@ -543,8 +543,8 @@ async function calculateFairnessScore(
 }
 
 /**
- * Process lottery entries by assigning them to time blocks WITHOUT creating actual bookings
- * This allows for preview and confirmation before finalizing
+ * Process lottery entries by creating actual timeBlockMembers bookings directly
+ * This creates real bookings that can be viewed and arranged in the teesheet preview
  * Enhanced with priority-based processing algorithm
  */
 export async function processLotteryForDate(
@@ -577,6 +577,7 @@ export async function processLotteryForDate(
     const timeWindows = calculateDynamicTimeWindows(config);
     let processedCount = 0;
     const now = new Date();
+    const memberInserts: any[] = [];
 
     // Simple logging for algorithm decisions
     console.log(`🎲 Starting lottery processing for ${date}`);
@@ -684,7 +685,7 @@ export async function processLotteryForDate(
       }
 
       if (suitableBlock) {
-        // ONLY assign the group - DO NOT create timeBlockMembers records yet
+        // Update group status to ASSIGNED
         await db
           .update(lotteryGroups)
           .set({
@@ -694,6 +695,16 @@ export async function processLotteryForDate(
             updatedAt: now,
           })
           .where(eq(lotteryGroups.id, group.id));
+
+        // Create timeBlockMembers records for all group members
+        for (const memberId of group.memberIds) {
+          memberInserts.push({
+            timeBlockId: suitableBlock.id,
+            memberId: memberId,
+            bookingDate: date,
+            bookingTime: suitableBlock.startTime,
+          });
+        }
 
         // Update available spots for next assignment calculations
         suitableBlock.availableSpots -= groupSize;
@@ -720,7 +731,7 @@ export async function processLotteryForDate(
       );
 
       if (suitableResult.block && suitableResult.block.availableSpots > 0) {
-        // ONLY assign the entry - DO NOT create timeBlockMembers record yet
+        // Update entry status to ASSIGNED
         await db
           .update(lotteryEntries)
           .set({
@@ -731,10 +742,23 @@ export async function processLotteryForDate(
           })
           .where(eq(lotteryEntries.id, entry.id));
 
+        // Create timeBlockMembers record
+        memberInserts.push({
+          timeBlockId: suitableResult.block.id,
+          memberId: entry.memberId,
+          bookingDate: date,
+          bookingTime: suitableResult.block.startTime,
+        });
+
         // Update available spots for next assignment calculations
         suitableResult.block.availableSpots -= 1;
         processedCount++;
       }
+    }
+
+    // Insert all timeBlockMembers records at once
+    if (memberInserts.length > 0) {
+      await db.insert(timeBlockMembers).values(memberInserts);
     }
 
     // Update fairness scores after processing
@@ -766,14 +790,17 @@ export async function processLotteryForDate(
       `🏌️ Individuals: ${assignedIndividuals}/${entries.individual.length} assigned`,
     );
     console.log(`🎯 Remaining slots: ${remainingSlots}`);
+    console.log(`🎫 Created ${memberInserts.length} actual bookings`);
 
     revalidatePath("/admin/lottery");
+    revalidatePath("/admin/teesheet");
     return {
       success: true,
       data: {
         processedCount,
         totalEntries,
-        message: `Enhanced algorithm processed ${processedCount} entries using priority scoring`,
+        bookingsCreated: memberInserts.length,
+        message: `Enhanced algorithm processed ${processedCount} entries and created ${memberInserts.length} bookings`,
       },
     };
   } catch (error) {
@@ -1462,6 +1489,7 @@ export async function updateLotteryAssignment(
 
 /**
  * Batch update lottery assignments (save all client-side changes at once)
+ * This function actually moves the timeBlockMembers records, not just updates assignedTimeBlockId
  */
 export async function batchUpdateLotteryAssignments(
   changes: {
@@ -1474,6 +1502,54 @@ export async function batchUpdateLotteryAssignments(
     // Process all entry assignment changes
     for (const change of changes) {
       if (change.isGroup) {
+        // Get the group details
+        const group = await db.query.lotteryGroups.findFirst({
+          where: eq(lotteryGroups.id, change.entryId),
+          with: {
+            leader: true,
+          },
+        });
+
+        if (!group) {
+          console.error(`Group ${change.entryId} not found`);
+          continue;
+        }
+
+        // Remove existing timeBlockMembers for all group members
+        if (group.memberIds && group.memberIds.length > 0) {
+          await db
+            .delete(timeBlockMembers)
+            .where(
+              and(
+                inArray(timeBlockMembers.memberId, group.memberIds),
+                eq(timeBlockMembers.bookingDate, group.lotteryDate),
+              ),
+            );
+        }
+
+        // If assigning to a new time block, create new timeBlockMembers records
+        if (
+          change.assignedTimeBlockId &&
+          group.memberIds &&
+          group.memberIds.length > 0
+        ) {
+          const timeBlock = await db.query.timeBlocks.findFirst({
+            where: eq(timeBlocks.id, change.assignedTimeBlockId!),
+          });
+
+          if (timeBlock) {
+            const memberInserts = group.memberIds.map((memberId) => ({
+              timeBlockId: change.assignedTimeBlockId!,
+              memberId: memberId,
+              bookingDate: group.lotteryDate,
+              bookingTime: timeBlock.startTime,
+            }));
+
+            await db.insert(timeBlockMembers).values(memberInserts);
+          }
+        }
+
+        // Update group assignment
         await db
           .update(lotteryGroups)
           .set({
@@ -1483,6 +1559,46 @@ export async function batchUpdateLotteryAssignments(
           })
           .where(eq(lotteryGroups.id, change.entryId));
       } else {
+        // Get the individual entry details
+        const entry = await db.query.lotteryEntries.findFirst({
+          where: eq(lotteryEntries.id, change.entryId),
+          with: {
+            member: true,
+          },
+        });
+
+        if (!entry) {
+          console.error(`Entry ${change.entryId} not found`);
+          continue;
+        }
+
+        // Remove existing timeBlockMembers for this member
+        await db
+          .delete(timeBlockMembers)
+          .where(
+            and(
+              eq(timeBlockMembers.memberId, entry.memberId),
+              eq(timeBlockMembers.bookingDate, entry.lotteryDate),
+            ),
+          );
+
+        // If assigning to a new time block, create new timeBlockMembers record
+        if (change.assignedTimeBlockId) {
+          const timeBlock = await db.query.timeBlocks.findFirst({
+            where: eq(timeBlocks.id, change.assignedTimeBlockId),
+          });
+
+          if (timeBlock) {
+            await db.insert(timeBlockMembers).values({
+              timeBlockId: change.assignedTimeBlockId,
+              memberId: entry.memberId,
+              bookingDate: entry.lotteryDate,
+              bookingTime: timeBlock.startTime,
+            });
+          }
+        }
+
+        // Update entry assignment
         await db
           .update(lotteryEntries)
           .set({
@@ -1495,6 +1611,7 @@ export async function batchUpdateLotteryAssignments(
     }
 
     revalidatePath("/admin/lottery");
+    revalidatePath("/admin/teesheet"); // Also revalidate teesheet since we moved actual bookings
     return { success: true };
   } catch (error) {
     console.error("Error batch updating lottery assignments:", error);

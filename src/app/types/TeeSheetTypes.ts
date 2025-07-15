@@ -29,6 +29,10 @@ export interface TeeSheet {
   date: string;
   configId: number;
   generalNotes?: string | null;
+  lotteryEnabled: boolean;
+  lotteryDisabledMessage?: string | null;
+  isPublic: boolean;
+  privateMessage?: string | null;
   createdAt: Date;
   updatedAt: Date | null;
 }
