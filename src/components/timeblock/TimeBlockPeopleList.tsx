@@ -267,6 +267,7 @@ interface TimeBlockMemberSearchProps {
   isLoading: boolean;
   onAddMember: (memberId: number) => Promise<void>;
   isTimeBlockFull: boolean;
+  existingMembers?: Array<{ id: number }>;
 }
 
 export function TimeBlockMemberSearch({
@@ -276,6 +277,7 @@ export function TimeBlockMemberSearch({
   isLoading,
   onAddMember,
   isTimeBlockFull,
+  existingMembers = [],
 }: TimeBlockMemberSearchProps) {
   return (
     <EntitySearchCard
@@ -290,29 +292,40 @@ export function TimeBlockMemberSearch({
       limitReachedMessage="This time block is full. Remove a member or guest before adding more."
       noResultsMessage="No members found matching your search"
       itemsPerPage={5}
-      renderEntityCard={(member) => (
-        <div
-          key={member.id}
-          className="flex items-center justify-between rounded-lg border p-3 transition-colors hover:bg-gray-50"
-        >
-          <div className="flex items-center space-x-3">
-            <div>
-              <p className="font-medium">
-                {member.firstName} {member.lastName}
-              </p>
-              <p className="text-sm text-gray-500">#{member.memberNumber}</p>
-            </div>
-          </div>
-          <Button
-            size="sm"
-            onClick={() => onAddMember(member.id)}
-            disabled={isTimeBlockFull}
+      renderEntityCard={(member) => {
+        const isAlreadyAdded = existingMembers.some(m => m.id === member.id);
+        return (
+          <div
+            key={member.id}
+            className={`flex items-center justify-between rounded-lg border p-3 transition-colors ${
+              isAlreadyAdded ? 'bg-green-50 border-green-200' : 'hover:bg-gray-50'
+            }`}
           >
-            <UserPlus className="mr-2 h-4 w-4" />
-            Add
-          </Button>
-        </div>
-      )}
+            <div className="flex items-center space-x-3">
+              <div>
+                <p className="font-medium">
+                  {member.firstName} {member.lastName}
+                </p>
+                <p className="text-sm text-gray-500">#{member.memberNumber}</p>
+              </div>
+            </div>
+            {isAlreadyAdded ? (
+              <Badge variant="secondary" className="bg-green-100 text-green-800">
+                ✓ Added
+              </Badge>
+            ) : (
+              <Button
+                size="sm"
+                onClick={() => onAddMember(member.id)}
+                disabled={isTimeBlockFull}
+              >
+                <UserPlus className="mr-2 h-4 w-4" />
+                Add
+              </Button>
+            )}
+          </div>
+        );
+      }}
     />
   );
 }
@@ -344,6 +357,7 @@ interface TimeBlockGuestSearchProps {
   onMemberSelect: (memberId: number) => void;
   selectedMemberId: number | null;
   onCreateGuest?: () => void;
+  existingGuests?: Array<{ id: number }>;
 }
 
 export function TimeBlockGuestSearch({
@@ -357,6 +371,7 @@ export function TimeBlockGuestSearch({
   onMemberSelect,
   selectedMemberId,
   onCreateGuest,
+  existingGuests = [],
 }: TimeBlockGuestSearchProps) {
   // Convert members to select options format, including Course Sponsored
   const courseSponsoredOption = {
@@ -394,31 +409,42 @@ export function TimeBlockGuestSearch({
       showCreateButton={true}
       createButtonText="Create Guest"
       onCreateNew={onCreateGuest}
-      renderEntityCard={(guest) => (
-        <div
-          key={guest.id}
-          className="flex items-center justify-between rounded-lg border p-3 transition-colors hover:bg-gray-50"
-        >
-          <div className="flex items-center space-x-3">
-            <div>
-              <p className="font-medium">
-                {guest.firstName} {guest.lastName}
-              </p>
-              <p className="text-sm text-gray-500">
-                {guest.email || guest.phone || "No contact information"}
-              </p>
-            </div>
-          </div>
-          <Button
-            size="sm"
-            onClick={() => onAddGuest(guest.id)}
-            disabled={isTimeBlockFull || !selectedMemberId}
+      renderEntityCard={(guest) => {
+        const isAlreadyAdded = existingGuests.some(g => g.id === guest.id);
+        return (
+          <div
+            key={guest.id}
+            className={`flex items-center justify-between rounded-lg border p-3 transition-colors ${
+              isAlreadyAdded ? 'bg-green-50 border-green-200' : 'hover:bg-gray-50'
+            }`}
           >
-            <UserPlus className="mr-2 h-4 w-4" />
-            Add
-          </Button>
-        </div>
-      )}
+            <div className="flex items-center space-x-3">
+              <div>
+                <p className="font-medium">
+                  {guest.firstName} {guest.lastName}
+                </p>
+                <p className="text-sm text-gray-500">
+                  {guest.email || guest.phone || "No contact information"}
+                </p>
+              </div>
+            </div>
+            {isAlreadyAdded ? (
+              <Badge variant="secondary" className="bg-green-100 text-green-800">
+                ✓ Added
+              </Badge>
+            ) : (
+              <Button
+                size="sm"
+                onClick={() => onAddGuest(guest.id)}
+                disabled={isTimeBlockFull || !selectedMemberId}
+              >
+                <UserPlus className="mr-2 h-4 w-4" />
+                Add
+              </Button>
+            )}
+          </div>
+        );
+      }}
     />
   );
 }

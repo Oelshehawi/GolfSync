@@ -10,6 +10,7 @@ import {
   getDay,
   isSameDay,
 } from "date-fns";
+import { getBCNow } from "~/lib/dates";
 
 export interface DatePickerProps {
   selected: Date;
@@ -45,8 +46,8 @@ export function DatePicker({ selected, onChange }: DatePickerProps) {
     days.push(i);
   }
 
-  // Get today's date for highlighting
-  const today = new Date();
+  // Get today's date for highlighting in BC timezone
+  const today = getBCNow();
 
   return (
     <div className="w-full px-2 py-4 sm:px-4">

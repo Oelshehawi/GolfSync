@@ -5,8 +5,8 @@ import { useDebouncedCallback } from "use-debounce";
 import { TimeBlockPageHeader } from "./TimeBlockPageHeader";
 import { TimeBlockHeader } from "./TimeBlockHeader";
 import { useTeesheetMutations } from "~/hooks/useTeesheetMutations";
-import { useQuery } from "@tanstack/react-query";
-import { memberQueryOptions, guestQueryOptions } from "~/server/query-options";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { memberQueryOptions, guestQueryOptions, queryKeys, teesheetQueryOptions } from "~/server/query-options";
 import {
   searchMembersAction,
   addMemberToTimeBlock,
@@ -39,7 +39,7 @@ import toast from "react-hot-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { type RestrictionViolation } from "~/app/types/RestrictionTypes";
 import { RestrictionViolationAlert } from "~/components/settings/timeblock-restrictions/RestrictionViolationAlert";
-import { formatDateToYYYYMMDD, parseDate, getBCToday } from "~/lib/dates";
+import { formatDateToYYYYMMDD, parseDate, getBCToday, formatDate } from "~/lib/dates";
 import { type TimeBlockGuest } from "~/app/types/GuestTypes";
 import { AddGuestDialog } from "~/components/guests/AddGuestDialog";
 import { createGuest } from "~/server/guests/actions";
@@ -65,6 +65,8 @@ export function TimeBlockMemberManager({
   timeBlockGuests: initialTimeBlockGuests = [],
   mutations: providedMutations,
 }: TimeBlockMemberManagerProps) {
+  const queryClient = useQueryClient();
+
   // Use mutations-only hook to avoid redundant data fetching
   const dateForMutations = initialTimeBlock.date
     ? parseDate(initialTimeBlock.date)
@@ -74,8 +76,23 @@ export function TimeBlockMemberManager({
   // Use provided mutations if available, otherwise use hook mutations
   const mutations = providedMutations || hookMutations;
 
-  // Use the timeblock data directly - it will be updated via query invalidation
-  const timeBlock = initialTimeBlock;
+  // Subscribe to live data instead of using static initial data
+  const dateString = formatDate(dateForMutations, "yyyy-MM-dd");
+
+  // Use reactive query to get live data - this will trigger re-renders when cache updates
+  const teesheetQuery = useQuery(teesheetQueryOptions.byDate(dateString));
+
+  // Find the current timeblock from live data, fallback to initial data
+  let timeBlock = initialTimeBlock;
+  if (teesheetQuery.data?.timeBlocks) {
+    const currentTimeBlock = teesheetQuery.data.timeBlocks.find(
+      (tb: any) => tb.id === initialTimeBlock.id
+    );
+    if (currentTimeBlock) {
+      timeBlock = currentTimeBlock;
+    }
+  }
+
   const members = timeBlock.members || [];
   const guests = timeBlock.guests || [];
   const fills = timeBlock.fills || [];
@@ -203,6 +220,7 @@ export function TimeBlockMemberManager({
   };
 
   const handleAddMember = async (memberId: number) => {
+
     // Check if timeblock is full
     if (isTimeBlockFull) {
       return;
@@ -213,6 +231,7 @@ export function TimeBlockMemberManager({
       if (!memberToAdd) {
         return;
       }
+
 
       // Check for restrictions first
       const hasViolations = await checkMemberRestrictions(
@@ -236,7 +255,7 @@ export function TimeBlockMemberManager({
 
       // No violations, proceed as normal
       try {
-        await mutations.addMember(timeBlock.id, memberId);
+        const result = await mutations.addMember(timeBlock.id, memberId);
       } catch (error) {
         console.error("Error adding member:", error);
       }
@@ -414,6 +433,7 @@ export function TimeBlockMemberManager({
             isLoading={isMemberSearching}
             onAddMember={handleAddMember}
             isTimeBlockFull={isTimeBlockFull}
+            existingMembers={members}
           />
         </TabsContent>
 
@@ -440,6 +460,7 @@ export function TimeBlockMemberManager({
               onMemberSelect={handleMemberSelect}
               selectedMemberId={selectedMemberId}
               onCreateGuest={handleShowCreateGuestDialog}
+              existingGuests={guests}
             />
           </div>
         </TabsContent>

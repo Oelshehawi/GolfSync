@@ -218,45 +218,135 @@ export function useTeesheetMutations(date: Date) {
 
   const removeFillMutation = useMutation({
     ...teesheetMutationOptions.removeFill(),
+    onMutate: async ({ timeBlockId, fillId }) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: queryKeys.teesheets.byDate(dateString) });
+
+      // Snapshot the previous value
+      const previousData = queryClient.getQueryData(queryKeys.teesheets.byDate(dateString));
+
+      // Optimistically update the cache
+      queryClient.setQueryData(queryKeys.teesheets.byDate(dateString), (old: any) => {
+        if (!old) return old;
+        return {
+          ...old,
+          timeBlocks: old.timeBlocks.map((block: any) =>
+            block.id === timeBlockId
+              ? {
+                  ...block,
+                  fills: block.fills?.filter((f: any) => f.id !== fillId) || [],
+                }
+              : block
+          ),
+        };
+      });
+
+      // Return a context with the previous data
+      return { previousData };
+    },
+    onError: (err, variables, context) => {
+      // Revert the optimistic update on error
+      if (context?.previousData) {
+        queryClient.setQueryData(queryKeys.teesheets.byDate(dateString), context.previousData);
+      }
+      toast.error("Failed to remove fill");
+    },
     onSuccess: () => {
       toast.success("Fill removed successfully");
-      queryClient.invalidateQueries({ queryKey: queryKeys.teesheets.byDate(dateString) });
     },
-    onError: () => {
-      toast.error("Failed to remove fill");
+    onSettled: () => {
+      // Always refetch to ensure we have the latest data
+      queryClient.invalidateQueries({ queryKey: queryKeys.teesheets.byDate(dateString) });
     },
   });
 
   const addMemberMutation = useMutation({
     ...teesheetMutationOptions.addMember(),
-    onSuccess: () => {
-      toast.success("Member added successfully");
-      queryClient.invalidateQueries({ queryKey: queryKeys.teesheets.byDate(dateString) });
+    onMutate: async ({ timeBlockId, memberId }) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: queryKeys.teesheets.byDate(dateString) });
+
+      // Snapshot the previous value
+      const previousData = queryClient.getQueryData(queryKeys.teesheets.byDate(dateString));
+
+      // Optimistically update the cache - we need the member data to add
+      // For now, we'll just trigger a refetch since we need the full member object
+
+      // Return a context with the previous data
+      return { previousData };
     },
-    onError: (error: any) => {
-      toast.error(error?.message || "Failed to add member");
+    onError: (err, variables, context) => {
+      // Revert the optimistic update on error
+      if (context?.previousData) {
+        queryClient.setQueryData(queryKeys.teesheets.byDate(dateString), context.previousData);
+      }
+      toast.error("Failed to add member");
+    },
+    onSuccess: (data, variables) => {
+      toast.success("Member added successfully");
+    },
+    onSettled: () => {
+      // Always refetch to ensure we have the latest data
+      queryClient.invalidateQueries({ queryKey: queryKeys.teesheets.byDate(dateString) });
     },
   });
 
   const addGuestMutation = useMutation({
     ...teesheetMutationOptions.addGuest(),
+    onMutate: async ({ timeBlockId, guestId, invitingMemberId }) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: queryKeys.teesheets.byDate(dateString) });
+
+      // Snapshot the previous value
+      const previousData = queryClient.getQueryData(queryKeys.teesheets.byDate(dateString));
+
+      // Optimistically update the cache - we need the guest data to add
+      // For now, we'll just trigger a refetch since we need the full guest object
+
+      // Return a context with the previous data
+      return { previousData };
+    },
+    onError: (err, variables, context) => {
+      // Revert the optimistic update on error
+      if (context?.previousData) {
+        queryClient.setQueryData(queryKeys.teesheets.byDate(dateString), context.previousData);
+      }
+      toast.error("Failed to add guest");
+    },
     onSuccess: () => {
       toast.success("Guest added successfully");
-      queryClient.invalidateQueries({ queryKey: queryKeys.teesheets.byDate(dateString) });
     },
-    onError: (error: any) => {
-      toast.error(error?.message || "Failed to add guest");
+    onSettled: () => {
+      // Always refetch to ensure we have the latest data
+      queryClient.invalidateQueries({ queryKey: queryKeys.teesheets.byDate(dateString) });
     },
   });
 
   const addFillMutation = useMutation({
     ...teesheetMutationOptions.addFill(),
+    onMutate: async ({ timeBlockId, fillType, customName }) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: queryKeys.teesheets.byDate(dateString) });
+
+      // Snapshot the previous value
+      const previousData = queryClient.getQueryData(queryKeys.teesheets.byDate(dateString));
+
+      // Return a context with the previous data
+      return { previousData };
+    },
+    onError: (err, variables, context) => {
+      // Revert the optimistic update on error
+      if (context?.previousData) {
+        queryClient.setQueryData(queryKeys.teesheets.byDate(dateString), context.previousData);
+      }
+      toast.error("Failed to add fill");
+    },
     onSuccess: () => {
       toast.success("Fill added successfully");
-      queryClient.invalidateQueries({ queryKey: queryKeys.teesheets.byDate(dateString) });
     },
-    onError: () => {
-      toast.error("Failed to add fill");
+    onSettled: () => {
+      // Always refetch to ensure we have the latest data
+      queryClient.invalidateQueries({ queryKey: queryKeys.teesheets.byDate(dateString) });
     },
   });
 

@@ -8,7 +8,10 @@ import { TwoDayView } from "~/components/teesheet/TwoDayView";
 import { TeesheetControlPanel } from "~/components/teesheet/TeesheetControlPanel";
 import { MutationProvider } from "~/hooks/useMutationContext";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
-import { parseDate } from "~/lib/dates";
+import { parseDate, formatDate } from "~/lib/dates";
+import { useQuery } from "@tanstack/react-query";
+import { teesheetQueryOptions } from "~/server/query-options";
+import { useTeesheetMutations } from "~/hooks/useTeesheetMutations";
 
 interface TeesheetPageClientProps {
   initialDate: Date;
@@ -30,14 +33,20 @@ export function TeesheetPageClient({
 }: TeesheetPageClientProps) {
   const [currentDate, setCurrentDate] = useState(initialDate);
   const [isTwoDayView, setIsTwoDayView] = useState(false);
-  const { data, error, isLoading, mutations } = useTeesheetData(currentDate);
 
-  // Use SWR data if available, otherwise fall back to initial data
-  const displayData = data || initialData;
+  // Use TanStack Query instead of SWR
+  const dateString = formatDate(currentDate, "yyyy-MM-dd");
+  const teesheetQuery = useQuery(teesheetQueryOptions.byDate(dateString));
+  const { mutations } = useTeesheetMutations(currentDate);
+
+  // Use TanStack Query data if available, otherwise fall back to initial data
+  const displayData = teesheetQuery.data || initialData;
+  const error = teesheetQuery.error;
+  const isLoading = teesheetQuery.isLoading;
 
   const handleDateChange = async (newDate: Date) => {
     setCurrentDate(newDate);
-    // SWR will automatically fetch data for the new date
+    // TanStack Query will automatically fetch data for the new date
   };
 
   const handleToggleTwoDayView = (enabled: boolean) => {
