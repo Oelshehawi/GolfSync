@@ -118,9 +118,7 @@ export const TeesheetView = memo(function TeesheetView({
           result = await removeTimeBlockMember(timeBlockId, memberId);
         }
 
-        if (result.success) {
-          toast.success("Member removed successfully");
-        } else {
+        if (!result.success) {
           toast.error(result.error || "Failed to remove member");
         }
       } catch (error) {
@@ -144,9 +142,7 @@ export const TeesheetView = memo(function TeesheetView({
           result = await removeTimeBlockGuest(timeBlockId, guestId);
         }
 
-        if (result.success) {
-          toast.success("Guest removed successfully");
-        } else {
+        if (!result.success) {
           toast.error(result.error || "Failed to remove guest");
         }
       } catch (error) {
@@ -175,10 +171,7 @@ export const TeesheetView = memo(function TeesheetView({
           result = await checkInMember(timeBlockId, memberId, !isCheckedIn);
         }
 
-        if (result.success) {
-          const action = !isCheckedIn ? "checked in" : "checked out";
-          toast.success(`Member ${action} successfully`);
-        } else {
+        if (!result.success) {
           toast.error(result.error || "Failed to update check-in status");
         }
       } catch (error) {
@@ -207,10 +200,7 @@ export const TeesheetView = memo(function TeesheetView({
           result = await checkInGuest(timeBlockId, guestId, !isCheckedIn);
         }
 
-        if (result.success) {
-          const action = !isCheckedIn ? "checked in" : "checked out";
-          toast.success(`Guest ${action} successfully`);
-        } else {
+        if (!result.success) {
           toast.error(result.error || "Failed to update check-in status");
         }
       } catch (error) {
@@ -261,10 +251,7 @@ export const TeesheetView = memo(function TeesheetView({
           );
         }
 
-        if (result.success) {
-          const action = shouldCheckIn ? "checked in" : "checked out";
-          toast.success(`All participants ${action} successfully`);
-        } else {
+        if (!result.success) {
           toast.error(result.error || "Failed to check in all participants");
         }
       } catch (error) {
@@ -289,7 +276,6 @@ export const TeesheetView = memo(function TeesheetView({
         }
 
         if (result.success) {
-          toast.success("Notes updated successfully");
           return true;
         } else {
           toast.error(result.error || "Failed to update notes");
@@ -317,9 +303,7 @@ export const TeesheetView = memo(function TeesheetView({
           result = await removeFillFromTimeBlock(timeBlockId, fillId);
         }
 
-        if (result.success) {
-          toast.success("Fill removed successfully");
-        } else {
+        if (!result.success) {
           toast.error(result.error || "Failed to remove fill");
         }
       } catch (error) {

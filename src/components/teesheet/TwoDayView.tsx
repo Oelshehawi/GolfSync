@@ -2,7 +2,9 @@
 
 import { addDays } from "date-fns";
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
-import { useTeesheetData } from "~/hooks/useTeesheetData";
+import { useQuery } from "@tanstack/react-query";
+import { teesheetQueryOptions } from "~/server/query-options";
+import { useTeesheetMutations } from "~/hooks/useTeesheetMutations";
 import { TeesheetView } from "./TeesheetView";
 import { MutationProvider } from "~/hooks/useMutationContext";
 import { formatDate, getBCToday, parseDate } from "~/lib/dates";
@@ -72,22 +74,27 @@ export function TwoDayView({
 }: TwoDayViewProps) {
   const nextDate = addDays(currentDate, 1);
 
-  // Fetch data for both days using our SWR hooks
-  const {
-    data: currentDayData,
-    error: currentDayError,
-    isLoading: currentDayLoading,
-    mutations: currentDayMutations,
-  } = useTeesheetData(currentDate);
+  // Fetch data for both days using TanStack Query
+  const currentDateString = formatDate(currentDate, "yyyy-MM-dd");
+  const nextDateString = formatDate(nextDate, "yyyy-MM-dd");
 
-  const {
-    data: nextDayData,
-    error: nextDayError,
-    isLoading: nextDayLoading,
-    mutations: nextDayMutations,
-  } = useTeesheetData(nextDate);
+  const currentDayQuery = useQuery(teesheetQueryOptions.byDate(currentDateString));
+  const nextDayQuery = useQuery(teesheetQueryOptions.byDate(nextDateString));
 
-  // Use SWR data if available, otherwise fall back to initial data for current day
+  // Get mutations for both days
+  const { mutations: currentDayMutations } = useTeesheetMutations(currentDate);
+  const { mutations: nextDayMutations } = useTeesheetMutations(nextDate);
+
+  // Extract data, error, and loading states
+  const currentDayData = currentDayQuery.data;
+  const currentDayError = currentDayQuery.error;
+  const currentDayLoading = currentDayQuery.isLoading;
+
+  const nextDayData = nextDayQuery.data;
+  const nextDayError = nextDayQuery.error;
+  const nextDayLoading = nextDayQuery.isLoading;
+
+  // Use TanStack Query data if available, otherwise fall back to initial data for current day
   const displayCurrentData = currentDayData || initialData;
 
   // Panel sizes from localStorage

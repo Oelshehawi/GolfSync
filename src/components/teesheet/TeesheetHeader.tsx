@@ -23,7 +23,7 @@ import {
   isSameDay,
 } from "~/lib/dates";
 import { addDays, subDays } from "date-fns";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 
 interface TeesheetHeaderProps {
   teesheetDate: Date;
@@ -108,12 +108,22 @@ export function TeesheetHeader({
     [onDateChange, router, searchParams, isNavigating, teesheetDate],
   );
 
-  const today = getBCToday();
+  // Use client-side date to avoid hydration mismatches
+  const [today, setToday] = useState<string | null>(null);
 
-  const modifiers = {
-    today: (day: Date) => isSameDay(day, today),
-    selected: (day: Date) => isSameDay(day, teesheetDate),
-  };
+  useEffect(() => {
+    // Set today only on client-side to avoid server/client mismatch
+    setToday(getBCToday());
+  }, []);
+
+  const modifiers = useMemo(() => {
+    if (!today) return {};
+
+    return {
+      today: (day: Date) => isSameDay(day, today),
+      selected: (day: Date) => isSameDay(day, teesheetDate),
+    };
+  }, [today, teesheetDate]);
 
   // Determine if calendar should be shown
   // Default to true for admin pages, otherwise check the search param

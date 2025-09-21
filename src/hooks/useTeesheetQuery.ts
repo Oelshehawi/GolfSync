@@ -25,7 +25,6 @@ export function useTeesheetQuery(date: Date) {
   const removeMemberMutation = useMutation({
     ...teesheetMutationOptions.removeMember(),
     onSuccess: () => {
-      toast.success("Member removed successfully");
       queryClient.invalidateQueries({ queryKey: queryKeys.teesheets.byDate(dateString) });
     },
     onError: () => {

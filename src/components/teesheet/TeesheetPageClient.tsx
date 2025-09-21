@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useTeesheetData } from "~/hooks/useTeesheetData";
 import { TeesheetView } from "~/components/teesheet/TeesheetView";
 import { TeesheetHeader } from "~/components/teesheet/TeesheetHeader";
 import { TwoDayView } from "~/components/teesheet/TwoDayView";
