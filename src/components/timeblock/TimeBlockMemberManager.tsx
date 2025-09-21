@@ -4,8 +4,9 @@ import { useState, useCallback, useEffect } from "react";
 import { useDebouncedCallback } from "use-debounce";
 import { TimeBlockPageHeader } from "./TimeBlockPageHeader";
 import { TimeBlockHeader } from "./TimeBlockHeader";
-import { useMutationContext } from "~/hooks/useMutationContext";
-import { useTeesheetData } from "~/hooks/useTeesheetData";
+import { useTeesheetMutations } from "~/hooks/useTeesheetMutations";
+import { useQuery } from "@tanstack/react-query";
+import { memberQueryOptions, guestQueryOptions } from "~/server/query-options";
 import {
   searchMembersAction,
   addMemberToTimeBlock,
@@ -64,37 +65,28 @@ export function TimeBlockMemberManager({
   timeBlockGuests: initialTimeBlockGuests = [],
   mutations: providedMutations,
 }: TimeBlockMemberManagerProps) {
-  // Use provided mutations or get from context as fallback
-  const contextMutations = useMutationContext();
-  const mutations = providedMutations || contextMutations;
-
-  // Get live SWR data instead of using static props
-  // This ensures we see updates immediately when mutations happen
-  // Fix: Use proper date functions from dates.ts to handle BC timezone
-  const dateForSWR = initialTimeBlock.date
-    ? parseDate(initialTimeBlock.date) // Use parseDate from dates.ts for proper BC timezone handling
+  // Use mutations-only hook to avoid redundant data fetching
+  const dateForMutations = initialTimeBlock.date
+    ? parseDate(initialTimeBlock.date)
     : new Date();
-  const { data: swrData } = useTeesheetData(dateForSWR);
+  const { mutations: hookMutations } = useTeesheetMutations(dateForMutations);
 
-  // Find the current timeblock in the SWR data
-  const timeBlock =
-    swrData?.timeBlocks?.find((tb) => tb.id === initialTimeBlock.id) ||
-    initialTimeBlock;
+  // Use provided mutations if available, otherwise use hook mutations
+  const mutations = providedMutations || hookMutations;
 
-  // Use live data from SWR for immediate updates
+  // Use the timeblock data directly - it will be updated via query invalidation
+  const timeBlock = initialTimeBlock;
   const members = timeBlock.members || [];
   const guests = timeBlock.guests || [];
   const fills = timeBlock.fills || [];
 
-  // Member state
+  // Member search state and query
   const [memberSearchQuery, setMemberSearchQuery] = useState("");
-  const [memberSearchResults, setMemberSearchResults] = useState<Member[]>([]);
-  const [isMemberSearching, setIsMemberSearching] = useState(false);
+  const memberSearchQuery_ = useQuery(memberQueryOptions.search(memberSearchQuery));
 
-  // Guest state
+  // Guest search state and query
   const [guestSearchQuery, setGuestSearchQuery] = useState("");
-  const [guestSearchResults, setGuestSearchResults] = useState<Guest[]>([]);
-  const [isGuestSearching, setIsGuestSearching] = useState(false);
+  const guestSearchQuery_ = useQuery(guestQueryOptions.search(guestSearchQuery));
   const [selectedMemberId, setSelectedMemberId] = useState<number | null>(null);
 
   // Restriction violation state
@@ -127,65 +119,20 @@ export function TimeBlockMemberManager({
   const currentPeople = members.length + guests.length + fills.length;
   const isTimeBlockFull = currentPeople >= MAX_PEOPLE;
 
-  // Member search handler with better error handling
-  const handleMemberSearch = useCallback(async (query: string) => {
-    if (!query.trim()) {
-      setMemberSearchResults([]);
-      return;
-    }
+  // Get search results from TanStack Query
+  const memberSearchResults = memberSearchQuery_.data || [];
+  const guestSearchResults = guestSearchQuery_.data || [];
+  const isMemberSearching = memberSearchQuery_.isLoading;
+  const isGuestSearching = guestSearchQuery_.isLoading;
 
-    setIsMemberSearching(true);
-    try {
-      const results = await searchMembersAction(query);
+  // Simple debounced handlers that just update the search query state
+  const debouncedMemberSearch = useDebouncedCallback((query: string) => {
+    setMemberSearchQuery(query);
+  }, 300);
 
-      // Transform date strings to Date objects
-      const transformedResults = results.map((member) => ({
-        ...member,
-        dateOfBirth: member.dateOfBirth ? new Date(member.dateOfBirth) : null,
-        createdAt: new Date(member.createdAt),
-        updatedAt: member.updatedAt ? new Date(member.updatedAt) : null,
-      }));
-
-      setMemberSearchResults(transformedResults as Member[]);
-    } catch (error) {
-      console.error("Error searching members:", error);
-      toast.error("Failed to search members");
-      setMemberSearchResults([]);
-    } finally {
-      setIsMemberSearching(false);
-    }
-  }, []);
-
-  // Guest search handler with better error handling
-  const handleGuestSearch = useCallback(async (query: string) => {
-    if (!query.trim()) {
-      setGuestSearchResults([]);
-      return;
-    }
-
-    setIsGuestSearching(true);
-    try {
-      const results = await searchGuestsAction(query);
-      // Map results to match the Guest type with all required properties
-      const mappedResults = results.map((result: any) => ({
-        id: result.id,
-        firstName: result.firstName,
-        lastName: result.lastName,
-        email: result.email,
-        phone: result.phone,
-      }));
-      setGuestSearchResults(mappedResults);
-    } catch (error) {
-      console.error("Error searching guests:", error);
-      toast.error("Failed to search guests");
-      setGuestSearchResults([]);
-    } finally {
-      setIsGuestSearching(false);
-    }
-  }, []);
-
-  const debouncedMemberSearch = useDebouncedCallback(handleMemberSearch, 300);
-  const debouncedGuestSearch = useDebouncedCallback(handleGuestSearch, 300);
+  const debouncedGuestSearch = useDebouncedCallback((query: string) => {
+    setGuestSearchQuery(query);
+  }, 300);
 
   // Check for restrictions before adding a member
   const checkMemberRestrictions = async (
@@ -278,22 +225,9 @@ export function TimeBlockMemberManager({
         setPendingAction(() => {
           return async () => {
             try {
-              // Use SWR mutation with optimistic updates enabled for immediate feedback
-              const result = mutations.addMember
-                ? await mutations.addMember(timeBlock.id, memberId, {
-                    optimisticUpdate: true, // Enable optimistic update for faster UI
-                    revalidate: true,
-                  })
-                : await addMemberToTimeBlock(timeBlock.id, memberId);
-
-              if (result.success) {
-                toast.success("Member added successfully");
-              } else {
-                toast.error(result.error || "Failed to add member");
-              }
+              await mutations.addMember(timeBlock.id, memberId);
             } catch (error) {
-              toast.error("An error occurred while adding the member");
-              console.error(error);
+              console.error("Error adding member:", error);
             }
           };
         });
@@ -302,22 +236,9 @@ export function TimeBlockMemberManager({
 
       // No violations, proceed as normal
       try {
-        // Use SWR mutation with optimistic updates for immediate UI feedback
-        const result = mutations.addMember
-          ? await mutations.addMember(timeBlock.id, memberId, {
-              optimisticUpdate: true, // Enable optimistic update for immediate feedback
-              revalidate: true,
-            })
-          : await addMemberToTimeBlock(timeBlock.id, memberId);
-
-        if (result.success) {
-          toast.success("Member added successfully");
-        } else {
-          toast.error(result.error || "Failed to add member");
-        }
+        await mutations.addMember(timeBlock.id, memberId);
       } catch (error) {
         console.error("Error adding member:", error);
-        toast.error("An error occurred while adding the member");
       }
     } catch (error) {
       console.error("Error adding member:", error);
@@ -327,23 +248,9 @@ export function TimeBlockMemberManager({
 
   const handleRemoveMember = async (memberId: number) => {
     try {
-      // Use SWR mutation with optimistic updates for immediate UI feedback
-      const result = mutations.removeMember
-        ? await mutations.removeMember(timeBlock.id, memberId, {
-            optimisticUpdate: true, // Optimistic update for immediate UI feedback
-            revalidate: true,
-          })
-        : await removeTimeBlockMember(timeBlock.id, memberId);
-
-      if (result.success) {
-        toast.success("Member removed successfully");
-        // SWR mutation handles immediate UI update
-      } else {
-        toast.error(result.error || "Failed to remove member");
-      }
+      await mutations.removeMember(timeBlock.id, memberId);
     } catch (error) {
-      toast.error("An error occurred while removing the member");
-      console.error(error);
+      console.error("Error removing member:", error);
     }
   };
 
@@ -389,32 +296,10 @@ export function TimeBlockMemberManager({
         setPendingAction(() => {
           return async () => {
             try {
-              // Use SWR mutation with optimistic updates for immediate feedback
-              const result = mutations.addGuest
-                ? await mutations.addGuest(
-                    timeBlock.id,
-                    guestId,
-                    invitingMemberId,
-                    {
-                      optimisticUpdate: true, // Enable optimistic update for faster UI
-                      revalidate: true,
-                    },
-                  )
-                : await addGuestToTimeBlock(
-                    timeBlock.id,
-                    guestId,
-                    invitingMemberId,
-                  );
-
-              if (result.success) {
-                toast.success("Guest added successfully");
-                setSelectedMemberId(null);
-              } else {
-                toast.error(result.error || "Failed to add guest");
-              }
+              await mutations.addGuest(timeBlock.id, guestId, invitingMemberId);
+              setSelectedMemberId(null);
             } catch (error) {
-              toast.error("An error occurred while adding the guest");
-              console.error(error);
+              console.error("Error adding guest:", error);
             }
           };
         });
@@ -422,20 +307,8 @@ export function TimeBlockMemberManager({
       }
 
       // No violations, proceed as normal
-      // Use SWR mutation with optimistic updates for immediate UI feedback
-      const result = mutations.addGuest
-        ? await mutations.addGuest(timeBlock.id, guestId, invitingMemberId, {
-            optimisticUpdate: true, // Enable optimistic update for immediate feedback
-            revalidate: true,
-          })
-        : await addGuestToTimeBlock(timeBlock.id, guestId, invitingMemberId);
-
-      if (result.success) {
-        toast.success("Guest added successfully");
-        setSelectedMemberId(null);
-      } else {
-        toast.error(result.error || "Failed to add guest");
-      }
+      await mutations.addGuest(timeBlock.id, guestId, invitingMemberId);
+      setSelectedMemberId(null);
     } catch (error) {
       toast.error("An error occurred while adding the guest");
       console.error(error);
@@ -444,23 +317,9 @@ export function TimeBlockMemberManager({
 
   const handleRemoveGuest = async (guestId: number) => {
     try {
-      // Use SWR mutation with optimistic updates for immediate UI feedback
-      const result = mutations.removeGuest
-        ? await mutations.removeGuest(timeBlock.id, guestId, {
-            optimisticUpdate: true, // Optimistic update for immediate UI feedback
-            revalidate: true,
-          })
-        : await removeGuestFromTimeBlock(timeBlock.id, guestId);
-
-      if (result.success) {
-        toast.success("Guest removed successfully");
-        // SWR mutation handles immediate UI update
-      } else {
-        toast.error(result.error || "Failed to remove guest");
-      }
+      await mutations.removeGuest(timeBlock.id, guestId);
     } catch (error) {
-      toast.error("An error occurred while removing the guest");
-      console.error(error);
+      console.error("Error removing guest:", error);
     }
   };
 
@@ -490,11 +349,6 @@ export function TimeBlockMemberManager({
           await handleAddGuest(result.data.id);
         }
 
-        // Always refresh the guest search results to show the new guest
-        await handleGuestSearch(
-          guestSearchQuery || `${values.firstName} ${values.lastName}`,
-        );
-
         // If no search query was active, set it to the new guest's name to show it in results
         if (!guestSearchQuery) {
           setGuestSearchQuery(`${values.firstName} ${values.lastName}`);
@@ -519,45 +373,17 @@ export function TimeBlockMemberManager({
     }
 
     try {
-      // Use SWR mutation with optimistic updates for immediate UI feedback
-      const result = mutations.addFill
-        ? await mutations.addFill(timeBlock.id, fillType, customName, {
-            optimisticUpdate: true, // Optimistic update for immediate UI feedback
-            revalidate: true,
-          })
-        : await addFillToTimeBlock(timeBlock.id, fillType, 1, customName);
-
-      if (result.success) {
-        toast.success("Fill added successfully");
-        // SWR mutation handles immediate UI update
-      } else {
-        toast.error(result.error || "Failed to add fill");
-      }
+      await mutations.addFill(timeBlock.id, fillType, customName);
     } catch (error) {
-      toast.error("An error occurred while adding the fill");
-      console.error(error);
+      console.error("Error adding fill:", error);
     }
   };
 
   const handleRemoveFill = async (fillId: number) => {
     try {
-      // Use SWR mutation with optimistic updates for immediate UI feedback
-      const result = mutations.removeFill
-        ? await mutations.removeFill(timeBlock.id, fillId, {
-            optimisticUpdate: true, // Optimistic update for immediate UI feedback
-            revalidate: true,
-          })
-        : await removeFillFromTimeBlock(timeBlock.id, fillId);
-
-      if (result.success) {
-        toast.success("Fill removed successfully");
-        // SWR mutation handles immediate UI update
-      } else {
-        toast.error(result.error || "Failed to remove fill");
-      }
+      await mutations.removeFill(timeBlock.id, fillId);
     } catch (error) {
-      toast.error("An error occurred while removing the fill");
-      console.error(error);
+      console.error("Error removing fill:", error);
     }
   };
 

@@ -5,6 +5,7 @@ import { type Metadata } from "next";
 import { ClerkProvider } from "@clerk/nextjs";
 
 import { Toaster } from "react-hot-toast";
+import { QueryProvider } from "~/components/providers/QueryProvider";
 
 export const metadata: Metadata = {
   title: "Quilchena Golf Club",
@@ -19,8 +20,10 @@ export default async function RootLayout({
     <ClerkProvider>
       <html lang="en" className={GeistSans.variable}>
         <body>
-          {children}
-          <Toaster position="top-right" />
+          <QueryProvider>
+            {children}
+            <Toaster position="bottom-right" />
+          </QueryProvider>
         </body>
       </html>
     </ClerkProvider>

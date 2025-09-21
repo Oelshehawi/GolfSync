@@ -28,7 +28,6 @@ import {
 } from "~/server/teesheet/actions";
 import { type RestrictionViolation } from "~/app/types/RestrictionTypes";
 import toast from "react-hot-toast";
-import { useTeesheetPolling } from "~/hooks/useTeesheetPolling";
 import { useRestrictionHandling } from "~/hooks/useRestrictionHandling";
 import { AddPlayerModal } from "../timeblock/AddPlayerModal";
 import { RestrictionViolationAlert } from "~/components/settings/timeblock-restrictions/RestrictionViolationAlert";
@@ -60,8 +59,6 @@ export const TeesheetView = memo(function TeesheetView({
   isAdmin = true,
   mutations,
 }: TeesheetViewProps) {
-  // Enable polling for real-time updates only for admin users
-  useTeesheetPolling(isAdmin);
 
   // Restriction handling hook
   const {

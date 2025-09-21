@@ -25,7 +25,7 @@ export default async function AdminPage({ searchParams }: PageProps) {
     // Parse the string into a Date object (will be in BC timezone)
     const date = parseDate(dateString);
 
-    // Get teesheet data - pass the Date object
+    // Get teesheet data first - this must be sequential
     const { teesheet, config } = await getOrCreateTeesheet(date);
 
     if (!teesheet) {
@@ -43,14 +43,14 @@ export default async function AdminPage({ searchParams }: PageProps) {
       );
     }
 
-    const timeBlocks = await getTimeBlocksForTeesheet(teesheet.id);
-    const configsResult = await getTeesheetConfigs();
-
-    // Fetch pace of play data for all time blocks - pass the Date object
-    const paceOfPlayData = await getAllPaceOfPlayForDate(date);
-
-    // Fetch lottery settings for the settings modal
-    const lotterySettings = await getLotterySettings(teesheet.id);
+    // Now parallelize all remaining calls for much better performance
+    const [timeBlocks, configsResult, paceOfPlayData, lotterySettings] =
+      await Promise.all([
+        getTimeBlocksForTeesheet(teesheet.id),
+        getTeesheetConfigs(),
+        getAllPaceOfPlayForDate(date),
+        getLotterySettings(teesheet.id),
+      ]);
 
     if (!Array.isArray(configsResult)) {
       throw new Error("Failed to load configurations");
