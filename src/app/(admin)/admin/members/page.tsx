@@ -12,7 +12,7 @@ export default async function MembersPage() {
   ]);
 
   return (
-    <div className="container space-y-6 py-6">
+    <div className="container space-y-6">
       <PageHeader
         title="Members & Guests"
         description="Manage club members and registered guests"

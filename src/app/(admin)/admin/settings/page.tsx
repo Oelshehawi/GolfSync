@@ -62,7 +62,7 @@ export default async function SettingsPage() {
   const allMemberClasses = await getAllMemberClasses();
 
   return (
-    <div className="mx-auto max-w-[1200px] space-y-6">
+    <div className="w-full space-y-6">
       {/* Header */}
       <PageHeader
         title="Settings"
@@ -72,7 +72,7 @@ export default async function SettingsPage() {
       {/* Tabbed Interface */}
       <Tabs defaultValue="teesheet" className="w-full">
         <div className="mb-6 flex justify-center">
-          <TabsList className="flex w-[1000px]">
+          <TabsList className="flex w-full max-w-[1000px]">
             <TabsTrigger value="teesheet" className="flex-1">
               Teesheet Settings
             </TabsTrigger>

@@ -28,48 +28,115 @@ const NavigationClient = ({
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   return (
-    <div className="bg-org-primary relative">
-      <div className="mx-auto max-w-7xl px-4">
-        <div className="flex h-16 items-center justify-between gap-8">
-          {/* Logo */}
-          <Link href="/admin" className="flex-shrink-0">
-            {logoUrl ? (
-              <div className="relative h-10 w-auto">
-                <Image
-                  src={logoUrl}
-                  alt={`${organizationName} Logo`}
-                  width={140}
-                  height={40}
-                  className="object-contain"
-                  style={{ height: "auto" }}
-                  priority
-                />
-              </div>
-            ) : (
-              <div className="bg-org-tertiary h-10 w-10 rounded" />
-            )}
-          </Link>
+    <div className="fixed top-0 left-0 right-0 z-50 p-4 pointer-events-none">
+      <div className="mx-auto max-w-5xl">
+        <div className="rounded-full bg-org-primary/95 backdrop-blur-sm shadow-xl border border-white/10 pointer-events-auto">
+          <div className="flex h-16 items-center justify-between gap-8 px-8">
+            {/* Logo */}
+            <Link href="/admin" className="flex-shrink-0 transition-transform hover:scale-105">
+              {logoUrl ? (
+                <div className="relative h-10 w-auto">
+                  <Image
+                    src={logoUrl}
+                    alt={`${organizationName} Logo`}
+                    width={140}
+                    height={40}
+                    className="object-contain"
+                    style={{ height: "auto" }}
+                    priority
+                  />
+                </div>
+              ) : (
+                <div className="bg-white/20 h-10 w-10 rounded-full shadow-sm" />
+              )}
+            </Link>
 
-          {/* Desktop Navigation */}
-          <div className="hidden flex-1 items-center justify-center md:flex">
-            <div className="flex space-x-1 rounded-full bg-white/5 p-1">
+            {/* Desktop Navigation */}
+            <div className="hidden flex-1 items-center justify-center md:flex">
+              <div className="flex space-x-1 rounded-full bg-white/10 p-1.5">
+                {navItems.map((item) => {
+                  const isActive = pathname === item.href;
+                  return (
+                    <Link
+                      key={item.name}
+                      href={item.href}
+                      className={`relative rounded-full px-6 py-2.5 text-sm font-medium transition-all duration-200 ${
+                        isActive
+                          ? "bg-white/20 text-white shadow-lg"
+                          : "text-white/80 hover:bg-white/15 hover:text-white"
+                      }`}
+                    >
+                      {item.name}
+                      {item.count !== undefined && item.count > 0 && (
+                        <Badge
+                          variant="secondary"
+                          className={`-mr-1 ml-2 transition-colors ${
+                            isActive
+                              ? "bg-white/30 text-white"
+                              : "bg-white/20 text-white"
+                          }`}
+                        >
+                          {item.count}
+                        </Badge>
+                      )}
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* User Button */}
+            <div className="flex items-center gap-4">
+              {/* Mobile Menu Button */}
+              <button
+                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                className="rounded-full p-2.5 text-white transition-colors hover:bg-white/10 md:hidden"
+              >
+                <div className="space-y-1.5">
+                  <div className={`h-0.5 w-5 bg-current transition-all duration-200 ${isMobileMenuOpen ? 'rotate-45 translate-y-2' : ''}`}></div>
+                  <div className={`h-0.5 w-5 bg-current transition-all duration-200 ${isMobileMenuOpen ? 'opacity-0' : ''}`}></div>
+                  <div className={`h-0.5 w-5 bg-current transition-all duration-200 ${isMobileMenuOpen ? '-rotate-45 -translate-y-2' : ''}`}></div>
+                </div>
+              </button>
+              <UserButtonComponent />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Mobile Navigation */}
+      <div
+        className={`absolute inset-x-0 top-full px-4 transform transition-all duration-300 md:hidden ${
+          isMobileMenuOpen
+            ? "translate-y-2 opacity-100 pointer-events-auto"
+            : "pointer-events-none -translate-y-2 opacity-0"
+        }`}
+      >
+        <div className="mx-auto max-w-5xl">
+          <div className="rounded-3xl bg-org-primary/95 backdrop-blur-sm border border-white/10 shadow-xl pointer-events-auto">
+            <div className="space-y-1 p-6">
               {navItems.map((item) => {
                 const isActive = pathname === item.href;
                 return (
                   <Link
                     key={item.name}
                     href={item.href}
-                    className={`relative rounded-full px-4 py-1.5 text-sm font-medium transition-all ${
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className={`flex items-center justify-between rounded-full px-6 py-3 text-sm font-medium transition-all duration-200 ${
                       isActive
-                        ? "bg-white/15 text-white"
-                        : "text-white/70 hover:bg-white/10 hover:text-white"
+                        ? "bg-white/20 text-white shadow-lg"
+                        : "text-white/80 hover:bg-white/10 hover:text-white"
                     }`}
                   >
-                    {item.name}
+                    <span>{item.name}</span>
                     {item.count !== undefined && item.count > 0 && (
                       <Badge
                         variant="secondary"
-                        className="-mr-1 ml-1.5 bg-white/20 text-white"
+                        className={`transition-colors ${
+                          isActive
+                            ? "bg-white/30 text-white"
+                            : "bg-white/20 text-white"
+                        }`}
                       >
                         {item.count}
                       </Badge>
@@ -79,61 +146,6 @@ const NavigationClient = ({
               })}
             </div>
           </div>
-
-          {/* User Button */}
-          <div className="flex items-center gap-4">
-            {/* Mobile Menu Button */}
-            <button
-              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="rounded-lg p-2 hover:bg-white/10 md:hidden"
-            >
-              <div className="space-y-1.5">
-                <div className="h-0.5 w-5 bg-white"></div>
-                <div className="h-0.5 w-5 bg-white"></div>
-                <div className="h-0.5 w-5 bg-white"></div>
-              </div>
-            </button>
-            <UserButtonComponent />
-          </div>
-        </div>
-      </div>
-
-      {/* Mobile Navigation */}
-      <div
-        className={`bg-org-primary absolute inset-x-0 top-full transform transition-all duration-300 md:hidden ${
-          isMobileMenuOpen
-            ? "translate-y-0 opacity-100"
-            : "pointer-events-none -translate-y-2 opacity-0"
-        }`}
-      >
-        <div className="space-y-1 px-4 py-3">
-          {navItems.map((item) => {
-            const isActive = pathname === item.href;
-            return (
-              <Link
-                key={item.name}
-                href={item.href}
-                onClick={() => setIsMobileMenuOpen(false)}
-                className={`block rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
-                  isActive
-                    ? "bg-white/15 text-white"
-                    : "text-white/70 hover:bg-white/10 hover:text-white"
-                }`}
-              >
-                <span className="flex items-center">
-                  {item.name}
-                  {item.count !== undefined && item.count > 0 && (
-                    <Badge
-                      variant="secondary"
-                      className="ml-2 bg-white/20 text-white"
-                    >
-                      {item.count}
-                    </Badge>
-                  )}
-                </span>
-              </Link>
-            );
-          })}
         </div>
       </div>
     </div>
