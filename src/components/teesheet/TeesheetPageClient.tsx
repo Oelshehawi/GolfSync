@@ -88,6 +88,8 @@ export function TeesheetPageClient({
           isAdmin={isAdmin}
           isTwoDayView={isTwoDayView}
           onToggleTwoDayView={handleToggleTwoDayView}
+          currentDate={currentDate}
+          onDateChange={handleDateChange}
           mutations={mutations}
         />
 

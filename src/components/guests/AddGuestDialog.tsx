@@ -55,8 +55,16 @@ export function AddGuestDialog({
     onOpenChange(false);
   };
 
+  const handleOpenChange = (newOpen: boolean) => {
+    if (!newOpen) {
+      // Reset form when dialog is closed
+      form.reset();
+    }
+    onOpenChange(newOpen);
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Add Guest</DialogTitle>
@@ -131,7 +139,11 @@ export function AddGuestDialog({
             </div>
 
             <div className="flex justify-end space-x-4">
-              <Button variant="outline" onClick={() => onOpenChange(false)}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => handleOpenChange(false)}
+              >
                 Cancel
               </Button>
               <Button type="submit">Create Guest</Button>

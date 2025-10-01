@@ -944,6 +944,7 @@ export const lotteryGroups = createTable(
       .notNull(), // Member who submitted for group
     lotteryDate: date("lottery_date").notNull(),
     memberIds: integer("member_ids").array().notNull(), // All members in group including leader
+    fills: jsonb("fills").$type<Array<{ fillType: string; customName?: string }>>().default([]), // Array of fills
     preferredWindow: varchar("preferred_window", { length: 20 }).notNull(),
     alternateWindow: varchar("alternate_window", { length: 20 }),
     status: varchar("status", { length: 20 }).notNull().default("PENDING"),

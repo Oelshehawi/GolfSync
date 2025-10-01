@@ -25,6 +25,14 @@ import { Button } from "~/components/ui/button";
 import { Badge } from "~/components/ui/badge";
 import { Separator } from "~/components/ui/separator";
 import { Clock, Dice1, CheckCircle, Users, X } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "~/components/ui/select";
+import { Input } from "~/components/ui/input";
 import { formatDate } from "~/lib/dates";
 import { submitLotteryEntry } from "~/server/lottery/actions";
 import { MemberSearchInput } from "~/components/members/MemberSearchInput";
@@ -32,7 +40,8 @@ import type {
   TimeWindow,
   LotteryEntryFormData,
 } from "~/app/types/LotteryTypes";
-import type { TeesheetConfig } from "~/app/types/TeeSheetTypes";
+import type { TeesheetConfig, FillType } from "~/app/types/TeeSheetTypes";
+import { FillTypes } from "~/app/types/TeeSheetTypes";
 import {
   calculateDynamicTimeWindows,
   isLotteryAvailableForConfig,
@@ -71,6 +80,7 @@ export function AdminLotteryEntryForm({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [organizer, setOrganizer] = useState<SearchMember | null>(null);
   const [selectedMembers, setSelectedMembers] = useState<SearchMember[]>([]);
+  const [fills, setFills] = useState<Array<{ id: string; fillType: FillType; customName?: string }>>([]);
 
   // Calculate dynamic time windows based on config
   const timeWindows = calculateDynamicTimeWindows(config);
@@ -104,6 +114,9 @@ export function AdminLotteryEntryForm({
       "memberIds",
       newMembers.map((m) => m.id),
     );
+
+    // Reset fills when organizer changes
+    setFills([]);
   };
 
   const handleMemberSelect = (selectedMember: SearchMember | null) => {
@@ -143,6 +156,37 @@ export function AdminLotteryEntryForm({
   const removeOrganizer = () => {
     setOrganizer(null);
     form.setValue("organizerId", 0);
+    // Reset fills when organizer is removed
+    setFills([]);
+  };
+
+  const addFill = (fillType: FillType, customName?: string) => {
+    if (totalPlayers >= 4) {
+      toast.error("Maximum 4 players per group");
+      return;
+    }
+    const newFill = {
+      id: `fill-${Date.now()}-${Math.random()}`,
+      fillType,
+      customName,
+    };
+    setFills([...fills, newFill]);
+  };
+
+  const removeFill = (fillId: string) => {
+    setFills(fills.filter((f) => f.id !== fillId));
+  };
+
+  const resetForm = () => {
+    setOrganizer(null);
+    setSelectedMembers([]);
+    setFills([]);
+    form.reset();
+  };
+
+  const handleCancel = () => {
+    resetForm();
+    onCancel?.();
   };
 
   const onSubmit = async (data: FormData) => {
@@ -158,12 +202,14 @@ export function AdminLotteryEntryForm({
         preferredWindow: data.preferredWindow as TimeWindow,
         alternateWindow: data.alternateWindow as TimeWindow | undefined,
         memberIds: data.memberIds,
+        fills: fills.length > 0 ? fills.map(f => ({ fillType: f.fillType, customName: f.customName })) : undefined,
       };
 
       const result = await submitLotteryEntry(organizer.id, formData);
 
       if (result.success) {
         toast.success("Lottery entry created successfully!");
+        resetForm();
         onSuccess?.();
       } else {
         toast.error(result.error || "Failed to create lottery entry");
@@ -175,7 +221,7 @@ export function AdminLotteryEntryForm({
     }
   };
 
-  const totalPlayers = selectedMembers.length + 1; // +1 for the organizer
+  const totalPlayers = selectedMembers.length + 1 + fills.length; // +1 for the organizer
 
   // Show message if lottery is not available for this config
   if (!isLotteryAvailable || timeWindows.length === 0) {
@@ -286,7 +332,20 @@ export function AdminLotteryEntryForm({
                     </Badge>
                   </div>
 
-                  {/* Selected Members */}
+                  {/* Add Member Search - Show only if space available */}
+                  {totalPlayers < 4 && (
+                    <div className="space-y-2">
+                      <div className="text-sm text-gray-600">
+                        Add additional players (optional):
+                      </div>
+                      <MemberSearchInput
+                        onSelect={handleMemberSelect}
+                        placeholder="Search for members to add..."
+                      />
+                    </div>
+                  )}
+
+                  {/* Display all players (members and fills) together */}
                   {selectedMembers.map((selectedMember) => (
                     <div
                       key={selectedMember.id}
@@ -315,16 +374,42 @@ export function AdminLotteryEntryForm({
                     </div>
                   ))}
 
-                  {/* Add Member */}
-                  {selectedMembers.length < 3 && (
-                    <div className="space-y-2">
-                      <div className="text-sm text-gray-600">
-                        Add additional players (optional):
+                  {/* Display fills in the same list */}
+                  {fills.map((fill) => (
+                    <div
+                      key={fill.id}
+                      className="flex items-center gap-3 rounded-lg border p-3"
+                    >
+                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-sm font-medium">
+                        F
                       </div>
-                      <MemberSearchInput
-                        onSelect={handleMemberSelect}
-                        placeholder="Search for members to add..."
-                      />
+                      <div className="flex-1">
+                        <div className="font-medium">
+                          {fill.fillType === FillTypes.GUEST && "Guest Fill"}
+                          {fill.fillType === FillTypes.RECIPROCAL && "Reciprocal Fill"}
+                          {fill.fillType === FillTypes.CUSTOM && (fill.customName || "Custom Fill")}
+                        </div>
+                        <div className="text-sm text-gray-500">Fill</div>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeFill(fill.id)}
+                        className="h-8 w-8 p-0"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+
+                  {/* Add Fills Section - Show only if space available */}
+                  {totalPlayers < 4 && (
+                    <div className="space-y-3 border-t pt-4">
+                      <div className="text-sm font-medium text-gray-700">
+                        Add Fills (Optional)
+                      </div>
+                      <LotteryFillSelector onAddFill={addFill} isDisabled={totalPlayers >= 4} />
                     </div>
                   )}
                 </div>
@@ -460,7 +545,7 @@ export function AdminLotteryEntryForm({
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={onCancel}
+                  onClick={handleCancel}
                   disabled={isSubmitting}
                   size="lg"
                 >
@@ -471,6 +556,72 @@ export function AdminLotteryEntryForm({
           </Form>
         </CardContent>
       </Card>
+    </div>
+  );
+}
+
+// Fill selector component
+interface LotteryFillSelectorProps {
+  onAddFill: (fillType: FillType, customName?: string) => void;
+  isDisabled: boolean;
+}
+
+function LotteryFillSelector({ onAddFill, isDisabled }: LotteryFillSelectorProps) {
+  const [selectedFillType, setSelectedFillType] = useState<FillType>(FillTypes.GUEST);
+  const [customFillName, setCustomFillName] = useState("");
+
+  const handleAddFill = () => {
+    if (selectedFillType === FillTypes.CUSTOM && !customFillName.trim()) {
+      toast.error("Please enter a name for the custom fill");
+      return;
+    }
+
+    onAddFill(
+      selectedFillType,
+      selectedFillType === FillTypes.CUSTOM ? customFillName : undefined
+    );
+
+    // Reset form
+    setCustomFillName("");
+    setSelectedFillType(FillTypes.GUEST);
+  };
+
+  return (
+    <div className="space-y-3 rounded-lg border border-dashed p-3">
+      <Select
+        value={selectedFillType}
+        onValueChange={(value) => setSelectedFillType(value as FillType)}
+        disabled={isDisabled}
+      >
+        <SelectTrigger>
+          <SelectValue placeholder="Select fill type" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value={FillTypes.GUEST}>Guest Fill</SelectItem>
+          <SelectItem value={FillTypes.RECIPROCAL}>Reciprocal Fill</SelectItem>
+          <SelectItem value={FillTypes.CUSTOM}>Other...</SelectItem>
+        </SelectContent>
+      </Select>
+
+      {selectedFillType === FillTypes.CUSTOM && (
+        <Input
+          value={customFillName}
+          onChange={(e) => setCustomFillName(e.target.value)}
+          placeholder="Enter fill name..."
+          disabled={isDisabled}
+        />
+      )}
+
+      <Button
+        type="button"
+        onClick={handleAddFill}
+        disabled={isDisabled || (selectedFillType === FillTypes.CUSTOM && !customFillName.trim())}
+        variant="outline"
+        size="sm"
+        className="w-full"
+      >
+        Add Fill
+      </Button>
     </div>
   );
 }

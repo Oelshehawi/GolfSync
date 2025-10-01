@@ -62,9 +62,7 @@ export async function checkAndRunMonthlyMaintenance(): Promise<MaintenanceResult
       month: currentMonth,
       recordsAffected: totalRecords,
       notes: `Reset ${resetResult.data?.recordsAffected || 0} fairness scores, updated ${speedResult.data?.recordsAffected || 0} member profiles`,
-    });
-
-    revalidatePath("/admin/lottery/member-profiles");
+    }).onConflictDoNothing();
 
     return {
       success: true,
@@ -119,7 +117,7 @@ async function resetMonthlyFairnessScores(): Promise<MaintenanceResult> {
     }));
 
     if (newScores.length > 0) {
-      await db.insert(memberFairnessScores).values(newScores);
+      await db.insert(memberFairnessScores).values(newScores).onConflictDoNothing();
     }
 
     return {
@@ -241,13 +239,23 @@ async function recalculateSpeedProfiles(): Promise<MaintenanceResult> {
       }
     }
 
-    // Record speed calculation maintenance
-    await db.insert(systemMaintenance).values({
-      maintenanceType: "SPEED_RECALCULATION",
-      month: new Date().toISOString().slice(0, 7),
-      recordsAffected: updatedProfiles,
-      notes: `Recalculated member profiles for ${updatedProfiles} members with 3+ rounds in last 3 months`,
+    // Record speed calculation maintenance (only if not already recorded this month)
+    const currentMonth = new Date().toISOString().slice(0, 7);
+    const existingSpeedMaintenance = await db.query.systemMaintenance.findFirst({
+      where: and(
+        eq(systemMaintenance.maintenanceType, "SPEED_RECALCULATION"),
+        eq(systemMaintenance.month, currentMonth),
+      ),
     });
+
+    if (!existingSpeedMaintenance) {
+      await db.insert(systemMaintenance).values({
+        maintenanceType: "SPEED_RECALCULATION",
+        month: currentMonth,
+        recordsAffected: updatedProfiles,
+        notes: `Recalculated member profiles for ${updatedProfiles} members with 3+ rounds in last 3 months`,
+      }).onConflictDoNothing();
+    }
 
     return {
       success: true,
@@ -326,7 +334,7 @@ export async function triggerManualMaintenance(): Promise<MaintenanceResult> {
       month: new Date().toISOString().slice(0, 7),
       recordsAffected: totalRecords,
       notes: `Manual maintenance: ${resetResult.data?.notes || ""}, ${speedResult.data?.notes || ""}`,
-    });
+    }).onConflictDoNothing();
 
     revalidatePath("/admin/lottery");
     revalidatePath("/admin/lottery/member-profiles");

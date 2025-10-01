@@ -78,6 +78,7 @@ export interface LotteryGroup {
   leaderId: number;
   lotteryDate: string; // YYYY-MM-DD
   memberIds: number[]; // All members including leader
+  fills?: Array<{ fillType: string; customName?: string }>; // Array of fills
   preferredWindow: TimeWindow;
   alternateWindow?: TimeWindow | null;
   status: LotteryStatus;
@@ -101,6 +102,7 @@ export interface LotteryGroupInsert {
   leaderId: number;
   lotteryDate: string;
   memberIds: number[];
+  fills?: Array<{ fillType: string; customName?: string }>;
   preferredWindow: TimeWindow;
   alternateWindow?: TimeWindow | null;
   status?: LotteryStatus;
@@ -128,6 +130,7 @@ export interface LotteryEntryFormData {
   preferredWindow: TimeWindow;
   alternateWindow?: TimeWindow;
   memberIds?: number[]; // For group entries
+  fills?: Array<{ fillType: string; customName?: string }>; // For fills
 }
 
 // Re-export time window info interface from lottery-utils

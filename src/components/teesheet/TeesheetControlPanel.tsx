@@ -10,6 +10,7 @@ import {
   UserPlus,
   CalendarDays,
   Calendar,
+  Home,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -31,7 +32,7 @@ import type { TeeSheet, TeesheetConfig } from "~/app/types/TeeSheetTypes";
 import { populateTimeBlocksWithRandomMembers } from "~/server/teesheet/actions";
 import { AdminLotteryEntryForm } from "~/components/lottery/AdminLotteryEntryForm";
 import { TeesheetSettingsModal } from "./TeesheetSettingsModal";
-import { getBCToday, formatDate } from "~/lib/dates";
+import { getBCToday, formatDate, parseDate } from "~/lib/dates";
 
 // Check if we're in development mode
 const isDev =
@@ -45,6 +46,8 @@ interface TeesheetControlPanelProps {
   isAdmin?: boolean;
   isTwoDayView?: boolean;
   onToggleTwoDayView?: (enabled: boolean) => void;
+  currentDate?: Date;
+  onDateChange?: (date: Date) => void;
   mutations?: {
     revalidate?: () => Promise<void>;
   };
@@ -57,6 +60,8 @@ export function TeesheetControlPanel({
   isAdmin = true,
   isTwoDayView = false,
   onToggleTwoDayView,
+  currentDate,
+  onDateChange,
   mutations,
 }: TeesheetControlPanelProps) {
   const [isUpdating, setIsUpdating] = useState(false);
@@ -128,9 +133,38 @@ export function TeesheetControlPanel({
     }
   };
 
+  // Handle return to today
+  const handleReturnToToday = () => {
+    if (!onDateChange) return;
+
+    const todayString = getBCToday();
+    const todayDate = parseDate(todayString);
+    onDateChange(todayDate);
+  };
+
+  // Check if already on today
+  const isOnToday = () => {
+    if (!currentDate) return false;
+    const today = getBCToday();
+    const currentDateString = formatDate(currentDate, "yyyy-MM-dd");
+    return currentDateString === today;
+  };
+
   return (
     <div className="mb-4 flex items-center justify-between">
       <div className="flex items-center gap-2">
+        {/* Return to Today Button */}
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleReturnToToday}
+          disabled={isOnToday() || !onDateChange}
+          className="shadow-sm transition-all"
+        >
+          <Home className="mr-2 h-4 w-4" />
+          Return to Today
+        </Button>
+
         {/* Two-Day View Toggle - Only show on desktop */}
         <div className="hidden lg:block">
           <Button
