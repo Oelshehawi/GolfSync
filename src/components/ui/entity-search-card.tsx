@@ -110,6 +110,16 @@ export function EntitySearchCard<T extends Entity>({
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
+          {showCreateButton && onCreateNew && (
+            <Button
+              onClick={onCreateNew}
+              variant="outline"
+              className="w-full border-blue-300 text-blue-600 hover:bg-blue-50 hover:text-blue-700"
+            >
+              <UserPlus className="mr-2 h-4 w-4" />
+              {createButtonText}
+            </Button>
+          )}
           <div
             className={`grid grid-cols-1 gap-4 ${showSelectFilter ? "md:grid-cols-2" : ""}`}
           >
@@ -186,18 +196,7 @@ export function EntitySearchCard<T extends Entity>({
             </div>
           ) : localQuery ? (
             <div className="rounded-lg border border-dashed p-4 text-center text-gray-500">
-              <p className="mb-3">{noResultsMessage}</p>
-              {showCreateButton && onCreateNew && (
-                <Button
-                  onClick={onCreateNew}
-                  variant="outline"
-                  size="sm"
-                  className="border-blue-300 text-blue-600 hover:bg-blue-50 hover:text-blue-700"
-                >
-                  <UserPlus className="mr-2 h-4 w-4" />
-                  {createButtonText}
-                </Button>
-              )}
+              {noResultsMessage}
             </div>
           ) : null}
         </div>

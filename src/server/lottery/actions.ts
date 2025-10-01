@@ -88,6 +88,7 @@ export async function submitLotteryEntry(
         leaderId: member.id,
         lotteryDate: data.lotteryDate,
         memberIds: allMemberIds,
+        fills: data.fills || undefined,
         preferredWindow: data.preferredWindow,
         alternateWindow: data.alternateWindow || null,
         status: "PENDING",

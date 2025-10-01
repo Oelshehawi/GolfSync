@@ -27,34 +27,37 @@ export function TimeBlockNoteEditor({
   };
 
   return (
-    <div className="p-3">
-      <div className="flex flex-col space-y-2">
-        <Textarea
-          value={newNote}
-          onChange={(e) => setNewNote(e.target.value)}
-          placeholder="Add a note for this tee time..."
-          className="min-h-[60px] text-xs"
-          autoFocus
-        />
-        <div className="flex justify-end space-x-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onCancel ? onCancel : () => setNewNote("")}
-            className="h-7 text-xs"
-          >
-            Cancel
-          </Button>
-          <Button
-            variant="default"
-            size="sm"
-            onClick={handleSaveNote}
-            className="h-7 text-xs"
-            disabled={!newNote.trim()}
-          >
-            <Check className="mr-1 h-3 w-3" />
-            Save
-          </Button>
+    <div className="px-4 py-2">
+      {/* Editor container */}
+      <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+        <div className="flex flex-col space-y-2">
+          <Textarea
+            value={newNote}
+            onChange={(e) => setNewNote(e.target.value)}
+            placeholder="Add a note for this tee time..."
+            className="min-h-[60px] text-xs"
+            autoFocus
+          />
+          <div className="flex justify-end space-x-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onCancel ? onCancel : () => setNewNote("")}
+              className="h-7 text-xs"
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="default"
+              size="sm"
+              onClick={handleSaveNote}
+              className="h-7 text-xs"
+              disabled={!newNote.trim()}
+            >
+              <Check className="mr-1 h-3 w-3" />
+              Save
+            </Button>
+          </div>
         </div>
       </div>
     </div>
@@ -86,29 +89,36 @@ export function TimeBlockNote({
 
   return (
     <>
-      <div className="group border-l-4 border-org-primary bg-org-primary-light px-4 py-3 transition-colors hover:bg-org-primary-lighter">
-        <div className="flex items-center justify-between">
-          <div className="flex-1 text-sm text-gray-700">{notes}</div>
-          <div className="flex space-x-1">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowDeleteConfirmation(true)}
-              className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 hover:bg-org-primary-light hover:text-red-500"
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                onEditClick();
-              }}
-              className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 hover:bg-org-primary-light"
-            >
-              <Edit className="h-4 w-4" />
-            </Button>
+      <div className="px-4 py-2">
+        {/* Note container */}
+        <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+          <div className="group rounded-md bg-white p-3 shadow-sm transition-colors hover:bg-gray-50">
+            <div className="flex items-center justify-between">
+              <div className="flex-1 border-l-4 border-org-primary pl-2 text-sm text-gray-700">
+                {notes}
+              </div>
+              <div className="ml-3 flex space-x-1">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowDeleteConfirmation(true)}
+                  className="h-8 w-8 p-0 opacity-0 transition-opacity group-hover:opacity-100 hover:text-red-500"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEditClick();
+                  }}
+                  className="h-8 w-8 p-0 opacity-0 transition-opacity group-hover:opacity-100"
+                >
+                  <Edit className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
       </div>

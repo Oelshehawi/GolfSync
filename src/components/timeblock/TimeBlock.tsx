@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import type { TimeBlockWithMembers } from "~/app/types/TeeSheetTypes";
 import { Button } from "~/components/ui/button";
-import { X, UserCheck, UserX, UserPlus, MoreVertical } from "lucide-react";
+import { X, UserCheck, UserX, UserPlus, MoreVertical, StickyNote } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { type RestrictionViolation } from "~/app/types/RestrictionTypes";
 import { formatDisplayTime, getMemberClassStyling } from "~/lib/utils";
@@ -39,6 +39,7 @@ interface TimeBlockProps {
   onCheckInMember?: (memberId: number, isCheckedIn: boolean) => Promise<void>;
   onCheckInGuest?: (guestId: number, isCheckedIn: boolean) => Promise<void>;
   onCheckInAll?: () => Promise<void>;
+  onToggleNoteEdit?: () => void;
   onSaveNotes?: (notes: string) => Promise<boolean>;
 }
 
@@ -52,6 +53,7 @@ export function TimeBlock({
   onCheckInMember,
   onCheckInGuest,
   onCheckInAll,
+  onToggleNoteEdit,
   onSaveNotes,
 }: TimeBlockProps) {
   const formattedTime = formatDisplayTime(timeBlock.startTime);
@@ -516,6 +518,11 @@ export function TimeBlock({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-40">
+                <DropdownMenuItem onClick={() => onToggleNoteEdit?.()}>
+                  <StickyNote className="mr-2 h-4 w-4" />
+                  Add Note
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
                 <DropdownMenuItem
                   onClick={() => onCheckInAll?.()}
                   disabled={checkInDisabled}

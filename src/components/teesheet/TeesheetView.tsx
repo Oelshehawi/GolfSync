@@ -16,7 +16,6 @@ import { TimeBlock as TimeBlockComponent } from "~/components/timeblock/TimeBloc
 import { TeesheetGeneralNotes } from "./TeesheetGeneralNotes";
 import { TimeBlockNote } from "~/components/timeblock/TimeBlockNotes";
 import { TimeBlockNoteEditor } from "~/components/timeblock/TimeBlockNotes";
-import { TimeBlockNoteAddIndicator } from "~/components/timeblock/TimeBlockNotes";
 import {
   removeTimeBlockMember,
   removeTimeBlockGuest,
@@ -424,43 +423,6 @@ export const TeesheetView = memo(function TeesheetView({
 
               return (
                 <React.Fragment key={`block-${block.id}`}>
-                  {/* Display existing notes if any */}
-                  {block.notes && block.notes.trim() !== "" && (
-                    <tr>
-                      <td
-                        colSpan={3}
-                        className="border-org-primary-light border-b p-0"
-                      >
-                        <TimeBlockNote
-                          notes={block.notes}
-                          onEditClick={() => toggleTimeBlockNoteEdit(block.id)}
-                          timeBlockId={block.id}
-                          onSaveNotes={handleSaveNotes}
-                        />
-                      </td>
-                    </tr>
-                  )}
-
-                  {/* Add note indicator or editor after timeblock */}
-                  <tr className="hover:bg-gray-50">
-                    <td colSpan={3} className="h-2 p-0">
-                      {editingTimeBlockNote === block.id ? (
-                        <TimeBlockNoteEditor
-                          timeBlockId={block.id}
-                          initialNote={block.notes || ""}
-                          onSaveNotes={(timeBlockId, notes) => {
-                            toggleTimeBlockNoteEdit(null);
-                            return handleSaveNotes(timeBlockId, notes);
-                          }}
-                          onCancel={() => toggleTimeBlockNoteEdit(null)}
-                        />
-                      ) : (
-                        <TimeBlockNoteAddIndicator
-                          onClick={() => toggleTimeBlockNoteEdit(block.id)}
-                        />
-                      )}
-                    </td>
-                  </tr>
                   <TimeBlockComponent
                     key={`timeblock-${block.id}`}
                     timeBlock={{
@@ -493,10 +455,45 @@ export const TeesheetView = memo(function TeesheetView({
                       handleCheckInGuest(block.id, guestId, isCheckedIn)
                     }
                     onCheckInAll={() => handleCheckInAll(block.id)}
+                    onToggleNoteEdit={() => toggleTimeBlockNoteEdit(block.id)}
                     onSaveNotes={(notes: string) =>
                       handleSaveNotes(block.id, notes)
                     }
                   />
+
+                  {/* Display note editor or existing note after timeblock */}
+                  {editingTimeBlockNote === block.id ? (
+                    <tr>
+                      <td colSpan={3} className="p-0">
+                        <TimeBlockNoteEditor
+                          timeBlockId={block.id}
+                          initialNote={block.notes || ""}
+                          onSaveNotes={async (timeBlockId, notes) => {
+                            const success = await handleSaveNotes(timeBlockId, notes);
+                            if (success) {
+                              toggleTimeBlockNoteEdit(null);
+                            }
+                            return success;
+                          }}
+                          onCancel={() => toggleTimeBlockNoteEdit(null)}
+                        />
+                      </td>
+                    </tr>
+                  ) : (
+                    block.notes &&
+                    block.notes.trim() !== "" && (
+                      <tr>
+                        <td colSpan={3} className="p-0">
+                          <TimeBlockNote
+                            notes={block.notes}
+                            onEditClick={() => toggleTimeBlockNoteEdit(block.id)}
+                            timeBlockId={block.id}
+                            onSaveNotes={handleSaveNotes}
+                          />
+                        </td>
+                      </tr>
+                    )
+                  )}
                 </React.Fragment>
               );
             })}
